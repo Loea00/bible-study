@@ -1,45 +1,31 @@
-import { useState, type FormEvent } from 'react'
+import { useState } from 'react'
 import { useVerses } from './useVerses'
+import { PassagePicker } from './PassagePicker'
+import { BOOK_BY_CODE } from './books'
 
 const TRANSLATIONS = ['KJV', 'ASV']
 
 export function ReadingView() {
-  const [book, setBook] = useState('PSA')
-  const [chapter, setChapter] = useState(46)
+  const [book, setBook] = useState('GEN')
+  const [chapter, setChapter] = useState(1)
   const [translation, setTranslation] = useState('KJV')
-  const [bookInput, setBookInput] = useState('PSA')
-  const [chapterInput, setChapterInput] = useState('46')
+  const [pickerOpen, setPickerOpen] = useState(false)
 
   const { verses, loading, error } = useVerses(book, chapter, translation)
+  const bookName = BOOK_BY_CODE[book]?.name ?? book
 
-  function handleGo(e: FormEvent) {
-    e.preventDefault()
-    const chapterNum = Number.parseInt(chapterInput, 10)
-    if (!bookInput.trim() || Number.isNaN(chapterNum) || chapterNum < 1) return
-    setBook(bookInput.trim().toUpperCase())
-    setChapter(chapterNum)
+  function handleSelect(newBook: string, newChapter: number) {
+    setBook(newBook)
+    setChapter(newChapter)
+    setPickerOpen(false)
   }
 
   return (
     <div className="reading-view">
-      <form className="reading-controls" onSubmit={handleGo}>
-        <input
-          value={bookInput}
-          onChange={(e) => setBookInput(e.target.value)}
-          placeholder="PSA"
-          aria-label="Book"
-          size={5}
-        />
-        <input
-          value={chapterInput}
-          onChange={(e) => setChapterInput(e.target.value)}
-          placeholder="46"
-          aria-label="Chapter"
-          type="number"
-          min={1}
-          size={3}
-        />
-        <button type="submit">Go</button>
+      <div className="reading-controls">
+        <button type="button" className="reference-button" onClick={() => setPickerOpen(true)}>
+          {bookName} {chapter}
+        </button>
         <select value={translation} onChange={(e) => setTranslation(e.target.value)}>
           {TRANSLATIONS.map((t) => (
             <option key={t} value={t}>
@@ -47,19 +33,27 @@ export function ReadingView() {
             </option>
           ))}
         </select>
-      </form>
+      </div>
+
+      {pickerOpen && (
+        <PassagePicker
+          translation={translation}
+          onSelect={handleSelect}
+          onClose={() => setPickerOpen(false)}
+        />
+      )}
 
       {loading && <p className="placeholder">Loading…</p>}
       {error && <p className="placeholder">Couldn't load this passage: {error}</p>}
       {!loading && !error && verses.length === 0 && (
         <p className="placeholder">
-          No verses found for {book} {chapter}. Has the scripture data been imported yet?
+          No verses found for {bookName} {chapter}. Has the scripture data been imported yet?
         </p>
       )}
 
       <div className="passage">
         <h1>
-          {book} {chapter}
+          {bookName} {chapter}
         </h1>
         {verses.map((v) => (
           <p key={v.verse_id} className="verse">
