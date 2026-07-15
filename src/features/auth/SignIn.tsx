@@ -10,7 +10,10 @@ export function SignIn() {
     e.preventDefault()
     setStatus('sending')
     setError(null)
-    const { error } = await supabase.auth.signInWithOtp({ email })
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: window.location.origin },
+    })
     if (error) {
       setError(error.message)
       setStatus('error')
