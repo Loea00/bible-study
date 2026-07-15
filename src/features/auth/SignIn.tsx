@@ -3,29 +3,27 @@ import { supabase } from '../../lib/supabase'
 
 export function SignIn() {
   const [email, setEmail] = useState('')
-  const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
+  const [password, setPassword] = useState('')
+  const [status, setStatus] = useState<'idle' | 'sending' | 'error'>('idle')
   const [error, setError] = useState<string | null>(null)
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setStatus('sending')
     setError(null)
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: window.location.origin },
-    })
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) {
       setError(error.message)
       setStatus('error')
-    } else {
-      setStatus('sent')
     }
+    // On success, the auth listener in AuthContext picks up the new session
+    // and AppShell re-renders past this component.
   }
 
   return (
     <div className="signin">
       <h1>Bible Study</h1>
-      <p>Sign in with a magic link to continue.</p>
+      <p>Sign in to continue.</p>
       <form onSubmit={handleSubmit}>
         <input
           type="email"
@@ -34,11 +32,17 @@ export function SignIn() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
+        <input
+          type="password"
+          required
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
         <button type="submit" disabled={status === 'sending'}>
-          {status === 'sending' ? 'Sending…' : 'Send magic link'}
+          {status === 'sending' ? 'Signing in…' : 'Sign in'}
         </button>
       </form>
-      {status === 'sent' && <p>Check your email for the sign-in link.</p>}
       {status === 'error' && error && <p className="error">{error}</p>}
     </div>
   )
