@@ -67,5 +67,15 @@ export function useMarginNotes(book: string, chapter: number) {
     }))
   }
 
-  return { notesByVerse, loading, addNote }
+  async function deleteNote(verseId: string, entryId: string) {
+    const { error } = await supabase.from('entries').delete().eq('id', entryId)
+    if (error) throw error
+
+    setNotesByVerse((prev) => ({
+      ...prev,
+      [verseId]: (prev[verseId] ?? []).filter((n) => n.id !== entryId),
+    }))
+  }
+
+  return { notesByVerse, loading, addNote, deleteNote }
 }

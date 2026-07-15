@@ -307,12 +307,30 @@ main {
   background: var(--highlight-purple-wash);
 }
 
-.highlight-swatches {
+.highlight-row {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 10px;
   margin-bottom: 16px;
   padding-bottom: 16px;
   border-bottom: 1px solid var(--border);
+}
+
+.highlight-swatches {
+  display: flex;
+  gap: 10px;
+}
+
+.highlight-remove {
+  border: none;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0;
+  white-space: nowrap;
 }
 
 .highlight-swatch {
@@ -388,15 +406,40 @@ main {
 }
 
 .verse-panel-note {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  background: var(--code-bg, rgba(128, 128, 128, 0.08));
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+
+.verse-panel-note p {
   font-family: var(--serif);
   font-size: 16px;
   line-height: 1.5;
   color: var(--text-h);
-  background: var(--code-bg, rgba(128, 128, 128, 0.08));
-  border-radius: 6px;
-  padding: 10px 12px;
   margin: 0;
   white-space: pre-wrap;
+}
+
+.verse-panel-note-delete {
+  border: none;
+  background: none;
+  color: var(--text);
+  opacity: 0.6;
+  font-family: var(--sans);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.verse-panel-note-delete:hover {
+  opacity: 1;
+  color: #c0392b;
 }
 
 .verse-panel-form {

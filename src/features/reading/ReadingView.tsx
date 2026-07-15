@@ -17,7 +17,7 @@ export function ReadingView() {
   const [selectedVerse, setSelectedVerse] = useState<Verse | null>(null)
 
   const { verses, loading, error } = useVerses(book, chapter, translation)
-  const { notesByVerse, addNote } = useMarginNotes(book, chapter)
+  const { notesByVerse, addNote, deleteNote } = useMarginNotes(book, chapter)
   const { colorByVerse, setHighlight } = useHighlights(book, chapter)
   const bookName = BOOK_BY_CODE[book]?.name ?? book
 
@@ -58,6 +58,7 @@ export function ReadingView() {
           notes={notesByVerse[selectedVerse.verse_id] ?? []}
           highlightColor={colorByVerse[selectedVerse.verse_id] ?? null}
           onAddNote={(body) => addNote(selectedVerse.verse_id, body)}
+          onDeleteNote={(entryId) => deleteNote(selectedVerse.verse_id, entryId)}
           onSetHighlight={(color) => setHighlight(selectedVerse.verse_id, color)}
           onClose={() => setSelectedVerse(null)}
         />

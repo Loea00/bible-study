@@ -10,6 +10,7 @@ interface VersePanelProps {
   notes: Entry[]
   highlightColor: HighlightColor | null
   onAddNote: (body: string) => Promise<void>
+  onDeleteNote: (entryId: string) => Promise<void>
   onSetHighlight: (color: HighlightColor | null) => Promise<void>
   onClose: () => void
 }
@@ -20,6 +21,7 @@ export function VersePanel({
   notes,
   highlightColor,
   onAddNote,
+  onDeleteNote,
   onSetHighlight,
   onClose,
 }: VersePanelProps) {
@@ -27,6 +29,8 @@ export function VersePanel({
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [highlightError, setHighlightError] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -43,12 +47,24 @@ export function VersePanel({
     }
   }
 
-  async function handleHighlight(color: HighlightColor) {
+  async function handleHighlight(color: HighlightColor | null) {
     setHighlightError(null)
     try {
-      await onSetHighlight(highlightColor === color ? null : color)
+      await onSetHighlight(color)
     } catch (err) {
       setHighlightError(err instanceof Error ? err.message : 'Could not save the highlight.')
+    }
+  }
+
+  async function handleDeleteNote(entryId: string) {
+    setDeletingId(entryId)
+    setDeleteError(null)
+    try {
+      await onDeleteNote(entryId)
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Could not delete the note.')
+    } finally {
+      setDeletingId(null)
     }
   }
 
@@ -63,26 +79,42 @@ export function VersePanel({
         </div>
         <p className="verse-panel-text">{verseText}</p>
 
-        <div className="highlight-swatches">
-          {HIGHLIGHT_COLORS.map((color) => (
-            <button
-              key={color}
-              type="button"
-              className={`highlight-swatch highlight-swatch-${color}${highlightColor === color ? ' active' : ''}`}
-              aria-label={`Highlight ${color}`}
-              onClick={() => handleHighlight(color)}
-            />
-          ))}
+        <div className="highlight-row">
+          <div className="highlight-swatches">
+            {HIGHLIGHT_COLORS.map((color) => (
+              <button
+                key={color}
+                type="button"
+                className={`highlight-swatch highlight-swatch-${color}${highlightColor === color ? ' active' : ''}`}
+                aria-label={`Highlight ${color}`}
+                onClick={() => handleHighlight(highlightColor === color ? null : color)}
+              />
+            ))}
+          </div>
+          {highlightColor && (
+            <button type="button" className="highlight-remove" onClick={() => handleHighlight(null)}>
+              Remove highlight
+            </button>
+          )}
         </div>
         {highlightError && <p className="error">{highlightError}</p>}
 
         {notes.length > 0 && (
           <div className="verse-panel-notes">
             {notes.map((note) => (
-              <p key={note.id} className="verse-panel-note">
-                {note.body}
-              </p>
+              <div key={note.id} className="verse-panel-note">
+                <p>{note.body}</p>
+                <button
+                  type="button"
+                  className="verse-panel-note-delete"
+                  onClick={() => handleDeleteNote(note.id)}
+                  disabled={deletingId === note.id}
+                >
+                  {deletingId === note.id ? 'Deleting…' : 'Delete'}
+                </button>
+              </div>
             ))}
+            {deleteError && <p className="error">{deleteError}</p>}
           </div>
         )}
 
