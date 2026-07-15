@@ -18,7 +18,6 @@ export function useChapterCount(book: string | null, translation: string) {
       .eq('translation_code', translation)
       .order('chapter', { ascending: false })
       .limit(1)
-      .returns<{ chapter: number }[]>()
       .then(({ data }) => {
         if (cancelled) return
         setCount(data?.[0]?.chapter ?? null)

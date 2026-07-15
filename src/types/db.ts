@@ -2,11 +2,15 @@
 // (supabase/migrations/0001_phase1_schema.sql). Regenerate with
 // `supabase gen types typescript` once the project is linked, and
 // this file can be replaced wholesale.
+//
+// NOTE: these must be `type`, not `interface` — supabase-js's generic
+// query-result inference silently collapses to `never` when Row/Insert/
+// Update reference a named interface instead of a type alias.
 
 export type EntryType = 'margin_note' | 'journal' | 'reflection' | 'templated_journal'
 export type RefKind = 'anchor' | 'inline'
 
-export interface Entry {
+export type Entry = {
   id: string
   user_id: string
   created_at: string
@@ -22,7 +26,7 @@ export interface Entry {
   session_id: string | null
 }
 
-export interface VerseReference {
+export type VerseReference = {
   id: string
   entry_id: string
   user_id: string
@@ -32,7 +36,7 @@ export interface VerseReference {
   ref_kind: RefKind
 }
 
-export interface ReadingSession {
+export type ReadingSession = {
   id: string
   user_id: string
   started_at: string
@@ -42,13 +46,13 @@ export interface ReadingSession {
   last_position: string | null
 }
 
-export interface Translation {
+export type Translation = {
   code: string
   name: string
   is_default: boolean
 }
 
-export interface Verse {
+export type Verse = {
   verse_id: string
   translation_code: string
   book: string
@@ -57,7 +61,7 @@ export interface Verse {
   text: string
 }
 
-export interface Database {
+export type Database = {
   public: {
     Tables: {
       entries: {
@@ -68,27 +72,34 @@ export interface Database {
           updated_at?: string
         }
         Update: Partial<Entry>
+        Relationships: []
       }
       verse_references: {
         Row: VerseReference
         Insert: Omit<VerseReference, 'id'> & { id?: string }
         Update: Partial<VerseReference>
+        Relationships: []
       }
       reading_sessions: {
         Row: ReadingSession
         Insert: Omit<ReadingSession, 'id'> & { id?: string }
         Update: Partial<ReadingSession>
+        Relationships: []
       }
       translations: {
         Row: Translation
         Insert: Translation
         Update: Partial<Translation>
+        Relationships: []
       }
       verses: {
         Row: Verse
         Insert: Verse
         Update: Partial<Verse>
+        Relationships: []
       }
     }
+    Views: Record<string, never>
+    Functions: Record<string, never>
   }
 }

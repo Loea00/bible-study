@@ -1,7 +1,10 @@
 import { useState } from 'react'
 import { useVerses } from './useVerses'
+import { useMarginNotes } from './useMarginNotes'
 import { PassagePicker } from './PassagePicker'
+import { VersePanel } from './VersePanel'
 import { BOOK_BY_CODE } from './books'
+import type { Verse } from '../../types/db'
 
 const TRANSLATIONS = ['KJV', 'ASV']
 
@@ -10,8 +13,10 @@ export function ReadingView() {
   const [chapter, setChapter] = useState(1)
   const [translation, setTranslation] = useState('KJV')
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [selectedVerse, setSelectedVerse] = useState<Verse | null>(null)
 
   const { verses, loading, error } = useVerses(book, chapter, translation)
+  const { notesByVerse, addNote } = useMarginNotes(book, chapter)
   const bookName = BOOK_BY_CODE[book]?.name ?? book
 
   function handleSelect(newBook: string, newChapter: number) {
@@ -43,6 +48,17 @@ export function ReadingView() {
         />
       )}
 
+      {selectedVerse && (
+        <VersePanel
+          verseId={selectedVerse.verse_id}
+          verseText={selectedVerse.text}
+          reference={`${bookName} ${selectedVerse.chapter}:${selectedVerse.verse}`}
+          notes={notesByVerse[selectedVerse.verse_id] ?? []}
+          onAddNote={(body) => addNote(selectedVerse.verse_id, body)}
+          onClose={() => setSelectedVerse(null)}
+        />
+      )}
+
       {loading && <p className="placeholder">Loading…</p>}
       {error && <p className="placeholder">Couldn't load this passage: {error}</p>}
       {!loading && !error && verses.length === 0 && (
@@ -56,9 +72,12 @@ export function ReadingView() {
           {bookName} {chapter}
         </h1>
         {verses.map((v) => (
-          <p key={v.verse_id} className="verse">
+          <p key={v.verse_id} className="verse" onClick={() => setSelectedVerse(v)}>
             <span className="verse-num">{v.verse}</span>
             {v.text}
+            {notesByVerse[v.verse_id]?.length > 0 && (
+              <span className="verse-note-dot" title="Has a note" />
+            )}
           </p>
         ))}
       </div>

@@ -246,6 +246,13 @@ main {
   line-height: 1.7;
   color: var(--text-h);
   margin: 0 0 4px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.verse:hover {
+  background: var(--accent-bg, rgba(107, 79, 160, 0.08));
 }
 
 .verse-num {
@@ -255,4 +262,103 @@ main {
   opacity: 0.55;
   vertical-align: super;
   margin-right: 6px;
+}
+
+.verse-note-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.verse-panel {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  max-width: 480px;
+  width: 100%;
+  max-height: 80vh;
+  overflow-y: auto;
+  padding: 20px;
+  font-family: var(--sans);
+}
+
+.verse-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.verse-panel-header h2 {
+  margin: 0;
+  font-size: 16px;
+  color: var(--text-h);
+}
+
+.verse-panel-text {
+  font-family: var(--serif);
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--text-h);
+  opacity: 0.85;
+  margin: 0 0 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.verse-panel-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.verse-panel-note {
+  font-family: var(--serif);
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--text-h);
+  background: var(--code-bg, rgba(128, 128, 128, 0.08));
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.verse-panel-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.verse-panel-form textarea {
+  font: inherit;
+  font-family: var(--serif);
+  font-size: 16px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-h);
+  resize: vertical;
+}
+
+.verse-panel-form button {
+  align-self: flex-end;
+  padding: 8px 14px;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: var(--accent);
+  color: white;
+  font: inherit;
+  cursor: pointer;
+}
+
+.verse-panel-form button:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
