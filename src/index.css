@@ -5,6 +5,17 @@
   --border: #e5e4e7;
   --accent: #6b4fa0;
 
+  --highlight-yellow: #f5d949;
+  --highlight-yellow-wash: rgba(245, 217, 73, 0.28);
+  --highlight-green: #7bc47f;
+  --highlight-green-wash: rgba(123, 196, 127, 0.28);
+  --highlight-blue: #6fa8dc;
+  --highlight-blue-wash: rgba(111, 168, 220, 0.28);
+  --highlight-pink: #e8879e;
+  --highlight-pink-wash: rgba(232, 135, 158, 0.28);
+  --highlight-purple: #a58fd6;
+  --highlight-purple-wash: rgba(165, 143, 214, 0.28);
+
   --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
   --serif: 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
 
@@ -22,6 +33,12 @@
     --bg: #16171d;
     --border: #2e303a;
     --accent: #b39ddb;
+
+    --highlight-yellow-wash: rgba(245, 217, 73, 0.2);
+    --highlight-green-wash: rgba(123, 196, 127, 0.2);
+    --highlight-blue-wash: rgba(111, 168, 220, 0.2);
+    --highlight-pink-wash: rgba(232, 135, 158, 0.2);
+    --highlight-purple-wash: rgba(165, 143, 214, 0.2);
   }
 }
 
@@ -272,6 +289,59 @@ main {
   background: var(--accent);
   margin-left: 6px;
   vertical-align: middle;
+}
+
+.verse.highlight-yellow {
+  background: var(--highlight-yellow-wash);
+}
+.verse.highlight-green {
+  background: var(--highlight-green-wash);
+}
+.verse.highlight-blue {
+  background: var(--highlight-blue-wash);
+}
+.verse.highlight-pink {
+  background: var(--highlight-pink-wash);
+}
+.verse.highlight-purple {
+  background: var(--highlight-purple-wash);
+}
+
+.highlight-swatches {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.highlight-swatch {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+}
+
+.highlight-swatch.active {
+  border-color: var(--text-h);
+}
+
+.highlight-swatch-yellow {
+  background: var(--highlight-yellow);
+}
+.highlight-swatch-green {
+  background: var(--highlight-green);
+}
+.highlight-swatch-blue {
+  background: var(--highlight-blue);
+}
+.highlight-swatch-pink {
+  background: var(--highlight-pink);
+}
+.highlight-swatch-purple {
+  background: var(--highlight-purple);
 }
 
 .verse-panel {

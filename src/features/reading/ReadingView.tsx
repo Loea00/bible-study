@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useVerses } from './useVerses'
 import { useMarginNotes } from './useMarginNotes'
+import { useHighlights } from './useHighlights'
 import { PassagePicker } from './PassagePicker'
 import { VersePanel } from './VersePanel'
 import { BOOK_BY_CODE } from './books'
@@ -17,6 +18,7 @@ export function ReadingView() {
 
   const { verses, loading, error } = useVerses(book, chapter, translation)
   const { notesByVerse, addNote } = useMarginNotes(book, chapter)
+  const { colorByVerse, setHighlight } = useHighlights(book, chapter)
   const bookName = BOOK_BY_CODE[book]?.name ?? book
 
   function handleSelect(newBook: string, newChapter: number) {
@@ -54,7 +56,9 @@ export function ReadingView() {
           verseText={selectedVerse.text}
           reference={`${bookName} ${selectedVerse.chapter}:${selectedVerse.verse}`}
           notes={notesByVerse[selectedVerse.verse_id] ?? []}
+          highlightColor={colorByVerse[selectedVerse.verse_id] ?? null}
           onAddNote={(body) => addNote(selectedVerse.verse_id, body)}
+          onSetHighlight={(color) => setHighlight(selectedVerse.verse_id, color)}
           onClose={() => setSelectedVerse(null)}
         />
       )}
@@ -71,15 +75,22 @@ export function ReadingView() {
         <h1>
           {bookName} {chapter}
         </h1>
-        {verses.map((v) => (
-          <p key={v.verse_id} className="verse" onClick={() => setSelectedVerse(v)}>
-            <span className="verse-num">{v.verse}</span>
-            {v.text}
-            {notesByVerse[v.verse_id]?.length > 0 && (
-              <span className="verse-note-dot" title="Has a note" />
-            )}
-          </p>
-        ))}
+        {verses.map((v) => {
+          const color = colorByVerse[v.verse_id]
+          return (
+            <p
+              key={v.verse_id}
+              className={`verse${color ? ` highlight-${color}` : ''}`}
+              onClick={() => setSelectedVerse(v)}
+            >
+              <span className="verse-num">{v.verse}</span>
+              {v.text}
+              {notesByVerse[v.verse_id]?.length > 0 && (
+                <span className="verse-note-dot" title="Has a note" />
+              )}
+            </p>
+          )
+        })}
       </div>
     </div>
   )

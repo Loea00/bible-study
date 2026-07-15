@@ -1,19 +1,32 @@
 import { useState, type FormEvent } from 'react'
-import type { Entry } from '../../types/db'
+import type { Entry, HighlightColor } from '../../types/db'
+
+const HIGHLIGHT_COLORS: HighlightColor[] = ['yellow', 'green', 'blue', 'pink', 'purple']
 
 interface VersePanelProps {
   verseId: string
   verseText: string
   reference: string
   notes: Entry[]
+  highlightColor: HighlightColor | null
   onAddNote: (body: string) => Promise<void>
+  onSetHighlight: (color: HighlightColor | null) => Promise<void>
   onClose: () => void
 }
 
-export function VersePanel({ verseText, reference, notes, onAddNote, onClose }: VersePanelProps) {
+export function VersePanel({
+  verseText,
+  reference,
+  notes,
+  highlightColor,
+  onAddNote,
+  onSetHighlight,
+  onClose,
+}: VersePanelProps) {
   const [draft, setDraft] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [highlightError, setHighlightError] = useState<string | null>(null)
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -30,6 +43,15 @@ export function VersePanel({ verseText, reference, notes, onAddNote, onClose }: 
     }
   }
 
+  async function handleHighlight(color: HighlightColor) {
+    setHighlightError(null)
+    try {
+      await onSetHighlight(highlightColor === color ? null : color)
+    } catch (err) {
+      setHighlightError(err instanceof Error ? err.message : 'Could not save the highlight.')
+    }
+  }
+
   return (
     <div className="picker-overlay" onClick={onClose}>
       <div className="verse-panel" onClick={(e) => e.stopPropagation()}>
@@ -40,6 +62,19 @@ export function VersePanel({ verseText, reference, notes, onAddNote, onClose }: 
           </button>
         </div>
         <p className="verse-panel-text">{verseText}</p>
+
+        <div className="highlight-swatches">
+          {HIGHLIGHT_COLORS.map((color) => (
+            <button
+              key={color}
+              type="button"
+              className={`highlight-swatch highlight-swatch-${color}${highlightColor === color ? ' active' : ''}`}
+              aria-label={`Highlight ${color}`}
+              onClick={() => handleHighlight(color)}
+            />
+          ))}
+        </div>
+        {highlightError && <p className="error">{highlightError}</p>}
 
         {notes.length > 0 && (
           <div className="verse-panel-notes">

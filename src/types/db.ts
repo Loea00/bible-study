@@ -9,6 +9,7 @@
 
 export type EntryType = 'margin_note' | 'journal' | 'reflection' | 'templated_journal'
 export type RefKind = 'anchor' | 'inline'
+export type HighlightColor = 'yellow' | 'green' | 'blue' | 'pink' | 'purple'
 
 export type Entry = {
   id: string
@@ -61,6 +62,15 @@ export type Verse = {
   text: string
 }
 
+export type Highlight = {
+  id: string
+  user_id: string
+  verse_start: string
+  verse_end: string
+  color: HighlightColor
+  created_at: string
+}
+
 export type Database = {
   public: {
     Tables: {
@@ -96,6 +106,12 @@ export type Database = {
         Row: Verse
         Insert: Verse
         Update: Partial<Verse>
+        Relationships: []
+      }
+      highlights: {
+        Row: Highlight
+        Insert: Omit<Highlight, 'id' | 'created_at'> & { id?: string; created_at?: string }
+        Update: Partial<Highlight>
         Relationships: []
       }
     }
