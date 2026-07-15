@@ -15,6 +15,10 @@ dist-ssr
 .env
 .env.local
 
+# Downloaded/generated reference-text data — regenerate with
+# `python3 scripts/transform_kjv.py` (fetches source CSVs first)
+/data
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

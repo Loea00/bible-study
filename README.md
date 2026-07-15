@@ -28,11 +28,28 @@ is a matter of enabling sign-ups, not restructuring data.
 - `src/features/reading/` — reading view (scripture-first home)
 - `src/features/journal/` — journal timeline + editor
 - `supabase/migrations/` — schema: `entries`, `verse_references`, `reading_sessions` (user
-  content) and `translations`, `verses` (bundled public-domain reference text — KJV/WEB/ASV;
-  seeding the actual verse text is a separate data-ingestion task)
+  content) and `translations`, `verses` (bundled public-domain reference text)
+
+## Seeding scripture text
+
+KJV and ASV are sourced from [scrollmapper/bible_databases](https://github.com/scrollmapper/bible_databases)
+(public domain, verse-per-row CSV). WEB isn't in that particular repo under that name — still
+need to find a source for it.
+
+```
+mkdir -p data
+curl -sL -o data/KJV.csv https://raw.githubusercontent.com/scrollmapper/bible_databases/master/formats/csv/KJV.csv
+curl -sL -o data/ASV.csv https://raw.githubusercontent.com/scrollmapper/bible_databases/master/formats/csv/ASV.csv
+python3 scripts/transform_kjv.py
+```
+
+That produces `data/verses_seed.csv` (verse_id, translation_code, book, chapter, verse, text —
+matching the `verses` table columns exactly). Import it via Supabase dashboard → Table Editor →
+`verses` → Insert → Import data from CSV.
 
 ## Status
 
-Scaffold only: routing, auth gating, DB schema, and typed Supabase client are wired up. The
-reading view and journal pages are placeholders — no scripture rendering, verse tagging, or side
-panel yet.
+Phase 1 in progress. Done: scaffold deployed (Vercel + Supabase, live), DB schema, auth
+(magic-link), reading view renders real KJV/ASV text by book/chapter with a translation switcher.
+Journal (inline @verse tagging), margin notes, side panel, and reading-session auto-capture are
+still placeholders/not started.
