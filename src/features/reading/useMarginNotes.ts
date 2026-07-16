@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import type { Entry } from '../../types/db'
+import { getActiveSessionId } from './useReadingSession'
 
 export function useMarginNotes(book: string, chapter: number) {
   const [notesByVerse, setNotesByVerse] = useState<Record<string, Entry[]>>({})
@@ -45,7 +46,7 @@ export function useMarginNotes(book: string, chapter: number) {
         anchor_start: verseId,
         anchor_end: verseId,
         tags: [],
-        session_id: null,
+        session_id: getActiveSessionId(),
       })
       .select()
       .single()

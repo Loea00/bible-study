@@ -29,6 +29,12 @@ function saveStoredSession(session: StoredSession) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(session))
 }
 
+// For linking writing to "the reading session it was created during"
+// (spec 4.2) — returns null if no session is active or it's gone stale.
+export function getActiveSessionId(): string | null {
+  return loadStoredSession()?.id ?? null
+}
+
 // No verse-level scroll tracking exists yet, so "position" is the chapter's
 // first verse — a reasonable stand-in until reading-log/resume UI needs
 // finer precision.

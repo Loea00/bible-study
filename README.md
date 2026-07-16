@@ -68,13 +68,21 @@ scrolls to and highlights the entry on the journal page) grouped together, plus 
 indicator per type in the running text. Reflections and TSK cross-references aren't in the panel
 yet since neither surface exists (Phase 2/3 per spec).
 
-Reading sessions now auto-capture in the background (`src/features/reading/useReadingSession.ts`):
+Reading sessions auto-capture in the background (`src/features/reading/useReadingSession.ts`):
 opening the reading view starts or continues a session (rolling forward on each passage change,
 30-minute inactivity gap before a new one starts) and writes `passage_start`/`passage_end`/
-`last_position` to `reading_sessions`. No UI reads this yet — that's the Phase 2 reading log and
-"resume where I left off" surfaces — this is purely the capture mechanism landing first, per the
-spec's own phasing.
+`last_position` to `reading_sessions`. Margin notes and journal entries created during an active
+session now link to it via `entries.session_id` (previously always written as `null` — fixed
+alongside the log surface below, since it's what the log's "expand a session" needs).
 
-**All of Phase 1's original spec checklist is now built.** Text selection (drag-to-select,
-multi-span highlights/notes, word-tap lexicon) is designed per amendment v1.1 §A9 but not built —
-current interaction is still tap-the-whole-verse; that lands with Phase 2 lexicon work.
+**All of Phase 1's original spec checklist is built.** Phase 2 is starting — first slice: the
+**reading log** (`/log`, `src/features/log/`), the first Phase 2 item since it's pure payoff on
+data already being captured, no new dataset or table needed. Stat cards (day streak, sessions this
+month, notes this month) + a session list, each expandable to show what was written during it,
+deep-linking back to the passage or journal entry. `computeStreak()` counts consecutive local
+calendar days with at least one session; not having read yet *today* doesn't break it (spec
+principle 3 — gentle, never enforced).
+
+Still ahead in Phase 2: word-tap Strong's lexicon (also when the deferred text-selection gesture
+model from amendment v1.1 §A9 gets built — drag-to-select, multi-span highlights/notes), calendar,
+reading plans, TSK cross-references, search across own writing, "Today, I..." templates.

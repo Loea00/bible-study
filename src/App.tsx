@@ -4,6 +4,7 @@ import { SignIn } from './features/auth/SignIn'
 import { NavBar } from './components/NavBar'
 import { ReadingView } from './features/reading/ReadingView'
 import { Journal } from './features/journal/Journal'
+import { ReadingLog } from './features/log/ReadingLog'
 
 function AppShell() {
   const { session, loading } = useAuth()
@@ -18,6 +19,7 @@ function AppShell() {
         <Routes>
           <Route path="/" element={<ReadingView />} />
           <Route path="/journal" element={<Journal />} />
+          <Route path="/log" element={<ReadingLog />} />
         </Routes>
       </main>
     </div>
