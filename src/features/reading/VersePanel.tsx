@@ -1,5 +1,7 @@
 import { useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 import type { Entry, HighlightColor } from '../../types/db'
+import type { JournalExcerpt } from './useJournalExcerpts'
 
 const HIGHLIGHT_COLORS: HighlightColor[] = ['yellow', 'green', 'blue', 'pink', 'purple']
 
@@ -8,6 +10,7 @@ interface VersePanelProps {
   verseText: string
   reference: string
   notes: Entry[]
+  journalExcerpts: JournalExcerpt[]
   highlightColor: HighlightColor | null
   onAddNote: (body: string) => Promise<void>
   onDeleteNote: (entryId: string) => Promise<void>
@@ -19,6 +22,7 @@ export function VersePanel({
   verseText,
   reference,
   notes,
+  journalExcerpts,
   highlightColor,
   onAddNote,
   onDeleteNote,
@@ -100,21 +104,50 @@ export function VersePanel({
         {highlightError && <p className="error">{highlightError}</p>}
 
         {notes.length > 0 && (
-          <div className="verse-panel-notes">
-            {notes.map((note) => (
-              <div key={note.id} className="verse-panel-note">
-                <p>{note.body}</p>
-                <button
-                  type="button"
-                  className="verse-panel-note-delete"
-                  onClick={() => handleDeleteNote(note.id)}
-                  disabled={deletingId === note.id}
-                >
-                  {deletingId === note.id ? 'Deleting…' : 'Delete'}
-                </button>
-              </div>
-            ))}
-            {deleteError && <p className="error">{deleteError}</p>}
+          <div className="verse-panel-section">
+            <h3>Margin notes</h3>
+            <div className="verse-panel-notes">
+              {notes.map((note) => (
+                <div key={note.id} className="verse-panel-note">
+                  <p>{note.body}</p>
+                  <button
+                    type="button"
+                    className="verse-panel-note-delete"
+                    onClick={() => handleDeleteNote(note.id)}
+                    disabled={deletingId === note.id}
+                  >
+                    {deletingId === note.id ? 'Deleting…' : 'Delete'}
+                  </button>
+                </div>
+              ))}
+              {deleteError && <p className="error">{deleteError}</p>}
+            </div>
+          </div>
+        )}
+
+        {journalExcerpts.length > 0 && (
+          <div className="verse-panel-section">
+            <h3>Journal</h3>
+            <div className="verse-panel-excerpts">
+              {journalExcerpts.map((ex) => (
+                <div key={ex.entryId} className="verse-panel-excerpt">
+                  <div className="verse-panel-excerpt-header">
+                    {ex.title && <span className="verse-panel-excerpt-title">{ex.title}</span>}
+                    <span className="verse-panel-excerpt-date">
+                      {new Date(ex.date).toLocaleDateString(undefined, {
+                        month: 'long',
+                        day: 'numeric',
+                        year: 'numeric',
+                      })}
+                    </span>
+                  </div>
+                  <p className="verse-panel-excerpt-text">{ex.excerpt}</p>
+                  <Link to={`/journal?entry=${ex.entryId}`} className="verse-panel-excerpt-link">
+                    Open full entry →
+                  </Link>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 

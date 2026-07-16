@@ -62,7 +62,12 @@ journal (timeline + editor, inline `@Book chapter:verse` tagging that resolves t
 with an inline preview and "Open in reading view" deep link — see
 `src/features/journal/verseTagParser.ts`; tags are parsed on save/render rather than live
 autocomplete-while-typing, a deliberate Phase 1 simplification vs. the spec's described UX).
-Still open: the fuller side panel (journal/reflection excerpts alongside margin notes — currently
-each surface is separate), reading-session auto-capture. Text selection (drag-to-select,
-multi-span highlights/notes, word-tap lexicon) is designed per amendment v1.1 §A9 but not built —
-current interaction is still tap-the-whole-verse.
+The verse side panel is now the spec's "payoff feature" for real: tapping a verse shows margin
+notes and journal excerpts (title, date, surrounding text, "Open full entry" deep-link that
+scrolls to and highlights the entry on the journal page) grouped together, plus a quiet dot
+indicator per type in the running text. Reflections and TSK cross-references aren't in the panel
+yet since neither surface exists (Phase 2/3 per spec).
+
+Still open: reading-session auto-capture. Text selection (drag-to-select, multi-span
+highlights/notes, word-tap lexicon) is designed per amendment v1.1 §A9 but not built — current
+interaction is still tap-the-whole-verse.
