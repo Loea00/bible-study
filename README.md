@@ -57,8 +57,12 @@ matching the `verses` table columns exactly). Import it via Supabase dashboard �
 
 Phase 1 in progress. Done: scaffold deployed (Vercel + Supabase, live), DB schema (incl. v1.1 span
 anchoring), auth (email+password), reading view renders real KJV/ASV text by book/chapter with a
-translation switcher, margin notes (add/delete), verse highlighting in 5 colors (add/remove).
-Still open: journal with inline @verse tagging, the fuller side panel (journal/reflection
-excerpts — currently only margin notes surface there), reading-session auto-capture. Text
-selection (drag-to-select, multi-span highlights/notes, word-tap lexicon) is designed per
-amendment v1.1 §A9 but not built — current interaction is still tap-the-whole-verse.
+translation switcher, margin notes (add/delete), verse highlighting in 5 colors (add/remove),
+journal (timeline + editor, inline `@Book chapter:verse` tagging that resolves to a clickable chip
+with an inline preview and "Open in reading view" deep link — see
+`src/features/journal/verseTagParser.ts`; tags are parsed on save/render rather than live
+autocomplete-while-typing, a deliberate Phase 1 simplification vs. the spec's described UX).
+Still open: the fuller side panel (journal/reflection excerpts alongside margin notes — currently
+each surface is separate), reading-session auto-capture. Text selection (drag-to-select,
+multi-span highlights/notes, word-tap lexicon) is designed per amendment v1.1 §A9 but not built —
+current interaction is still tap-the-whole-verse.

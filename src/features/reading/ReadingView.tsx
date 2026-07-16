@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useVerses } from './useVerses'
 import { useMarginNotes } from './useMarginNotes'
 import { useHighlights } from './useHighlights'
@@ -10,8 +11,9 @@ import type { Verse } from '../../types/db'
 const TRANSLATIONS = ['KJV', 'ASV']
 
 export function ReadingView() {
-  const [book, setBook] = useState('GEN')
-  const [chapter, setChapter] = useState(1)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const book = searchParams.get('book') ?? 'GEN'
+  const chapter = Number.parseInt(searchParams.get('chapter') ?? '1', 10) || 1
   const [translation, setTranslation] = useState('KJV')
   const [pickerOpen, setPickerOpen] = useState(false)
   const [selectedVerse, setSelectedVerse] = useState<Verse | null>(null)
@@ -22,8 +24,7 @@ export function ReadingView() {
   const bookName = BOOK_BY_CODE[book]?.name ?? book
 
   function handleSelect(newBook: string, newChapter: number) {
-    setBook(newBook)
-    setChapter(newChapter)
+    setSearchParams({ book: newBook, chapter: String(newChapter) })
     setPickerOpen(false)
   }
 
