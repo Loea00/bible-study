@@ -68,6 +68,13 @@ scrolls to and highlights the entry on the journal page) grouped together, plus 
 indicator per type in the running text. Reflections and TSK cross-references aren't in the panel
 yet since neither surface exists (Phase 2/3 per spec).
 
-Still open: reading-session auto-capture. Text selection (drag-to-select, multi-span
-highlights/notes, word-tap lexicon) is designed per amendment v1.1 §A9 but not built — current
-interaction is still tap-the-whole-verse.
+Reading sessions now auto-capture in the background (`src/features/reading/useReadingSession.ts`):
+opening the reading view starts or continues a session (rolling forward on each passage change,
+30-minute inactivity gap before a new one starts) and writes `passage_start`/`passage_end`/
+`last_position` to `reading_sessions`. No UI reads this yet — that's the Phase 2 reading log and
+"resume where I left off" surfaces — this is purely the capture mechanism landing first, per the
+spec's own phasing.
+
+**All of Phase 1's original spec checklist is now built.** Text selection (drag-to-select,
+multi-span highlights/notes, word-tap lexicon) is designed per amendment v1.1 §A9 but not built —
+current interaction is still tap-the-whole-verse; that lands with Phase 2 lexicon work.

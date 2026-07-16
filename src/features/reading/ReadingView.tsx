@@ -4,6 +4,7 @@ import { useVerses } from './useVerses'
 import { useMarginNotes } from './useMarginNotes'
 import { useHighlights } from './useHighlights'
 import { useJournalExcerpts } from './useJournalExcerpts'
+import { useReadingSession } from './useReadingSession'
 import { PassagePicker } from './PassagePicker'
 import { VersePanel } from './VersePanel'
 import { BOOK_BY_CODE } from './books'
@@ -23,6 +24,7 @@ export function ReadingView() {
   const { notesByVerse, addNote, deleteNote } = useMarginNotes(book, chapter)
   const { colorByVerse, setHighlight } = useHighlights(book, chapter)
   const { excerptsByVerse } = useJournalExcerpts(book, chapter)
+  useReadingSession(book, chapter)
   const bookName = BOOK_BY_CODE[book]?.name ?? book
 
   function handleSelect(newBook: string, newChapter: number) {
