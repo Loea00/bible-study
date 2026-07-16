@@ -17,6 +17,13 @@ alter table verse_references
 
 alter table highlights rename to highlights_v1;
 
+-- Index names are unique per-schema in Postgres, not per-table, so the old
+-- indexes (still attached to the renamed table) would collide with the new
+-- table's indexes below. Drop them now — highlights_v1 is dropped entirely
+-- a few statements down anyway, so they're not needed for that long.
+drop index highlights_user_id_idx;
+drop index highlights_verse_range_idx;
+
 create table highlights (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users (id) on delete cascade,
