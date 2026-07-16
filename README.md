@@ -1,7 +1,10 @@
 # Bible Study App
 
 Phase 1 scaffold: React + TypeScript (Vite) frontend, Supabase (Postgres/auth) backend. See
-`bible-study-app-spec.md` for the full product spec.
+`bible-study-app-spec.md` for the full product spec, plus `spec-amendment-v1-1-highlights.md`
+(span anchoring, unified across notes/highlights/journal tags) and
+`spec-amendment-v1-2-prayer-social.md` (Phase 2+ prayer system, AI grounding, social — roadmap
+only, no code yet).
 
 ## Setup
 
@@ -15,9 +18,11 @@ Phase 1 scaffold: React + TypeScript (Vite) frontend, Supabase (Postgres/auth) b
 4. `npm install`
 5. `npm run dev`
 
-Auth is email magic-link (Supabase OTP). Phase 1 is single-user (Aaron), but every table is
-scoped by `user_id` with row-level security from day one, so opening the app to more users later
-is a matter of enabling sign-ups, not restructuring data.
+Auth is email + password (switched from magic-link — Supabase's built-in email service rate-limits
+hard and custom SMTP isn't set up yet). New accounts are created via Supabase dashboard →
+Authentication → Users → Add User with "Auto Confirm User" checked, no email involved. Phase 1 is
+single-user (Aaron), but every table is scoped by `user_id` with row-level security from day one,
+so opening the app to more users later is a matter of enabling sign-ups, not restructuring data.
 
 ## Project layout
 
@@ -28,7 +33,8 @@ is a matter of enabling sign-ups, not restructuring data.
 - `src/features/reading/` — reading view (scripture-first home)
 - `src/features/journal/` — journal timeline + editor
 - `supabase/migrations/` — schema: `entries`, `verse_references`, `reading_sessions` (user
-  content) and `translations`, `verses` (bundled public-domain reference text)
+  content), `translations`/`verses` (bundled public-domain reference text), `highlights`
+  (group-based spans per amendment v1.1)
 
 ## Seeding scripture text
 
@@ -49,7 +55,10 @@ matching the `verses` table columns exactly). Import it via Supabase dashboard �
 
 ## Status
 
-Phase 1 in progress. Done: scaffold deployed (Vercel + Supabase, live), DB schema, auth
-(magic-link), reading view renders real KJV/ASV text by book/chapter with a translation switcher.
-Journal (inline @verse tagging), margin notes, side panel, and reading-session auto-capture are
-still placeholders/not started.
+Phase 1 in progress. Done: scaffold deployed (Vercel + Supabase, live), DB schema (incl. v1.1 span
+anchoring), auth (email+password), reading view renders real KJV/ASV text by book/chapter with a
+translation switcher, margin notes (add/delete), verse highlighting in 5 colors (add/remove).
+Still open: journal with inline @verse tagging, the fuller side panel (journal/reflection
+excerpts — currently only margin notes surface there), reading-session auto-capture. Text
+selection (drag-to-select, multi-span highlights/notes, word-tap lexicon) is designed per
+amendment v1.1 §A9 but not built — current interaction is still tap-the-whole-verse.

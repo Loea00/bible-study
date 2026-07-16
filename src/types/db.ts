@@ -35,6 +35,12 @@ export type VerseReference = {
   verse_end: string
   position: number | null
   ref_kind: RefKind
+  // Sub-verse span anchoring (spec amendment v1.1 §A2). Null across all
+  // three = whole-verse reference (today's only case). Present = a precise,
+  // translation-specific span within the verse.
+  start_offset: number | null
+  end_offset: number | null
+  translation: string | null
 }
 
 export type ReadingSession = {
@@ -62,13 +68,23 @@ export type Verse = {
   text: string
 }
 
+// One highlight row is a group; `spans` covers every shape — a partial
+// verse, a whole verse, multiple verses, or non-consecutive parts — in a
+// single row (spec amendment v1.1 §A3). Phase 1 only ever writes single-span
+// whole-verse groups (offsets null) until text-selection ships.
+export type HighlightSpan = {
+  verse_id: string
+  start_offset: number | null
+  end_offset: number | null
+}
+
 export type Highlight = {
   id: string
   user_id: string
-  verse_start: string
-  verse_end: string
-  color: HighlightColor
   created_at: string
+  color: HighlightColor
+  translation: string | null
+  spans: HighlightSpan[]
 }
 
 export type Database = {
@@ -86,7 +102,12 @@ export type Database = {
       }
       verse_references: {
         Row: VerseReference
-        Insert: Omit<VerseReference, 'id'> & { id?: string }
+        Insert: Omit<VerseReference, 'id' | 'start_offset' | 'end_offset' | 'translation'> & {
+          id?: string
+          start_offset?: number | null
+          end_offset?: number | null
+          translation?: string | null
+        }
         Update: Partial<VerseReference>
         Relationships: []
       }
