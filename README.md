@@ -80,12 +80,22 @@ up. Emailed CrossWire (`modules@crosswire.org`) for clarification; no response y
 python3 scripts/transform_word_tags.py
 ```
 
-Produces `data/word_tags.csv` (355,850 rows, 16MB — parses the OSIS `<w lemma="strong:...">`
-tags, filters out the 14 apocryphal books KJVA includes that our 66-book canon doesn't, zero
-parse failures across all 31,102 canonical verses). This is a much bigger import than anything
-so far, so the script also splits it into `data/word_tags_ot.csv` (227,196 rows) and
-`data/word_tags_nt.csv` (128,654 rows) — import each separately via Table Editor → `word_tags`,
-so a failed/timed-out import only means retrying one chunk, not the whole thing.
+Produces `data/word_tags_ot.csv` (227,196 rows) and `data/word_tags_nt.csv` (128,654 rows) —
+parses the OSIS `<w lemma="strong:...">` tags, filters out the 14 apocryphal books KJVA includes
+that our 66-book canon doesn't, zero parse failures across all 31,102 canonical verses. Split
+OT/NT since 355,850 rows in one file is a much bigger import than anything so far — import each
+separately via Table Editor, so a failed/timed-out import only means retrying one chunk.
+
+**Two real import gotchas hit while first doing this, worth knowing about:**
+- Make sure **`word_tags`** is the actually-selected table in the Table Editor sidebar before
+  importing — the error "columns X, Y, Z are not present in your table" showed up because the
+  CSV had gotten pointed at `verses` instead (whose columns partially overlap: both have
+  `verse_id`/`translation_code`/`text`, which is exactly why only *some* columns were flagged).
+- `strongs_ids` is a plain comma-separated `text` column (e.g. `"H853,H1254"`), not a Postgres
+  `text[]` array, even though an array is the more natural type — Supabase's Table Editor CSV
+  importer can't parse Postgres array-literal syntax (`{H853,H1254}`) and silently treats it as
+  null, which then trips the not-null constraint. See migration 0006. Nothing queries this column
+  at the SQL level yet, so the app-code (not SQL) parsing this implies is a fine tradeoff.
 
 `position` is sequence order within the verse, not a character offset into `verses.text` —
 aligning tagged phrases to exact spans in the rendered text is deferred to whichever session

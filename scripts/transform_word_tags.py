@@ -80,8 +80,7 @@ def main():
                         parse_failures += 1
                         continue
                     for position, text, strongs_ids, morph in tags:
-                        array_literal = "{" + ",".join(strongs_ids) + "}"
-                        writer.writerow([verse_id, "KJV", position, text, array_literal, morph])
+                        writer.writerow([verse_id, "KJV", position, text, ",".join(strongs_ids), morph])
                         rows_written[testament] += 1
 
     print(f"OT rows: {rows_written['ot']}, NT rows: {rows_written['nt']}, parse failures: {parse_failures}")
