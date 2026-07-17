@@ -35,7 +35,8 @@ so opening the app to more users later is a matter of enabling sign-ups, not res
 - `src/features/journal/` — journal timeline + editor
 - `supabase/migrations/` — schema: `entries`, `verse_references`, `reading_sessions` (user
   content), `translations`/`verses` (bundled public-domain reference text), `highlights`
-  (group-based spans per amendment v1.1)
+  (group-based spans per amendment v1.1), `strongs_lexicon`/`word_tags` (Strong's data, sourcing
+  only so far — no UI yet, see Status)
 
 ## Seeding scripture text
 
@@ -53,6 +54,42 @@ python3 scripts/transform_kjv.py
 That produces `data/verses_seed.csv` (verse_id, translation_code, book, chapter, verse, text —
 matching the `verses` table columns exactly). Import it via Supabase dashboard → Table Editor →
 `verses` → Insert → Import data from CSV.
+
+## Seeding Strong's data
+
+**Lexicon** (Strong's number → original word/transliteration/definition/derivation), from
+[openscriptures/strongs](https://github.com/openscriptures/strongs) (CC-BY-SA, public-domain
+1890 Strong's Concordance re-keyed to JSON):
+
+```
+python3 scripts/transform_strongs_lexicon.py
+```
+
+Produces `data/strongs_lexicon.csv` (14,197 rows). Import via Table Editor → `strongs_lexicon`.
+
+**Word tagging** (which KJV word/phrase maps to which Strong's number, in actual KJV word order —
+not a reordered Hebrew/Greek gloss), from
+[scrollmapper/bible_databases](https://github.com/scrollmapper/bible_databases)'s `KJVA-osis.json`
+source, which mirrors CrossWire's KJV2003 Project data (OT tagging from The Bible Foundation, NT
+from Dr. Maurice Robinson). **Licensing note:** this data is marked GPL by CrossWire and every
+mirror of it; fine for personal use (where we are now), but revisit before distributing the app
+to other users — see `spec-amendment` discussion in memory/session history if picking this back
+up. Emailed CrossWire (`modules@crosswire.org`) for clarification; no response yet as of writing.
+
+```
+python3 scripts/transform_word_tags.py
+```
+
+Produces `data/word_tags.csv` (355,850 rows, 16MB — parses the OSIS `<w lemma="strong:...">`
+tags, filters out the 14 apocryphal books KJVA includes that our 66-book canon doesn't, zero
+parse failures across all 31,102 canonical verses). This is a much bigger import than anything
+so far, so the script also splits it into `data/word_tags_ot.csv` (227,196 rows) and
+`data/word_tags_nt.csv` (128,654 rows) — import each separately via Table Editor → `word_tags`,
+so a failed/timed-out import only means retrying one chunk, not the whole thing.
+
+`position` is sequence order within the verse, not a character offset into `verses.text` —
+aligning tagged phrases to exact spans in the rendered text is deferred to whichever session
+builds the actual tap-word UI.
 
 ## Status
 
