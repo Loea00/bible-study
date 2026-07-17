@@ -169,12 +169,31 @@ screenshot, but clicks landed on the passage text underneath instead of the bar.
 `position: fixed`, which resolves directly against the viewport, matching what
 `getBoundingClientRect()` already returns.
 
-**Deliberately not in this pass:** the "+Add" multi-select mode for building one highlight/note
-out of non-consecutive selections, and the concordance ("other occurrences") view. Both are real
-remaining pieces, scoped out on purpose rather than folded in.
+**Concordance view and "+Add" multi-select are now both live**, closing out the two pieces scoped
+out of the interaction-redesign session:
 
-Still ahead in Phase 2: the two items above, calendar, reading plans, TSK cross-references, search
-across own writing, "Today, I..." templates.
+- **Concordance** (`ConcordanceView.tsx`) — "Other occurrences →" on each lexicon entry in
+  `LexiconCard` opens every other place in KJV that Strong's number appears, sorted in canonical
+  book order then numeric chapter/verse, each a deep-link back into the reading view. Backed by a
+  new `verses_for_strongs(target_id, max_results)` Postgres function
+  (`supabase/migrations/0007_concordance.sql`, **not yet run** — needs to be applied via the
+  Supabase SQL Editor before real data shows) that does exact membership matching within
+  `word_tags.strongs_ids`'s comma-separated text via `string_to_array(...) = any(...)`, avoiding
+  `LIKE`-substring false positives (H430 matching H4300). Capped at 300 results, shown as "First
+  300 occurrences" when hit. `LexiconCard` renders it as a sibling overlay, not a nested one — an
+  earlier attempt at nesting meant closing the concordance card's own backdrop also closed the
+  lexicon card underneath.
+- **"+Add"** (spec amendment v1.1 §A9) — the `SelectionActionBar` now has a fourth action beside
+  Highlight/Note/Copy. Clicking it holds the current selection in a `pendingGroup` (state lives in
+  `ReadingView`) instead of committing it, so the next selection — anywhere else in the passage —
+  can join it; a persistent `PendingGroupBar` at the bottom of the screen shows the running count
+  and lets you commit the whole group as one highlight or note, or clear it. Spans held in the
+  group render with a dashed underline (`.pending-mark`) distinct from the five highlight colors.
+  No backend changes were needed — `createHighlight`/`addNote` already accepted arbitrary
+  `SelectionSpan[]` groups from the interaction-redesign session.
+
+Still ahead in Phase 2: calendar, reading plans, TSK cross-references, search across own writing,
+"Today, I..." templates.
 
 ## TODO — amendment v1.4 (theming), intentionally deferred
 

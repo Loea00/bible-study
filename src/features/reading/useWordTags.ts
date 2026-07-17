@@ -1,14 +1,8 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
+import type { WordTag } from '../../types/db'
 
-export interface WordTag {
-  id: string
-  verse_id: string
-  position: number
-  text: string
-  strongs_ids: string
-  morph: string | null
-}
+export type { WordTag }
 
 export function useWordTags(book: string, chapter: number, translation: string) {
   const [tagsByVerse, setTagsByVerse] = useState<Record<string, WordTag[]>>({})

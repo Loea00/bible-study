@@ -6,15 +6,25 @@ const HIGHLIGHT_COLORS: HighlightColor[] = ['yellow', 'green', 'blue', 'pink', '
 interface SelectionActionBarProps {
   rect: DOMRect
   selectedText: string
+  groupCount: number
   onHighlight: (color: HighlightColor) => Promise<void>
   onNote: () => void
+  onAddToGroup: () => void
   onClose: () => void
 }
 
 // Reflect and Ask aren't built yet (reflection mode + AI assistant are
-// later Phase 2/3 surfaces), so the action bar is Highlight/Note/Copy only
-// for now — not the full spec 5.1 selection-action set.
-export function SelectionActionBar({ rect, selectedText, onHighlight, onNote, onClose }: SelectionActionBarProps) {
+// later Phase 2/3 surfaces), so the action bar is Highlight/Note/Copy/+Add
+// only for now — not the full spec 5.1 selection-action set.
+export function SelectionActionBar({
+  rect,
+  selectedText,
+  groupCount,
+  onHighlight,
+  onNote,
+  onAddToGroup,
+  onClose,
+}: SelectionActionBarProps) {
   const [copied, setCopied] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -62,10 +72,13 @@ export function SelectionActionBar({ rect, selectedText, onHighlight, onNote, on
       </div>
       <div className="selection-bar-divider" />
       <button type="button" className="selection-bar-action" onClick={onNote}>
-        Note
+        {groupCount > 0 ? `Note (${groupCount + 1})` : 'Note'}
       </button>
       <button type="button" className="selection-bar-action" onClick={handleCopy}>
         {copied ? 'Copied' : 'Copy'}
+      </button>
+      <button type="button" className="selection-bar-action" onClick={onAddToGroup}>
+        + Add
       </button>
       {error && <p className="error">{error}</p>}
     </div>

@@ -1,6 +1,7 @@
 import { Fragment, type ReactNode } from 'react'
 import type { WordTag } from './useWordTags'
 import type { HighlightColor } from '../../types/db'
+import type { SelectionSpan } from './selection'
 
 export interface RenderedHighlight {
   startOffset: number
@@ -13,6 +14,7 @@ interface VerseTextProps {
   text: string
   tags: WordTag[]
   highlights: RenderedHighlight[]
+  pending: SelectionSpan[]
   onWordTap: (strongsIds: string[]) => void
   onHighlightTap: (color: HighlightColor) => void
 }
@@ -47,10 +49,10 @@ function findWordIntervals(text: string, tags: WordTag[]): WordInterval[] {
 // interval boundary from both sets, then render each resulting segment
 // wrapped in whichever of the two applies to it — this handles overlap
 // without needing to merge/split the source intervals themselves.
-export function VerseText({ verseId, text, tags, highlights, onWordTap, onHighlightTap }: VerseTextProps) {
+export function VerseText({ verseId, text, tags, highlights, pending, onWordTap, onHighlightTap }: VerseTextProps) {
   const wordIntervals = findWordIntervals(text, tags)
 
-  if (wordIntervals.length === 0 && highlights.length === 0) {
+  if (wordIntervals.length === 0 && highlights.length === 0 && pending.length === 0) {
     return (
       <span data-verse-content={verseId}>{text}</span>
     )
@@ -65,6 +67,10 @@ export function VerseText({ verseId, text, tags, highlights, onWordTap, onHighli
     cutPoints.add(h.startOffset)
     cutPoints.add(h.endOffset)
   }
+  for (const p of pending) {
+    cutPoints.add(p.startOffset)
+    cutPoints.add(p.endOffset)
+  }
   const sorted = [...cutPoints].sort((a, b) => a - b)
 
   const parts: ReactNode[] = []
@@ -75,6 +81,7 @@ export function VerseText({ verseId, text, tags, highlights, onWordTap, onHighli
 
     const word = wordIntervals.find((w) => w.start <= start && w.end >= end)
     const highlight = highlights.find((h) => h.startOffset <= start && h.endOffset >= end)
+    const isPending = pending.some((p) => p.startOffset <= start && p.endOffset >= end)
 
     let node: ReactNode = text.slice(start, end)
 
@@ -104,6 +111,10 @@ export function VerseText({ verseId, text, tags, highlights, onWordTap, onHighli
           {node}
         </span>
       )
+    }
+
+    if (isPending) {
+      node = <span className="pending-mark">{node}</span>
     }
 
     parts.push(<Fragment key={`${start}-${end}`}>{node}</Fragment>)

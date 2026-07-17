@@ -87,6 +87,28 @@ export type Highlight = {
   spans: HighlightSpan[]
 }
 
+export type StrongsLexicon = {
+  strongs_id: string
+  language: 'hebrew' | 'greek'
+  lemma: string
+  transliteration: string | null
+  pronunciation: string | null
+  derivation: string | null
+  definition: string | null
+  kjv_def: string | null
+}
+
+export type WordTag = {
+  id: string
+  verse_id: string
+  translation_code: string
+  position: number
+  text: string
+  // Comma-separated, not a real array — see migration 0006's note on why.
+  strongs_ids: string
+  morph: string | null
+}
+
 export type Database = {
   public: {
     Tables: {
@@ -135,8 +157,25 @@ export type Database = {
         Update: Partial<Highlight>
         Relationships: []
       }
+      strongs_lexicon: {
+        Row: StrongsLexicon
+        Insert: StrongsLexicon
+        Update: Partial<StrongsLexicon>
+        Relationships: []
+      }
+      word_tags: {
+        Row: WordTag
+        Insert: Omit<WordTag, 'id'> & { id?: string }
+        Update: Partial<WordTag>
+        Relationships: []
+      }
     }
     Views: Record<string, never>
-    Functions: Record<string, never>
+    Functions: {
+      verses_for_strongs: {
+        Args: { target_id: string; max_results?: number }
+        Returns: { verse_id: string; tag_text: string }[]
+      }
+    }
   }
 }

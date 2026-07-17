@@ -11,6 +11,7 @@ import { VersePanel } from './VersePanel'
 import { VerseText } from './VerseText'
 import { LexiconCard } from './LexiconCard'
 import { SelectionActionBar } from './SelectionActionBar'
+import { PendingGroupBar } from './PendingGroupBar'
 import { NoteComposer } from './NoteComposer'
 import { getSelectionSpans, getSelectionBoundingRect, clearSelection, type SelectionSpan } from './selection'
 import { BOOK_BY_CODE } from './books'
@@ -31,7 +32,8 @@ export function ReadingView() {
     rect: DOMRect
     text: string
   } | null>(null)
-  const [noteComposerOpen, setNoteComposerOpen] = useState(false)
+  const [pendingGroup, setPendingGroup] = useState<SelectionSpan[]>([])
+  const [noteSpans, setNoteSpans] = useState<SelectionSpan[] | null>(null)
 
   const { verses, loading, error } = useVerses(book, chapter, translation)
   const { notesByVerse, addNote, deleteNote } = useMarginNotes(book, chapter)
@@ -73,16 +75,49 @@ export function ReadingView() {
     setActiveSelection(null)
   }
 
-  async function handleHighlightSelection(color: HighlightColor) {
+  // "+ Add" (spec amendment v1.1 §A9): hold the current selection in a
+  // provisional group instead of committing it, so the next selection can
+  // join it — the designed way to mark non-consecutive text as one
+  // highlight/note, since no native gesture does this.
+  function handleAddToGroup() {
     if (!activeSelection) return
-    await createHighlight(activeSelection.spans, color)
+    setPendingGroup((prev) => [...prev, ...activeSelection.spans])
     closeSelection()
   }
 
-  async function handleSaveNote(body: string) {
+  function clearPendingGroup() {
+    setPendingGroup([])
+  }
+
+  async function handleHighlightSelection(color: HighlightColor) {
     if (!activeSelection) return
-    await addNote(activeSelection.spans, body, translation)
-    setNoteComposerOpen(false)
+    const spans = [...pendingGroup, ...activeSelection.spans]
+    await createHighlight(spans, color)
+    clearPendingGroup()
+    closeSelection()
+  }
+
+  async function handleHighlightPending(color: HighlightColor) {
+    if (pendingGroup.length === 0) return
+    await createHighlight(pendingGroup, color)
+    clearPendingGroup()
+  }
+
+  function openNoteFromSelection() {
+    if (!activeSelection) return
+    setNoteSpans([...pendingGroup, ...activeSelection.spans])
+  }
+
+  function openNoteFromPending() {
+    if (pendingGroup.length === 0) return
+    setNoteSpans(pendingGroup)
+  }
+
+  async function handleSaveNote(body: string) {
+    if (!noteSpans) return
+    await addNote(noteSpans, body, translation)
+    setNoteSpans(null)
+    clearPendingGroup()
     closeSelection()
   }
 
@@ -97,6 +132,11 @@ export function ReadingView() {
         ).values(),
       )
     : []
+
+  const pendingByVerse: Record<string, SelectionSpan[]> = {}
+  for (const span of pendingGroup) {
+    ;(pendingByVerse[span.verseId] ??= []).push(span)
+  }
 
   return (
     <div className="reading-view">
@@ -125,21 +165,32 @@ export function ReadingView() {
         <LexiconCard strongsIds={selectedWord} onClose={() => setSelectedWord(null)} />
       )}
 
-      {activeSelection && !noteComposerOpen && (
+      {activeSelection && !noteSpans && (
         <SelectionActionBar
           rect={activeSelection.rect}
           selectedText={activeSelection.text}
+          groupCount={pendingGroup.length}
           onHighlight={handleHighlightSelection}
-          onNote={() => setNoteComposerOpen(true)}
+          onNote={openNoteFromSelection}
+          onAddToGroup={handleAddToGroup}
           onClose={closeSelection}
         />
       )}
 
-      {noteComposerOpen && (
+      {pendingGroup.length > 0 && !activeSelection && !noteSpans && (
+        <PendingGroupBar
+          count={pendingGroup.length}
+          onHighlight={handleHighlightPending}
+          onNote={openNoteFromPending}
+          onClear={clearPendingGroup}
+        />
+      )}
+
+      {noteSpans && (
         <NoteComposer
           onSave={handleSaveNote}
           onClose={() => {
-            setNoteComposerOpen(false)
+            setNoteSpans(null)
             closeSelection()
           }}
         />
@@ -180,6 +231,7 @@ export function ReadingView() {
               text={v.text}
               tags={tagsByVerse[v.verse_id] ?? []}
               highlights={highlightsByVerse[v.verse_id] ?? []}
+              pending={pendingByVerse[v.verse_id] ?? []}
               onWordTap={setSelectedWord}
               onHighlightTap={() => openVerseView(v)}
             />

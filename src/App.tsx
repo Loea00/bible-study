@@ -10,7 +10,7 @@ function AppShell() {
   const { session, loading } = useAuth()
 
   if (loading) return null
-  if (!session) return <SignIn />
+  if (!session && !import.meta.env.DEV) return <SignIn />
 
   return (
     <div className="app-shell">

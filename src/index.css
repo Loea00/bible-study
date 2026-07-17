@@ -957,3 +957,90 @@ main {
 .selection-bar-action:hover {
   color: var(--accent);
 }
+
+.lexicon-occurrences-link {
+  border: none;
+  background: none;
+  color: var(--accent);
+  font-family: var(--sans);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0;
+  margin-top: 4px;
+}
+
+.concordance-count {
+  font-family: var(--sans);
+  font-size: 12px;
+  color: var(--text);
+  opacity: 0.6;
+  margin: 0 0 12px;
+}
+
+.concordance-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.concordance-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 6px;
+  border-radius: 6px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.concordance-item:hover {
+  background: var(--code-bg, rgba(128, 128, 128, 0.08));
+}
+
+.concordance-ref {
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--accent);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.concordance-text {
+  font-family: var(--serif);
+  font-size: 15px;
+  color: var(--text-h);
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pending-mark {
+  background: var(--code-bg, rgba(128, 128, 128, 0.18));
+  border-bottom: 2px dashed var(--accent);
+  border-radius: 2px;
+}
+
+.pending-bar {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 12px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  font-family: var(--sans);
+}
+
+.pending-bar-count {
+  font-size: 13px;
+  color: var(--text);
+  opacity: 0.75;
+  white-space: nowrap;
+}
