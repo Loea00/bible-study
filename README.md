@@ -218,20 +218,40 @@ authenticated write path to create real entries to search.
   the word-tap span and the highlight span, and word-tap's handler called `stopPropagation()`,
   always winning. Since nearly every KJV word carries a Strong's tag, a highlighted phrase is
   *mostly* word-tap surface — in practice, almost nowhere to tap that hit the highlight instead.
-  Fixed by giving the highlight tap priority whenever both apply; word-tap still works everywhere
-  text isn't highlighted. Verified with mock highlight data (real writes need auth, unavailable in
-  this dev session) that tapping a highlighted, word-tagged phrase now opens the verse panel.
-- **No way to add a note to an already-highlighted span, or extend a highlight.** The
-  `selectionchange` fix above resolves re-selecting over/through highlighted text (verified: a new
-  drag-selection starting inside a highlight and extending beyond it works normally). Extending an
-  existing highlight's spans is a new, explicitly-requested feature: `VersePanel` now has an
-  "Extend" action per highlight alongside "Remove" — it loads that highlight's full span group
-  (`useHighlights.ts`'s new `getHighlightSpans`/`raw` state, since the per-verse `highlightsByVerse`
-  view doesn't retain the whole group) into the existing `pendingGroup` (`+Add`) machinery, so
-  making a new selection and committing calls a new `updateHighlight` (in place of `createHighlight`)
-  against the same row. Growing only — shrinking/removing individual spans from an existing group
-  isn't supported, since that wasn't what was asked for. Verified end-to-end with mock data: Extend
-  → new selection → commit correctly reached `updateHighlight` with the combined span set.
+  First fixed by flipping the priority (highlight wins the tap); **superseded a day later** by the
+  dot-based redesign below, once flipping priority the other way turned out to just trade the same
+  problem for word-tap becoming unreachable on highlighted text instead (see next entry).
+- **Extend a highlight, or add a note to an already-highlighted span.** Built as a first pass reusing
+  `VersePanel`'s single-verse view with Extend/Remove actions and the `+Add` `pendingGroup` machinery
+  for growing a highlight's spans (`useHighlights.ts`'s `getHighlightSpans`/`raw` state + a new
+  `updateHighlight`, used in place of `createHighlight` while editing). Landed, but real laptop use
+  turned up two follow-on problems addressed in the same session: (1) that single-verse `VersePanel`
+  could only ever show the ONE verse tapped, not a non-consecutive highlight's other parts, so there
+  was no way to see or note the "sum of the parts" of a multi-select highlight; (2) flipping
+  highlight-tap to win over word-tap (previous entry) made lexicon lookups unreachable on any
+  highlighted, word-tagged text — trading one unreachable feature for another.
+
+  **Redesigned to separate the two concerns entirely** instead of having them compete for the same
+  tap: word-tap now always wins on text (`VerseText.tsx` no longer gives highlight-mark spans a
+  click handler at all — they're purely a background-color style now), and highlight management
+  moved to a small dedicated indicator dot per verse per highlight group
+  (`.verse-highlight-dot`, styled like the existing note-dot/journal-dot pattern), opening a new
+  **`HighlightGroupPanel.tsx`** — not the per-verse `VersePanel`. It fetches and shows *every* span
+  in the group in selection order, each with its own book/chapter/verse reference (via new shared
+  `parseVerseId`/`formatReference` helpers promoted from `ConcordanceView.tsx` into `books.ts`,
+  since this was the third place duplicating that logic), fetching verse text directly by verse_id
+  rather than relying on whatever chapter happens to be open — correct even if a group's spans
+  reach outside the current chapter. Extend/Note/Remove all act on the whole group: Note reuses
+  `addNote(spans, ...)` fed from the group's exact spans (the "sum of the parts" note/reflect ask),
+  Remove deletes the whole row (all spans go together, as already confirmed working), and Extend is
+  unchanged from the first pass. `VersePanel` reverts to notes/journal only — it's deliberately
+  single-verse-scoped and was never going to be able to represent a multi-verse group correctly.
+  Verified end-to-end with a mock non-consecutive, multi-verse highlight (Gen.1.1 + Gen.1.3): the
+  dot correctly opens a panel listing both pieces with their real references, word-tap on
+  highlighted text opens the lexicon normally again, and Note opens the composer against both spans.
+
+  **Not built:** "reflect on the sum of the parts" — reflection mode doesn't exist anywhere in the
+  app yet (Phase 2/3 per spec); only the note half of that request was buildable today.
 
 Still ahead in Phase 2: calendar, reading plans, TSK cross-references, "Today, I..." templates.
 

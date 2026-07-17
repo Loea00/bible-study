@@ -78,3 +78,14 @@ export const BOOKS: BookInfo[] = [
 export const BOOK_BY_CODE: Record<string, BookInfo> = Object.fromEntries(
   BOOKS.map((b) => [b.code, b]),
 )
+
+export function parseVerseId(verseId: string) {
+  const [book, chapter, verse] = verseId.split('.')
+  return { book, chapter: Number(chapter), verse: Number(verse) }
+}
+
+export function formatReference(verseId: string): string {
+  const { book, chapter, verse } = parseVerseId(verseId)
+  const name = BOOK_BY_CODE[book]?.name ?? book
+  return `${name} ${chapter}:${verse}`
+}

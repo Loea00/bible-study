@@ -308,8 +308,33 @@ main {
   cursor: pointer;
 }
 
-.highlight-mark {
+.verse-highlight-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-left: 6px;
+  vertical-align: middle;
   cursor: pointer;
+}
+
+.verse-highlight-dot-yellow {
+  background: var(--highlight-yellow);
+}
+.verse-highlight-dot-green {
+  background: var(--highlight-green);
+}
+.verse-highlight-dot-blue {
+  background: var(--highlight-blue);
+}
+.verse-highlight-dot-pink {
+  background: var(--highlight-pink);
+}
+.verse-highlight-dot-purple {
+  background: var(--highlight-purple);
+}
+
+.highlight-mark {
   border-radius: 2px;
 }
 .highlight-mark.highlight-yellow {
@@ -328,25 +353,55 @@ main {
   background: var(--highlight-purple-wash);
 }
 
-.highlight-row {
+.highlight-group-header {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  align-items: center;
+  gap: 10px;
   margin-bottom: 16px;
   padding-bottom: 16px;
   border-bottom: 1px solid var(--border);
 }
 
-.highlight-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+.highlight-group-count {
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--text);
+  opacity: 0.6;
 }
 
-.highlight-item-actions {
+.highlight-group-pieces {
   display: flex;
+  flex-direction: column;
   gap: 12px;
-  margin-left: auto;
+  margin-bottom: 16px;
+}
+
+.highlight-group-piece {
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: var(--code-bg, rgba(128, 128, 128, 0.08));
+}
+
+.highlight-group-ref {
+  display: block;
+  font-family: var(--sans);
+  font-size: 12px;
+  color: var(--accent);
+  margin-bottom: 4px;
+}
+
+.highlight-group-text {
+  font-family: var(--serif);
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--text-h);
+  margin: 0;
+}
+
+.highlight-group-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 
 .highlight-swatch {

@@ -16,7 +16,6 @@ interface VerseTextProps {
   highlights: RenderedHighlight[]
   pending: SelectionSpan[]
   onWordTap: (strongsIds: string[]) => void
-  onHighlightTap: (color: HighlightColor) => void
 }
 
 interface WordInterval {
@@ -48,12 +47,14 @@ function findWordIntervals(text: string, tags: WordTag[]): WordInterval[] {
 // at every interval boundary from both sets, then render each resulting
 // segment wrapped in whichever of the two applies to it — this handles
 // overlap without needing to merge/split the source intervals themselves.
-// When both apply, the highlight wins the tap: with nearly every KJV word
-// carrying a Strong's tag, a highlighted phrase is *mostly* word-tap
-// surface, so if word-tap kept the tap (as it used to, via stopPropagation)
-// a highlight became practically un-tappable — no reachable way to open it
-// for removal. Word-tap still works everywhere text isn't highlighted.
-export function VerseText({ verseId, text, tags, highlights, pending, onWordTap, onHighlightTap }: VerseTextProps) {
+// Word-tap always keeps the tap (lexicon lookup should work on any tagged
+// word, highlighted or not); the highlight only contributes background
+// color here. Highlight management (view/note/extend/remove) lives behind
+// a dedicated per-verse indicator instead of competing for the same tap —
+// an earlier attempt at having the highlight win the tap when both applied
+// made word-tap unreachable on highlighted text, which is exactly backwards
+// from what was needed.
+export function VerseText({ verseId, text, tags, highlights, pending, onWordTap }: VerseTextProps) {
   const wordIntervals = findWordIntervals(text, tags)
 
   if (wordIntervals.length === 0 && highlights.length === 0 && pending.length === 0) {
@@ -89,7 +90,7 @@ export function VerseText({ verseId, text, tags, highlights, pending, onWordTap,
 
     let node: ReactNode = text.slice(start, end)
 
-    if (word && !highlight) {
+    if (word) {
       node = (
         <span
           className="tappable-word"
@@ -104,17 +105,7 @@ export function VerseText({ verseId, text, tags, highlights, pending, onWordTap,
     }
 
     if (highlight) {
-      node = (
-        <span
-          className={`highlight-mark highlight-${highlight.color}`}
-          onClick={(e) => {
-            e.stopPropagation()
-            onHighlightTap(highlight.color)
-          }}
-        >
-          {node}
-        </span>
-      )
+      node = <span className={`highlight-mark highlight-${highlight.color}`}>{node}</span>
     }
 
     if (isPending) {

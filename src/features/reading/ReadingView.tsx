@@ -8,6 +8,7 @@ import { useReadingSession } from './useReadingSession'
 import { useWordTags } from './useWordTags'
 import { PassagePicker } from './PassagePicker'
 import { VersePanel } from './VersePanel'
+import { HighlightGroupPanel } from './HighlightGroupPanel'
 import { VerseText } from './VerseText'
 import { LexiconCard } from './LexiconCard'
 import { SelectionActionBar } from './SelectionActionBar'
@@ -35,14 +36,18 @@ export function ReadingView() {
   const [pendingGroup, setPendingGroup] = useState<SelectionSpan[]>([])
   const [noteSpans, setNoteSpans] = useState<SelectionSpan[] | null>(null)
   const [editingHighlightId, setEditingHighlightId] = useState<string | null>(null)
+  const [openHighlightId, setOpenHighlightId] = useState<string | null>(null)
 
   const { verses, loading, error } = useVerses(book, chapter, translation)
   const { notesByVerse, addNote, deleteNote } = useMarginNotes(book, chapter)
-  const { highlightsByVerse, createHighlight, updateHighlight, removeHighlight, getHighlightSpans } = useHighlights(
-    book,
-    chapter,
-    translation,
-  )
+  const {
+    highlightsByVerse,
+    createHighlight,
+    updateHighlight,
+    removeHighlight,
+    getHighlightSpans,
+    getHighlight,
+  } = useHighlights(book, chapter, translation)
   const { excerptsByVerse } = useJournalExcerpts(book, chapter)
   const tagsByVerse = useWordTags(book, chapter, translation)
   useReadingSession(book, chapter)
@@ -127,7 +132,23 @@ export function ReadingView() {
     if (spans.length === 0) return
     setPendingGroup(spans)
     setEditingHighlightId(highlightId)
-    setSelectedVerse(null)
+    setOpenHighlightId(null)
+  }
+
+  // Notes anchor to the highlight's exact span group (spec's "sum of the
+  // parts") — reuses the same addNote(spans, ...) the selection flow uses,
+  // just fed from an existing highlight's spans instead of a fresh
+  // selection, so one note can cover the same non-consecutive text.
+  function openNoteFromHighlight(highlightId: string) {
+    const spans = getHighlightSpans(highlightId)
+    if (spans.length === 0) return
+    setNoteSpans(spans)
+    setOpenHighlightId(null)
+  }
+
+  async function handleRemoveHighlightGroup(highlightId: string) {
+    await removeHighlight(highlightId)
+    setOpenHighlightId(null)
   }
 
   async function handleHighlightSelection(color: HighlightColor) {
@@ -174,18 +195,23 @@ export function ReadingView() {
     setSelectedVerse(v)
   }
 
-  const panelHighlights = selectedVerse
-    ? Array.from(
-        new Map(
-          (highlightsByVerse[selectedVerse.verse_id] ?? []).map((h) => [h.id, { id: h.id, color: h.color }]),
-        ).values(),
-      )
-    : []
-
   const pendingByVerse: Record<string, SelectionSpan[]> = {}
   for (const span of pendingGroup) {
     ;(pendingByVerse[span.verseId] ??= []).push(span)
   }
+
+  // One dot per distinct highlight group touching this verse (a group can
+  // touch several verses, and a verse can carry more than one group) — the
+  // dedicated, always-reachable entry point into highlight management, now
+  // that the highlighted text itself is reserved for word-tap.
+  const highlightGroupsByVerse: Record<string, { id: string; color: HighlightColor }[]> = {}
+  for (const [verseId, list] of Object.entries(highlightsByVerse)) {
+    const seen = new Map<string, HighlightColor>()
+    for (const h of list) seen.set(h.id, h.color)
+    highlightGroupsByVerse[verseId] = [...seen.entries()].map(([id, color]) => ({ id, color }))
+  }
+
+  const openHighlight = openHighlightId ? getHighlight(openHighlightId) : undefined
 
   return (
     <div className="reading-view">
@@ -252,11 +278,19 @@ export function ReadingView() {
           reference={`${bookName} ${selectedVerse.chapter}:${selectedVerse.verse}`}
           notes={notesByVerse[selectedVerse.verse_id] ?? []}
           journalExcerpts={excerptsByVerse[selectedVerse.verse_id] ?? []}
-          highlights={panelHighlights}
           onDeleteNote={(entryId) => deleteNote(selectedVerse.verse_id, entryId)}
-          onRemoveHighlight={removeHighlight}
-          onEditHighlight={startEditHighlight}
           onClose={() => setSelectedVerse(null)}
+        />
+      )}
+
+      {openHighlight && !noteSpans && (
+        <HighlightGroupPanel
+          highlight={openHighlight}
+          translation={translation}
+          onExtend={() => startEditHighlight(openHighlight.id)}
+          onNote={() => openNoteFromHighlight(openHighlight.id)}
+          onRemove={() => handleRemoveHighlightGroup(openHighlight.id)}
+          onClose={() => setOpenHighlightId(null)}
         />
       )}
 
@@ -284,7 +318,6 @@ export function ReadingView() {
               highlights={highlightsByVerse[v.verse_id] ?? []}
               pending={pendingByVerse[v.verse_id] ?? []}
               onWordTap={setSelectedWord}
-              onHighlightTap={() => openVerseView(v)}
             />
             {notesByVerse[v.verse_id]?.length > 0 && (
               <span
@@ -306,6 +339,17 @@ export function ReadingView() {
                 }}
               />
             )}
+            {highlightGroupsByVerse[v.verse_id]?.map((h) => (
+              <span
+                key={h.id}
+                className={`verse-highlight-dot verse-highlight-dot-${h.color}`}
+                title="Highlighted"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setOpenHighlightId(h.id)
+                }}
+              />
+            ))}
           </p>
         ))}
       </div>

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
-import { BOOKS, BOOK_BY_CODE } from './books'
+import { BOOKS, parseVerseId, formatReference } from './books'
 
 const BOOK_ORDER = new Map(BOOKS.map((b, i) => [b.code, i]))
 
@@ -14,17 +14,6 @@ interface ConcordanceViewProps {
   strongsId: string
   lemma: string
   onClose: () => void
-}
-
-function parseVerseId(verseId: string) {
-  const [book, chapter, verse] = verseId.split('.')
-  return { book, chapter: Number(chapter), verse: Number(verse) }
-}
-
-function formatReference(verseId: string): string {
-  const { book, chapter, verse } = parseVerseId(verseId)
-  const name = BOOK_BY_CODE[book]?.name ?? book
-  return `${name} ${chapter}:${verse}`
 }
 
 export function ConcordanceView({ strongsId, lemma, onClose }: ConcordanceViewProps) {

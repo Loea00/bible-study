@@ -60,6 +60,10 @@ export function useHighlights(book: string, chapter: number, translation: string
     }))
   }
 
+  function getHighlight(highlightId: string): Highlight | undefined {
+    return raw.find((h) => h.id === highlightId)
+  }
+
   useEffect(() => {
     refetch()
   }, [refetch])
@@ -102,6 +106,7 @@ export function useHighlights(book: string, chapter: number, translation: string
   async function removeHighlight(highlightId: string) {
     const { error } = await supabase.from('highlights').delete().eq('id', highlightId)
     if (error) throw error
+    setRaw((prev) => prev.filter((h) => h.id !== highlightId))
     setByVerse((prev) => {
       const next: Record<string, StoredHighlight[]> = {}
       for (const [verseId, list] of Object.entries(prev)) {
@@ -111,5 +116,12 @@ export function useHighlights(book: string, chapter: number, translation: string
     })
   }
 
-  return { highlightsByVerse: byVerse, createHighlight, updateHighlight, removeHighlight, getHighlightSpans }
+  return {
+    highlightsByVerse: byVerse,
+    createHighlight,
+    updateHighlight,
+    removeHighlight,
+    getHighlightSpans,
+    getHighlight,
+  }
 }

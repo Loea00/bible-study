@@ -1,44 +1,26 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import type { Entry, HighlightColor } from '../../types/db'
+import type { Entry } from '../../types/db'
 import type { JournalExcerpt } from './useJournalExcerpts'
-
-interface PanelHighlight {
-  id: string
-  color: HighlightColor
-}
 
 interface VersePanelProps {
   verseText: string
   reference: string
   notes: Entry[]
   journalExcerpts: JournalExcerpt[]
-  highlights: PanelHighlight[]
   onDeleteNote: (entryId: string) => Promise<void>
-  onRemoveHighlight: (highlightId: string) => Promise<void>
-  onEditHighlight: (highlightId: string) => void
   onClose: () => void
 }
 
-// View + delete only — creating notes/highlights now happens via text
-// selection (spec amendment v1.1 §A9), not from this panel. This panel is
-// what opens when tapping an *existing* mark: a note-dot, a journal-dot, or
-// a highlighted span.
-export function VersePanel({
-  verseText,
-  reference,
-  notes,
-  journalExcerpts,
-  highlights,
-  onDeleteNote,
-  onRemoveHighlight,
-  onEditHighlight,
-  onClose,
-}: VersePanelProps) {
+// View + delete only — creating notes now happens via text selection (spec
+// amendment v1.1 §A9), not from this panel. This panel is what opens when
+// tapping an *existing* note-dot or journal-dot. Highlights have their own
+// dedicated HighlightGroupPanel (a highlight can be a non-consecutive,
+// multi-verse group — this panel is deliberately single-verse-scoped and
+// can't represent that).
+export function VersePanel({ verseText, reference, notes, journalExcerpts, onDeleteNote, onClose }: VersePanelProps) {
   const [deletingNoteId, setDeletingNoteId] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
-  const [removingHighlightId, setRemovingHighlightId] = useState<string | null>(null)
-  const [highlightError, setHighlightError] = useState<string | null>(null)
 
   async function handleDeleteNote(entryId: string) {
     setDeletingNoteId(entryId)
@@ -52,18 +34,6 @@ export function VersePanel({
     }
   }
 
-  async function handleRemoveHighlight(highlightId: string) {
-    setRemovingHighlightId(highlightId)
-    setHighlightError(null)
-    try {
-      await onRemoveHighlight(highlightId)
-    } catch (err) {
-      setHighlightError(err instanceof Error ? err.message : 'Could not remove the highlight.')
-    } finally {
-      setRemovingHighlightId(null)
-    }
-  }
-
   return (
     <div className="picker-overlay" onClick={onClose}>
       <div className="verse-panel" onClick={(e) => e.stopPropagation()}>
@@ -74,30 +44,6 @@ export function VersePanel({
           </button>
         </div>
         <p className="verse-panel-text">{verseText}</p>
-
-        {highlights.length > 0 && (
-          <div className="highlight-row">
-            {highlights.map((h) => (
-              <div key={h.id} className="highlight-item">
-                <span className={`highlight-swatch highlight-swatch-${h.color}`} aria-hidden="true" />
-                <div className="highlight-item-actions">
-                  <button type="button" className="verse-panel-note-delete" onClick={() => onEditHighlight(h.id)}>
-                    Extend
-                  </button>
-                  <button
-                    type="button"
-                    className="verse-panel-note-delete"
-                    disabled={removingHighlightId === h.id}
-                    onClick={() => handleRemoveHighlight(h.id)}
-                  >
-                    {removingHighlightId === h.id ? 'Removing…' : 'Remove'}
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-        {highlightError && <p className="error">{highlightError}</p>}
 
         {notes.length > 0 && (
           <div className="verse-panel-section">
@@ -147,7 +93,7 @@ export function VersePanel({
           </div>
         )}
 
-        {highlights.length === 0 && notes.length === 0 && journalExcerpts.length === 0 && (
+        {notes.length === 0 && journalExcerpts.length === 0 && (
           <p className="placeholder">Nothing connected to this verse yet.</p>
         )}
       </div>
