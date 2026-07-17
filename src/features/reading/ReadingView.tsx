@@ -10,8 +10,11 @@ import { PassagePicker } from './PassagePicker'
 import { VersePanel } from './VersePanel'
 import { VerseText } from './VerseText'
 import { LexiconCard } from './LexiconCard'
+import { SelectionActionBar } from './SelectionActionBar'
+import { NoteComposer } from './NoteComposer'
+import { getSelectionSpans, getSelectionBoundingRect, clearSelection, type SelectionSpan } from './selection'
 import { BOOK_BY_CODE } from './books'
-import type { Verse } from '../../types/db'
+import type { Verse, HighlightColor } from '../../types/db'
 
 const TRANSLATIONS = ['KJV', 'ASV']
 
@@ -22,20 +25,78 @@ export function ReadingView() {
   const [translation, setTranslation] = useState('KJV')
   const [pickerOpen, setPickerOpen] = useState(false)
   const [selectedVerse, setSelectedVerse] = useState<Verse | null>(null)
+  const [selectedWord, setSelectedWord] = useState<string[] | null>(null)
+  const [activeSelection, setActiveSelection] = useState<{
+    spans: SelectionSpan[]
+    rect: DOMRect
+    text: string
+  } | null>(null)
+  const [noteComposerOpen, setNoteComposerOpen] = useState(false)
 
   const { verses, loading, error } = useVerses(book, chapter, translation)
   const { notesByVerse, addNote, deleteNote } = useMarginNotes(book, chapter)
-  const { colorByVerse, setHighlight } = useHighlights(book, chapter)
+  const { highlightsByVerse, createHighlight, removeHighlight } = useHighlights(book, chapter, translation)
   const { excerptsByVerse } = useJournalExcerpts(book, chapter)
   const tagsByVerse = useWordTags(book, chapter, translation)
   useReadingSession(book, chapter)
-  const [selectedWord, setSelectedWord] = useState<string[] | null>(null)
   const bookName = BOOK_BY_CODE[book]?.name ?? book
+  const versesById = Object.fromEntries(verses.map((v) => [v.verse_id, v]))
 
   function handleSelect(newBook: string, newChapter: number) {
     setSearchParams({ book: newBook, chapter: String(newChapter) })
     setPickerOpen(false)
   }
+
+  function handleMouseUp() {
+    const spans = getSelectionSpans()
+    if (spans.length === 0) return
+    const rect = getSelectionBoundingRect()
+    if (!rect) return
+    const text = spans
+      .map((s) => versesById[s.verseId]?.text.slice(s.startOffset, s.endOffset) ?? '')
+      .join(' ')
+    setActiveSelection({ spans, rect, text })
+  }
+
+  function handleVerseNumberTap(v: Verse, e: React.MouseEvent) {
+    const target = e.currentTarget.closest('.verse') as HTMLElement | null
+    const rect = (target ?? e.currentTarget).getBoundingClientRect()
+    setActiveSelection({
+      spans: [{ verseId: v.verse_id, startOffset: 0, endOffset: v.text.length }],
+      rect,
+      text: v.text,
+    })
+  }
+
+  function closeSelection() {
+    clearSelection()
+    setActiveSelection(null)
+  }
+
+  async function handleHighlightSelection(color: HighlightColor) {
+    if (!activeSelection) return
+    await createHighlight(activeSelection.spans, color)
+    closeSelection()
+  }
+
+  async function handleSaveNote(body: string) {
+    if (!activeSelection) return
+    await addNote(activeSelection.spans, body, translation)
+    setNoteComposerOpen(false)
+    closeSelection()
+  }
+
+  function openVerseView(v: Verse) {
+    setSelectedVerse(v)
+  }
+
+  const panelHighlights = selectedVerse
+    ? Array.from(
+        new Map(
+          (highlightsByVerse[selectedVerse.verse_id] ?? []).map((h) => [h.id, { id: h.id, color: h.color }]),
+        ).values(),
+      )
+    : []
 
   return (
     <div className="reading-view">
@@ -64,17 +125,35 @@ export function ReadingView() {
         <LexiconCard strongsIds={selectedWord} onClose={() => setSelectedWord(null)} />
       )}
 
+      {activeSelection && !noteComposerOpen && (
+        <SelectionActionBar
+          rect={activeSelection.rect}
+          selectedText={activeSelection.text}
+          onHighlight={handleHighlightSelection}
+          onNote={() => setNoteComposerOpen(true)}
+          onClose={closeSelection}
+        />
+      )}
+
+      {noteComposerOpen && (
+        <NoteComposer
+          onSave={handleSaveNote}
+          onClose={() => {
+            setNoteComposerOpen(false)
+            closeSelection()
+          }}
+        />
+      )}
+
       {selectedVerse && (
         <VersePanel
-          verseId={selectedVerse.verse_id}
           verseText={selectedVerse.text}
           reference={`${bookName} ${selectedVerse.chapter}:${selectedVerse.verse}`}
           notes={notesByVerse[selectedVerse.verse_id] ?? []}
           journalExcerpts={excerptsByVerse[selectedVerse.verse_id] ?? []}
-          highlightColor={colorByVerse[selectedVerse.verse_id] ?? null}
-          onAddNote={(body) => addNote(selectedVerse.verse_id, body)}
+          highlights={panelHighlights}
           onDeleteNote={(entryId) => deleteNote(selectedVerse.verse_id, entryId)}
-          onSetHighlight={(color) => setHighlight(selectedVerse.verse_id, color)}
+          onRemoveHighlight={removeHighlight}
           onClose={() => setSelectedVerse(null)}
         />
       )}
@@ -87,33 +166,45 @@ export function ReadingView() {
         </p>
       )}
 
-      <div className="passage">
+      <div className="passage" onMouseUp={handleMouseUp}>
         <h1>
           {bookName} {chapter}
         </h1>
-        {verses.map((v) => {
-          const color = colorByVerse[v.verse_id]
-          return (
-            <p
-              key={v.verse_id}
-              className={`verse${color ? ` highlight-${color}` : ''}`}
-              onClick={() => setSelectedVerse(v)}
-            >
-              <span className="verse-num">{v.verse}</span>
-              <VerseText
-                text={v.text}
-                tags={tagsByVerse[v.verse_id] ?? []}
-                onWordTap={setSelectedWord}
+        {verses.map((v) => (
+          <p key={v.verse_id} className="verse">
+            <span className="verse-num" onClick={(e) => handleVerseNumberTap(v, e)}>
+              {v.verse}
+            </span>
+            <VerseText
+              verseId={v.verse_id}
+              text={v.text}
+              tags={tagsByVerse[v.verse_id] ?? []}
+              highlights={highlightsByVerse[v.verse_id] ?? []}
+              onWordTap={setSelectedWord}
+              onHighlightTap={() => openVerseView(v)}
+            />
+            {notesByVerse[v.verse_id]?.length > 0 && (
+              <span
+                className="verse-note-dot"
+                title="Has a note"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  openVerseView(v)
+                }}
               />
-              {notesByVerse[v.verse_id]?.length > 0 && (
-                <span className="verse-note-dot" title="Has a note" />
-              )}
-              {excerptsByVerse[v.verse_id]?.length > 0 && (
-                <span className="verse-journal-dot" title="Mentioned in journal" />
-              )}
-            </p>
-          )
-        })}
+            )}
+            {excerptsByVerse[v.verse_id]?.length > 0 && (
+              <span
+                className="verse-journal-dot"
+                title="Mentioned in journal"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  openVerseView(v)
+                }}
+              />
+            )}
+          </p>
+        ))}
       </div>
     </div>
   )

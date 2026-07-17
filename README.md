@@ -143,16 +143,38 @@ offsets — punctuation lives untagged between phrases in the source data, so of
 have reconstructed cleanly anyway); a tag that can't be found from the current cursor is skipped
 rather than breaking the render.
 
-**Interim gesture decision, not the final design:** word-taps call `stopPropagation()` so they
-take priority over the existing whole-verse click — tapping a tagged word opens the lexicon,
-tapping anywhere else on the verse (punctuation, the verse number, untagged text) still opens the
-notes/highlights panel as before. This is deliberately not amendment v1.1 §A9's real design
-(select-text-first for notes/highlights, freeing single-tap for words) — that's session 3,
-bundled with the concordance ("other occurrences") view, since both need the same underlying
-gesture rework.
+**The text-selection interaction redesign (amendment v1.1 §A9) is now live** — session 3 of the
+lexicon split. Notes and highlights are created by selecting text (drag, or tap a verse number for
+the zero-drag whole-verse fast path), not by tapping the whole verse anymore:
 
-Still ahead in Phase 2: the interaction redesign + concordance view just mentioned, calendar,
-reading plans, TSK cross-references, search across own writing, "Today, I..." templates.
+- `selection.ts` maps the native browser `Selection`/`Range` onto `(verse_id, start_offset,
+  end_offset)` spans, one per verse touched — computed by walking each verse's rendered text with
+  a `TreeWalker` and counting characters, never trusting DOM node positions directly (word-tap
+  `<span>` wrapping would throw raw DOM offsets off). Multi-verse selections work: each verse gets
+  its own span, clamped to that verse's boundary.
+- Releasing a selection shows `SelectionActionBar` — **Highlight · Note · Copy** (Reflect/Ask
+  omitted; those features don't exist yet). Tapping a verse number selects that whole verse with
+  zero dragging, per the spec's fast-path requirement.
+- `useHighlights`/`useMarginNotes` now write real per-span offsets (previously always
+  null/whole-verse). `VerseText` renders word-tap targets and highlight backgrounds in one unified
+  pass — cuts the verse text at every span boundary from both sets and wraps each resulting
+  segment in whichever applies, so a highlighted phrase still has working word-taps inside it.
+- `VersePanel` is now **view + delete only** — tapping an *existing* mark (a note-dot, journal-dot,
+  or a highlighted span) opens it to browse/remove; there's no creation UI left in the panel,
+  since creation is exclusively the selection flow now.
+
+**Real bug found and fixed during this work:** the action bar was `position: absolute`, which
+silently resolved against the wrong containing block — visually close enough to look right in a
+screenshot, but clicks landed on the passage text underneath instead of the bar. Switched to
+`position: fixed`, which resolves directly against the viewport, matching what
+`getBoundingClientRect()` already returns.
+
+**Deliberately not in this pass:** the "+Add" multi-select mode for building one highlight/note
+out of non-consecutive selections, and the concordance ("other occurrences") view. Both are real
+remaining pieces, scoped out on purpose rather than folded in.
+
+Still ahead in Phase 2: the two items above, calendar, reading plans, TSK cross-references, search
+across own writing, "Today, I..." templates.
 
 ## TODO — amendment v1.4 (theming), intentionally deferred
 

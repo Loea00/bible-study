@@ -1,30 +1,38 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import type { Highlight, HighlightColor } from '../../types/db'
+import type { SelectionSpan } from './selection'
+import type { RenderedHighlight } from './VerseText'
 
-interface VerseHighlight {
-  highlightId: string
-  color: HighlightColor
+interface StoredHighlight extends RenderedHighlight {
+  id: string
 }
 
-export function useHighlights(book: string, chapter: number) {
-  const [byVerse, setByVerse] = useState<Record<string, VerseHighlight>>({})
+export function useHighlights(book: string, chapter: number, translation: string) {
+  const [byVerse, setByVerse] = useState<Record<string, StoredHighlight[]>>({})
 
   const refetch = useCallback(async () => {
-    // Phase 1 only ever writes single-span, whole-verse highlight groups, so
-    // a full per-user fetch + client-side filter is simple and cheap at this
-    // scale. If highlight volume grows, promote `spans` to a child table and
-    // query that directly instead (spec amendment v1.1 §A3).
+    // Fetch all of the user's highlights and filter client-side — fine at
+    // Phase 1–2 scale (spec amendment v1.1 §A3). If volume grows, promote
+    // `spans` to a child table and query that directly instead.
     const { data } = await supabase.from('highlights').select('*')
 
     const prefix = `${book}.${chapter}.`
-    const grouped: Record<string, VerseHighlight> = {}
+    const grouped: Record<string, StoredHighlight[]> = {}
     for (const h of (data ?? []) as Highlight[]) {
       if (!Array.isArray(h.spans)) continue
       for (const span of h.spans) {
-        if (span.verse_id.startsWith(prefix)) {
-          grouped[span.verse_id] = { highlightId: h.id, color: h.color }
-        }
+        if (!span.verse_id.startsWith(prefix)) continue
+        ;(grouped[span.verse_id] ??= []).push({
+          id: h.id,
+          color: h.color,
+          // Null offsets mean "whole verse" (legacy whole-verse-tap
+          // highlights, or the verse-number fast path). Infinity as the end
+          // sentinel means containment checks work without needing to know
+          // the verse's text length at fetch time.
+          startOffset: span.start_offset ?? 0,
+          endOffset: span.end_offset ?? Number.POSITIVE_INFINITY,
+        })
       }
     }
     setByVerse(grouped)
@@ -34,53 +42,36 @@ export function useHighlights(book: string, chapter: number) {
     refetch()
   }, [refetch])
 
-  async function setHighlight(verseId: string, color: HighlightColor | null) {
+  async function createHighlight(spans: SelectionSpan[], color: HighlightColor) {
     const { data: userData } = await supabase.auth.getUser()
     const userId = userData.user?.id
     if (!userId) throw new Error('Not signed in')
 
-    const existing = byVerse[verseId]
-
-    if (color === null) {
-      if (!existing) return
-      const { error } = await supabase.from('highlights').delete().eq('id', existing.highlightId)
-      if (error) throw error
-      setByVerse((prev) => {
-        const next = { ...prev }
-        delete next[verseId]
-        return next
-      })
-      return
-    }
-
-    if (existing) {
-      const { error } = await supabase
-        .from('highlights')
-        .update({ color })
-        .eq('id', existing.highlightId)
-      if (error) throw error
-      setByVerse((prev) => ({ ...prev, [verseId]: { highlightId: existing.highlightId, color } }))
-      return
-    }
-
-    const { data: inserted, error } = await supabase
-      .from('highlights')
-      .insert({
-        user_id: userId,
-        color,
-        translation: null,
-        spans: [{ verse_id: verseId, start_offset: null, end_offset: null }],
-      })
-      .select()
-      .single()
+    const { error } = await supabase.from('highlights').insert({
+      user_id: userId,
+      color,
+      translation,
+      spans: spans.map((s) => ({
+        verse_id: s.verseId,
+        start_offset: s.startOffset,
+        end_offset: s.endOffset,
+      })),
+    })
     if (error) throw error
-
-    setByVerse((prev) => ({ ...prev, [verseId]: { highlightId: inserted.id, color } }))
+    await refetch()
   }
 
-  const colorByVerse = Object.fromEntries(
-    Object.entries(byVerse).map(([verseId, v]) => [verseId, v.color]),
-  ) as Record<string, HighlightColor>
+  async function removeHighlight(highlightId: string) {
+    const { error } = await supabase.from('highlights').delete().eq('id', highlightId)
+    if (error) throw error
+    setByVerse((prev) => {
+      const next: Record<string, StoredHighlight[]> = {}
+      for (const [verseId, list] of Object.entries(prev)) {
+        next[verseId] = list.filter((h) => h.id !== highlightId)
+      }
+      return next
+    })
+  }
 
-  return { colorByVerse, setHighlight }
+  return { highlightsByVerse: byVerse, createHighlight, removeHighlight }
 }

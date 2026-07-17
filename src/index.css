@@ -265,11 +265,7 @@ main {
   margin: 0 0 4px;
   padding: 2px 4px;
   border-radius: 4px;
-  cursor: pointer;
-}
-
-.verse:hover {
-  background: var(--accent-bg, rgba(107, 79, 160, 0.08));
+  user-select: text;
 }
 
 .verse-num {
@@ -279,6 +275,14 @@ main {
   opacity: 0.55;
   vertical-align: super;
   margin-right: 6px;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 3px;
+}
+
+.verse-num:hover {
+  background: var(--accent-bg, rgba(107, 79, 160, 0.12));
+  opacity: 1;
 }
 
 .verse-note-dot {
@@ -289,6 +293,7 @@ main {
   background: var(--accent);
   margin-left: 6px;
   vertical-align: middle;
+  cursor: pointer;
 }
 
 .verse-journal-dot {
@@ -300,21 +305,26 @@ main {
   opacity: 0.5;
   margin-left: 6px;
   vertical-align: middle;
+  cursor: pointer;
 }
 
-.verse.highlight-yellow {
+.highlight-mark {
+  cursor: pointer;
+  border-radius: 2px;
+}
+.highlight-mark.highlight-yellow {
   background: var(--highlight-yellow-wash);
 }
-.verse.highlight-green {
+.highlight-mark.highlight-green {
   background: var(--highlight-green-wash);
 }
-.verse.highlight-blue {
+.highlight-mark.highlight-blue {
   background: var(--highlight-blue-wash);
 }
-.verse.highlight-pink {
+.highlight-mark.highlight-pink {
   background: var(--highlight-pink-wash);
 }
-.verse.highlight-purple {
+.highlight-mark.highlight-purple {
   background: var(--highlight-purple-wash);
 }
 
@@ -333,15 +343,11 @@ main {
   gap: 10px;
 }
 
-.highlight-remove {
-  border: none;
-  background: none;
-  color: var(--accent);
-  font: inherit;
-  font-size: 13px;
-  cursor: pointer;
-  padding: 0;
-  white-space: nowrap;
+.highlight-row-hint {
+  font-family: var(--sans);
+  font-size: 12px;
+  color: var(--text);
+  opacity: 0.5;
 }
 
 .highlight-swatch {
@@ -909,4 +915,45 @@ main {
 
 .lexicon-kjv-def-label {
   opacity: 0.6;
+}
+
+.selection-bar {
+  position: fixed;
+  transform: translateX(-50%);
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 12px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  font-family: var(--sans);
+}
+
+.selection-bar-swatches {
+  display: flex;
+  gap: 6px;
+}
+
+.selection-bar-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--border);
+}
+
+.selection-bar-action {
+  border: none;
+  background: none;
+  color: var(--text-h);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 4px 6px;
+  white-space: nowrap;
+}
+
+.selection-bar-action:hover {
+  color: var(--accent);
 }
