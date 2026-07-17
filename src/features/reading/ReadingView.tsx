@@ -5,8 +5,11 @@ import { useMarginNotes } from './useMarginNotes'
 import { useHighlights } from './useHighlights'
 import { useJournalExcerpts } from './useJournalExcerpts'
 import { useReadingSession } from './useReadingSession'
+import { useWordTags } from './useWordTags'
 import { PassagePicker } from './PassagePicker'
 import { VersePanel } from './VersePanel'
+import { VerseText } from './VerseText'
+import { LexiconCard } from './LexiconCard'
 import { BOOK_BY_CODE } from './books'
 import type { Verse } from '../../types/db'
 
@@ -24,7 +27,9 @@ export function ReadingView() {
   const { notesByVerse, addNote, deleteNote } = useMarginNotes(book, chapter)
   const { colorByVerse, setHighlight } = useHighlights(book, chapter)
   const { excerptsByVerse } = useJournalExcerpts(book, chapter)
+  const tagsByVerse = useWordTags(book, chapter, translation)
   useReadingSession(book, chapter)
+  const [selectedWord, setSelectedWord] = useState<string[] | null>(null)
   const bookName = BOOK_BY_CODE[book]?.name ?? book
 
   function handleSelect(newBook: string, newChapter: number) {
@@ -53,6 +58,10 @@ export function ReadingView() {
           onSelect={handleSelect}
           onClose={() => setPickerOpen(false)}
         />
+      )}
+
+      {selectedWord && (
+        <LexiconCard strongsIds={selectedWord} onClose={() => setSelectedWord(null)} />
       )}
 
       {selectedVerse && (
@@ -91,7 +100,11 @@ export function ReadingView() {
               onClick={() => setSelectedVerse(v)}
             >
               <span className="verse-num">{v.verse}</span>
-              {v.text}
+              <VerseText
+                text={v.text}
+                tags={tagsByVerse[v.verse_id] ?? []}
+                onWordTap={setSelectedWord}
+              />
               {notesByVerse[v.verse_id]?.length > 0 && (
                 <span className="verse-note-dot" title="Has a note" />
               )}

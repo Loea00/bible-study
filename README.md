@@ -35,8 +35,8 @@ so opening the app to more users later is a matter of enabling sign-ups, not res
 - `src/features/journal/` — journal timeline + editor
 - `supabase/migrations/` — schema: `entries`, `verse_references`, `reading_sessions` (user
   content), `translations`/`verses` (bundled public-domain reference text), `highlights`
-  (group-based spans per amendment v1.1), `strongs_lexicon`/`word_tags` (Strong's data, sourcing
-  only so far — no UI yet, see Status)
+  (group-based spans per amendment v1.1), `strongs_lexicon`/`word_tags` (Strong's word-tap
+  lexicon, live — see Status)
 
 ## Seeding scripture text
 
@@ -131,8 +131,27 @@ deep-linking back to the passage or journal entry. `computeStreak()` counts cons
 calendar days with at least one session; not having read yet *today* doesn't break it (spec
 principle 3 — gentle, never enforced).
 
-Still ahead in Phase 2: word-tap Strong's lexicon (also when the deferred text-selection gesture
-model from amendment v1.1 §A9 gets built — drag-to-select, multi-span highlights/notes), calendar,
+**Word-tap Strong's lexicon is live** (`src/features/reading/VerseText.tsx`,
+`useWordTags.ts`, `LexiconCard.tsx`) — session 2 of the ~3-session split (source+import data →
+tap-word UI+lexicon card → interaction redesign+concordance view), following data sourcing.
+Every KJV word/phrase with a Strong's tag is individually tappable; taps open a card with the
+original word, transliteration, definition, derivation, and KJV renderings for every Strong's
+number attached (phrases mapping to multiple numbers, e.g. Gen.1.1's "created" → H853+H1254,
+show all of them). `VerseText` reconstructs tappable spans by walking the verse text with a
+cursor and matching each tagged phrase in sequence (word_tags stores order, not character
+offsets — punctuation lives untagged between phrases in the source data, so offsets wouldn't
+have reconstructed cleanly anyway); a tag that can't be found from the current cursor is skipped
+rather than breaking the render.
+
+**Interim gesture decision, not the final design:** word-taps call `stopPropagation()` so they
+take priority over the existing whole-verse click — tapping a tagged word opens the lexicon,
+tapping anywhere else on the verse (punctuation, the verse number, untagged text) still opens the
+notes/highlights panel as before. This is deliberately not amendment v1.1 §A9's real design
+(select-text-first for notes/highlights, freeing single-tap for words) — that's session 3,
+bundled with the concordance ("other occurrences") view, since both need the same underlying
+gesture rework.
+
+Still ahead in Phase 2: the interaction redesign + concordance view just mentioned, calendar,
 reading plans, TSK cross-references, search across own writing, "Today, I..." templates.
 
 ## TODO — amendment v1.4 (theming), intentionally deferred
