@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useJournalEntries } from './useJournalEntries'
 import { JournalEditor } from './JournalEditor'
@@ -9,6 +9,8 @@ export function Journal() {
   const [searchParams] = useSearchParams()
   const targetEntryId = searchParams.get('entry')
   const targetRef = useRef<HTMLDivElement>(null)
+  const [query, setQuery] = useState('')
+  const [activeTag, setActiveTag] = useState<string | null>(null)
 
   useEffect(() => {
     if (targetEntryId && targetRef.current) {
@@ -16,17 +18,65 @@ export function Journal() {
     }
   }, [targetEntryId, loading])
 
+  const allTags = useMemo(() => {
+    const seen = new Set<string>()
+    for (const entry of entries) {
+      for (const tag of entry.tags) seen.add(tag)
+    }
+    return [...seen].sort()
+  }, [entries])
+
+  const filteredEntries = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    return entries.filter((entry) => {
+      if (activeTag && !entry.tags.includes(activeTag)) return false
+      if (!q) return true
+      return entry.title?.toLowerCase().includes(q) || entry.body.toLowerCase().includes(q)
+    })
+  }, [entries, query, activeTag])
+
+  const isFiltering = query.trim() !== '' || activeTag !== null
+
   return (
     <div className="journal">
       <JournalEditor onSave={createEntry} />
+
+      {entries.length > 0 && (
+        <div className="journal-search">
+          <input
+            type="search"
+            className="journal-search-input"
+            placeholder="Search your writing…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          {allTags.length > 0 && (
+            <div className="journal-tag-filters">
+              {allTags.map((tag) => (
+                <button
+                  key={tag}
+                  type="button"
+                  className={`journal-tag-filter${activeTag === tag ? ' active' : ''}`}
+                  onClick={() => setActiveTag((prev) => (prev === tag ? null : tag))}
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {loading && <p className="placeholder">Loading…</p>}
       {!loading && entries.length === 0 && (
         <p className="placeholder">Nothing written yet — your first entry starts the timeline.</p>
       )}
+      {!loading && entries.length > 0 && isFiltering && filteredEntries.length === 0 && (
+        <p className="placeholder">Nothing matches that search.</p>
+      )}
 
       <div className="journal-timeline">
-        {entries.map((entry) => (
+        {filteredEntries.map((entry) => (
           <div
             key={entry.id}
             ref={entry.id === targetEntryId ? targetRef : undefined}

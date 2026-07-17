@@ -192,8 +192,18 @@ out of the interaction-redesign session:
   No backend changes were needed — `createHighlight`/`addNote` already accepted arbitrary
   `SelectionSpan[]` groups from the interaction-redesign session.
 
-Still ahead in Phase 2: calendar, reading plans, TSK cross-references, search across own writing,
-"Today, I..." templates.
+**Search across own writing is now live** — a search box and topical-tag filter chips on the
+journal timeline (`Journal.tsx`), scoped to journal entries per spec §5.2's "search + filter by
+type/tag" line. Filters client-side against `title`/`body` (case-insensitive substring) and the
+selected tag, combined with AND semantics when both are active. The search box shows whenever
+there's at least one entry (independent of whether any entry has tags yet — an early version
+gated the whole box on tag presence, which would've hidden text search entirely for anyone who
+hadn't tagged anything, caught and fixed before shipping); tag chips only render once at least one
+tag exists. Verified via temporary mock data injected into `useJournalEntries.ts` during testing
+(reverted before commit, confirmed via `git diff` showing no changes) since this dev session has no
+authenticated write path to create real entries to search.
+
+Still ahead in Phase 2: calendar, reading plans, TSK cross-references, "Today, I..." templates.
 
 ## TODO — amendment v1.4 (theming), intentionally deferred
 

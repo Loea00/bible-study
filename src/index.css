@@ -1044,3 +1044,47 @@ main {
   opacity: 0.75;
   white-space: nowrap;
 }
+
+.journal-search {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.journal-search-input {
+  font: inherit;
+  font-family: var(--sans);
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-h);
+}
+
+.journal-tag-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.journal-tag-filter {
+  font-family: var(--sans);
+  font-size: 12px;
+  color: var(--text);
+  background: var(--code-bg, rgba(128, 128, 128, 0.1));
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 3px 10px;
+  cursor: pointer;
+}
+
+.journal-tag-filter:hover {
+  color: var(--text-h);
+}
+
+.journal-tag-filter.active {
+  color: var(--accent);
+  background: var(--accent-bg, rgba(107, 79, 160, 0.1));
+  border-color: var(--accent);
+}
