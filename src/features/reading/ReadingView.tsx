@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useVerses } from './useVerses'
 import { useMarginNotes } from './useMarginNotes'
@@ -34,31 +34,58 @@ export function ReadingView() {
   } | null>(null)
   const [pendingGroup, setPendingGroup] = useState<SelectionSpan[]>([])
   const [noteSpans, setNoteSpans] = useState<SelectionSpan[] | null>(null)
+  const [editingHighlightId, setEditingHighlightId] = useState<string | null>(null)
 
   const { verses, loading, error } = useVerses(book, chapter, translation)
   const { notesByVerse, addNote, deleteNote } = useMarginNotes(book, chapter)
-  const { highlightsByVerse, createHighlight, removeHighlight } = useHighlights(book, chapter, translation)
+  const { highlightsByVerse, createHighlight, updateHighlight, removeHighlight, getHighlightSpans } = useHighlights(
+    book,
+    chapter,
+    translation,
+  )
   const { excerptsByVerse } = useJournalExcerpts(book, chapter)
   const tagsByVerse = useWordTags(book, chapter, translation)
   useReadingSession(book, chapter)
   const bookName = BOOK_BY_CODE[book]?.name ?? book
   const versesById = Object.fromEntries(verses.map((v) => [v.verse_id, v]))
+  const versesByIdRef = useRef(versesById)
+  versesByIdRef.current = versesById
 
   function handleSelect(newBook: string, newChapter: number) {
     setSearchParams({ book: newBook, chapter: String(newChapter) })
     setPickerOpen(false)
   }
 
-  function handleMouseUp() {
-    const spans = getSelectionSpans()
-    if (spans.length === 0) return
-    const rect = getSelectionBoundingRect()
-    if (!rect) return
-    const text = spans
-      .map((s) => versesById[s.verseId]?.text.slice(s.startOffset, s.endOffset) ?? '')
-      .join(' ')
-    setActiveSelection({ spans, rect, text })
-  }
+  // Driven by `selectionchange`, not `mouseup`: on iOS Safari, finishing a
+  // drag-selection (via the native handle UI) doesn't reliably fire mouseup
+  // on the underlying text — the finger lifts off a system-drawn handle, not
+  // a DOM node. `selectionchange` fires regardless of input device, so this
+  // is the one mechanism that captures both mouse and touch selections.
+  // Debounced because it also fires on every intermediate step while
+  // dragging a handle, not just on release.
+  useEffect(() => {
+    let timeoutId: number | undefined
+
+    function handleSelectionChange() {
+      if (timeoutId !== undefined) window.clearTimeout(timeoutId)
+      timeoutId = window.setTimeout(() => {
+        const spans = getSelectionSpans()
+        if (spans.length === 0) return
+        const rect = getSelectionBoundingRect()
+        if (!rect) return
+        const text = spans
+          .map((s) => versesByIdRef.current[s.verseId]?.text.slice(s.startOffset, s.endOffset) ?? '')
+          .join(' ')
+        setActiveSelection({ spans, rect, text })
+      }, 200)
+    }
+
+    document.addEventListener('selectionchange', handleSelectionChange)
+    return () => {
+      document.removeEventListener('selectionchange', handleSelectionChange)
+      if (timeoutId !== undefined) window.clearTimeout(timeoutId)
+    }
+  }, [])
 
   function handleVerseNumberTap(v: Verse, e: React.MouseEvent) {
     const target = e.currentTarget.closest('.verse') as HTMLElement | null
@@ -87,19 +114,41 @@ export function ReadingView() {
 
   function clearPendingGroup() {
     setPendingGroup([])
+    setEditingHighlightId(null)
+  }
+
+  // Reuses the +Add pending-group machinery for editing: loading an
+  // existing highlight's spans into `pendingGroup` lets the same "select
+  // more, then commit" flow extend it, instead of building a separate
+  // editing UI. Shrinking/removing individual spans isn't supported this
+  // way — only growing — which matches what was actually asked for.
+  function startEditHighlight(highlightId: string) {
+    const spans = getHighlightSpans(highlightId)
+    if (spans.length === 0) return
+    setPendingGroup(spans)
+    setEditingHighlightId(highlightId)
+    setSelectedVerse(null)
   }
 
   async function handleHighlightSelection(color: HighlightColor) {
     if (!activeSelection) return
     const spans = [...pendingGroup, ...activeSelection.spans]
-    await createHighlight(spans, color)
+    if (editingHighlightId) {
+      await updateHighlight(editingHighlightId, spans, color)
+    } else {
+      await createHighlight(spans, color)
+    }
     clearPendingGroup()
     closeSelection()
   }
 
   async function handleHighlightPending(color: HighlightColor) {
     if (pendingGroup.length === 0) return
-    await createHighlight(pendingGroup, color)
+    if (editingHighlightId) {
+      await updateHighlight(editingHighlightId, pendingGroup, color)
+    } else {
+      await createHighlight(pendingGroup, color)
+    }
     clearPendingGroup()
   }
 
@@ -180,6 +229,7 @@ export function ReadingView() {
       {pendingGroup.length > 0 && !activeSelection && !noteSpans && (
         <PendingGroupBar
           count={pendingGroup.length}
+          editing={editingHighlightId !== null}
           onHighlight={handleHighlightPending}
           onNote={openNoteFromPending}
           onClear={clearPendingGroup}
@@ -205,6 +255,7 @@ export function ReadingView() {
           highlights={panelHighlights}
           onDeleteNote={(entryId) => deleteNote(selectedVerse.verse_id, entryId)}
           onRemoveHighlight={removeHighlight}
+          onEditHighlight={startEditHighlight}
           onClose={() => setSelectedVerse(null)}
         />
       )}
@@ -217,7 +268,7 @@ export function ReadingView() {
         </p>
       )}
 
-      <div className="passage" onMouseUp={handleMouseUp}>
+      <div className="passage">
         <h1>
           {bookName} {chapter}
         </h1>

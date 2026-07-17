@@ -44,11 +44,15 @@ function findWordIntervals(text: string, tags: WordTag[]): WordInterval[] {
   return intervals
 }
 
-// Word-tap spans and highlight spans can overlap arbitrarily (a highlighted
-// phrase still has word-tap targets inside it). Cut the text at every
-// interval boundary from both sets, then render each resulting segment
-// wrapped in whichever of the two applies to it — this handles overlap
-// without needing to merge/split the source intervals themselves.
+// Word-tap spans and highlight spans can overlap arbitrarily. Cut the text
+// at every interval boundary from both sets, then render each resulting
+// segment wrapped in whichever of the two applies to it — this handles
+// overlap without needing to merge/split the source intervals themselves.
+// When both apply, the highlight wins the tap: with nearly every KJV word
+// carrying a Strong's tag, a highlighted phrase is *mostly* word-tap
+// surface, so if word-tap kept the tap (as it used to, via stopPropagation)
+// a highlight became practically un-tappable — no reachable way to open it
+// for removal. Word-tap still works everywhere text isn't highlighted.
 export function VerseText({ verseId, text, tags, highlights, pending, onWordTap, onHighlightTap }: VerseTextProps) {
   const wordIntervals = findWordIntervals(text, tags)
 
@@ -85,7 +89,7 @@ export function VerseText({ verseId, text, tags, highlights, pending, onWordTap,
 
     let node: ReactNode = text.slice(start, end)
 
-    if (word) {
+    if (word && !highlight) {
       node = (
         <span
           className="tappable-word"

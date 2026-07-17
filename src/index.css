@@ -330,24 +330,23 @@ main {
 
 .highlight-row {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+  flex-direction: column;
+  gap: 8px;
   margin-bottom: 16px;
   padding-bottom: 16px;
   border-bottom: 1px solid var(--border);
 }
 
-.highlight-swatches {
+.highlight-item {
   display: flex;
+  align-items: center;
   gap: 10px;
 }
 
-.highlight-row-hint {
-  font-family: var(--sans);
-  font-size: 12px;
-  color: var(--text);
-  opacity: 0.5;
+.highlight-item-actions {
+  display: flex;
+  gap: 12px;
+  margin-left: auto;
 }
 
 .highlight-swatch {
@@ -355,8 +354,12 @@ main {
   height: 26px;
   border-radius: 50%;
   border: 2px solid transparent;
-  cursor: pointer;
   padding: 0;
+  flex-shrink: 0;
+}
+
+button.highlight-swatch {
+  cursor: pointer;
 }
 
 .highlight-swatch.active {

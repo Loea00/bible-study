@@ -16,6 +16,7 @@ interface VersePanelProps {
   highlights: PanelHighlight[]
   onDeleteNote: (entryId: string) => Promise<void>
   onRemoveHighlight: (highlightId: string) => Promise<void>
+  onEditHighlight: (highlightId: string) => void
   onClose: () => void
 }
 
@@ -31,6 +32,7 @@ export function VersePanel({
   highlights,
   onDeleteNote,
   onRemoveHighlight,
+  onEditHighlight,
   onClose,
 }: VersePanelProps) {
   const [deletingNoteId, setDeletingNoteId] = useState<string | null>(null)
@@ -75,19 +77,24 @@ export function VersePanel({
 
         {highlights.length > 0 && (
           <div className="highlight-row">
-            <div className="highlight-swatches">
-              {highlights.map((h) => (
-                <button
-                  key={h.id}
-                  type="button"
-                  className={`highlight-swatch highlight-swatch-${h.color}`}
-                  aria-label={`Remove ${h.color} highlight`}
-                  disabled={removingHighlightId === h.id}
-                  onClick={() => handleRemoveHighlight(h.id)}
-                />
-              ))}
-            </div>
-            <span className="highlight-row-hint">tap to remove</span>
+            {highlights.map((h) => (
+              <div key={h.id} className="highlight-item">
+                <span className={`highlight-swatch highlight-swatch-${h.color}`} aria-hidden="true" />
+                <div className="highlight-item-actions">
+                  <button type="button" className="verse-panel-note-delete" onClick={() => onEditHighlight(h.id)}>
+                    Extend
+                  </button>
+                  <button
+                    type="button"
+                    className="verse-panel-note-delete"
+                    disabled={removingHighlightId === h.id}
+                    onClick={() => handleRemoveHighlight(h.id)}
+                  >
+                    {removingHighlightId === h.id ? 'Removing…' : 'Remove'}
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         )}
         {highlightError && <p className="error">{highlightError}</p>}

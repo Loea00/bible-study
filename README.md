@@ -176,8 +176,8 @@ out of the interaction-redesign session:
   `LexiconCard` opens every other place in KJV that Strong's number appears, sorted in canonical
   book order then numeric chapter/verse, each a deep-link back into the reading view. Backed by a
   new `verses_for_strongs(target_id, max_results)` Postgres function
-  (`supabase/migrations/0007_concordance.sql`, **not yet run** — needs to be applied via the
-  Supabase SQL Editor before real data shows) that does exact membership matching within
+  (`supabase/migrations/0007_concordance.sql`, live — verified with real data, e.g. H7225 רֵאשִׁית
+  returns 51 correctly-ordered occurrences) that does exact membership matching within
   `word_tags.strongs_ids`'s comma-separated text via `string_to_array(...) = any(...)`, avoiding
   `LIKE`-substring false positives (H430 matching H4300). Capped at 300 results, shown as "First
   300 occurrences" when hit. `LexiconCard` renders it as a sibling overlay, not a nested one — an
@@ -202,6 +202,36 @@ hadn't tagged anything, caught and fixed before shipping); tag chips only render
 tag exists. Verified via temporary mock data injected into `useJournalEntries.ts` during testing
 (reverted before commit, confirmed via `git diff` showing no changes) since this dev session has no
 authenticated write path to create real entries to search.
+
+**Three real bugs found via actual iPad use, all fixed:**
+
+- **Only whole-verse highlighting worked on touch, never partial-verse drag-select.** Selection
+  capture ran off the `mouseup` mouse event, which iOS Safari doesn't reliably fire when a
+  drag-selection is finished via the native handle UI — the finger lifts off a system-drawn handle,
+  not a DOM node, so no `mouseup` bubbles from anything. Verse-number tap (a plain `onClick`) was
+  unaffected, which is why that path alone kept working. Fixed by switching to a debounced
+  `document`-level `selectionchange` listener (`ReadingView.tsx`), which fires for both mouse and
+  touch regardless of how the selection was finished. Verified no regression on desktop drag-select
+  and verse-number tap.
+- **Highlights were nearly impossible to remove.** Tapping highlighted text was opening the lexicon
+  card instead of the verse panel. Root cause: `VerseText.tsx` wrapped overlapping segments in both
+  the word-tap span and the highlight span, and word-tap's handler called `stopPropagation()`,
+  always winning. Since nearly every KJV word carries a Strong's tag, a highlighted phrase is
+  *mostly* word-tap surface — in practice, almost nowhere to tap that hit the highlight instead.
+  Fixed by giving the highlight tap priority whenever both apply; word-tap still works everywhere
+  text isn't highlighted. Verified with mock highlight data (real writes need auth, unavailable in
+  this dev session) that tapping a highlighted, word-tagged phrase now opens the verse panel.
+- **No way to add a note to an already-highlighted span, or extend a highlight.** The
+  `selectionchange` fix above resolves re-selecting over/through highlighted text (verified: a new
+  drag-selection starting inside a highlight and extending beyond it works normally). Extending an
+  existing highlight's spans is a new, explicitly-requested feature: `VersePanel` now has an
+  "Extend" action per highlight alongside "Remove" — it loads that highlight's full span group
+  (`useHighlights.ts`'s new `getHighlightSpans`/`raw` state, since the per-verse `highlightsByVerse`
+  view doesn't retain the whole group) into the existing `pendingGroup` (`+Add`) machinery, so
+  making a new selection and committing calls a new `updateHighlight` (in place of `createHighlight`)
+  against the same row. Growing only — shrinking/removing individual spans from an existing group
+  isn't supported, since that wasn't what was asked for. Verified end-to-end with mock data: Extend
+  → new selection → commit correctly reached `updateHighlight` with the combined span set.
 
 Still ahead in Phase 2: calendar, reading plans, TSK cross-references, "Today, I..." templates.
 

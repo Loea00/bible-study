@@ -10,16 +10,22 @@ interface StoredHighlight extends RenderedHighlight {
 
 export function useHighlights(book: string, chapter: number, translation: string) {
   const [byVerse, setByVerse] = useState<Record<string, StoredHighlight[]>>({})
+  // Full rows (not just the per-verse-flattened view), kept so an existing
+  // highlight's complete span group — which can spread across verses beyond
+  // the current chapter view — can be recovered for editing.
+  const [raw, setRaw] = useState<Highlight[]>([])
 
   const refetch = useCallback(async () => {
     // Fetch all of the user's highlights and filter client-side — fine at
     // Phase 1–2 scale (spec amendment v1.1 §A3). If volume grows, promote
     // `spans` to a child table and query that directly instead.
     const { data } = await supabase.from('highlights').select('*')
+    const rows = (data ?? []) as Highlight[]
+    setRaw(rows)
 
     const prefix = `${book}.${chapter}.`
     const grouped: Record<string, StoredHighlight[]> = {}
-    for (const h of (data ?? []) as Highlight[]) {
+    for (const h of rows) {
       if (!Array.isArray(h.spans)) continue
       for (const span of h.spans) {
         if (!span.verse_id.startsWith(prefix)) continue
@@ -37,6 +43,22 @@ export function useHighlights(book: string, chapter: number, translation: string
     }
     setByVerse(grouped)
   }, [book, chapter])
+
+  // Null offsets only occur on highlights predating span anchoring
+  // (migrated with a null start/end meaning "whole verse" — see migration
+  // 0004); reconstructing the real length would need the verse text, which
+  // this hook doesn't fetch. Editing one of those legacy rows starts from a
+  // zero-length span for that verse rather than the true whole-verse extent
+  // — acceptable given how rare a pre-migration row still is in practice.
+  function getHighlightSpans(highlightId: string): SelectionSpan[] {
+    const highlight = raw.find((h) => h.id === highlightId)
+    if (!highlight) return []
+    return highlight.spans.map((s) => ({
+      verseId: s.verse_id,
+      startOffset: s.start_offset ?? 0,
+      endOffset: s.end_offset ?? 0,
+    }))
+  }
 
   useEffect(() => {
     refetch()
@@ -61,6 +83,22 @@ export function useHighlights(book: string, chapter: number, translation: string
     await refetch()
   }
 
+  async function updateHighlight(highlightId: string, spans: SelectionSpan[], color: HighlightColor) {
+    const { error } = await supabase
+      .from('highlights')
+      .update({
+        color,
+        spans: spans.map((s) => ({
+          verse_id: s.verseId,
+          start_offset: s.startOffset,
+          end_offset: s.endOffset,
+        })),
+      })
+      .eq('id', highlightId)
+    if (error) throw error
+    await refetch()
+  }
+
   async function removeHighlight(highlightId: string) {
     const { error } = await supabase.from('highlights').delete().eq('id', highlightId)
     if (error) throw error
@@ -73,5 +111,5 @@ export function useHighlights(book: string, chapter: number, translation: string
     })
   }
 
-  return { highlightsByVerse: byVerse, createHighlight, removeHighlight }
+  return { highlightsByVerse: byVerse, createHighlight, updateHighlight, removeHighlight, getHighlightSpans }
 }
