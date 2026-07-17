@@ -2,9 +2,10 @@
 
 Phase 1 scaffold: React + TypeScript (Vite) frontend, Supabase (Postgres/auth) backend. See
 `bible-study-app-spec.md` for the full product spec, plus `spec-amendment-v1-1-highlights.md`
-(span anchoring, unified across notes/highlights/journal tags) and
-`spec-amendment-v1-2-prayer-social.md` (Phase 2+ prayer system, AI grounding, social — roadmap
-only, no code yet).
+(span anchoring, unified across notes/highlights/journal tags), `spec-amendment-v1-2-prayer-social.md`
+(Phase 2+ prayer system, AI grounding, social — roadmap only, no code yet), and
+`spec-amendment-v1-4-theming.md` (token-based theme system, 4 themes + light/dark — **designed,
+deliberately not started**; see TODO below).
 
 ## Setup
 
@@ -86,3 +87,20 @@ principle 3 — gentle, never enforced).
 Still ahead in Phase 2: word-tap Strong's lexicon (also when the deferred text-selection gesture
 model from amendment v1.1 §A9 gets built — drag-to-select, multi-span highlights/notes), calendar,
 reading plans, TSK cross-references, search across own writing, "Today, I..." templates.
+
+## TODO — amendment v1.4 (theming), intentionally deferred
+
+Reviewed 2026-07-15, holding until after Strong's data sourcing (the currently agreed next
+session). Not a small add — retrofit now, since Phase 1's UI already exists. Recommended split
+when we do pick it up:
+1. **Cheap, do first:** rename the existing CSS custom properties in `src/index.css` to match the
+   amendment's token contract (`--surface-page`/`--surface-card`, `--text-ink`/`--text-muted`,
+   `--text-christ`, `--accent`, `--border`/`--border-strong`, `--font-voice`/`--font-sans`/
+   `--font-data`) — still just today's one look, no schema change, no visible difference.
+2. **Real work:** new `themes` table + a `profiles` table (doesn't exist yet — we've only ever
+   used `auth.users` directly, nothing stores per-user preferences today), design the actual color
+   values for the four themes (Warm Paper, Vellum & Slate, Before Dawn, The Blue Period), build the
+   Settings → Appearance picker.
+3. **Separate dependency, bundle with Strong's work:** red-letter rendering needs words-of-Christ
+   markup on the KJV text, which we don't have — it's its own small data-sourcing problem, not
+   something the theming system itself solves.
