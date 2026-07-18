@@ -54,7 +54,6 @@ export function ReadingView() {
   const [pendingGroup, setPendingGroup] = useState<SelectionSpan[]>([])
   const [noteSpans, setNoteSpans] = useState<SelectionSpan[] | null>(null)
   const [editingHighlightId, setEditingHighlightId] = useState<string | null>(null)
-  const [openHighlightId, setOpenHighlightId] = useState<string | null>(null)
 
   const { verses, loading, error } = useVerses(book, chapter, translation)
   const { notesByVerse, addNote, deleteNote } = useMarginNotes(book, chapter)
