@@ -11,6 +11,7 @@ import { VersePanel } from './VersePanel'
 import { HighlightGroupPanel } from './HighlightGroupPanel'
 import { ReflectionComposer } from './ReflectionComposer'
 import { VerseText } from './VerseText'
+import { NoteIcon, JournalIcon } from './VerseIndicatorIcons'
 import { LexiconCard } from './LexiconCard'
 import { SelectionActionBar } from './SelectionActionBar'
 import { PendingGroupBar } from './PendingGroupBar'
@@ -349,23 +350,27 @@ export function ReadingView() {
               />
               {(notesByVerse[v.verse_id]?.length > 0 || reflectionsByVerse[v.verse_id]?.length > 0) && (
                 <span
-                  className="verse-note-dot"
+                  className="verse-icon verse-note-icon"
                   title="Has a note or reflection"
                   onClick={(e) => {
                     e.stopPropagation()
                     openVerseView(v)
                   }}
-                />
+                >
+                  <NoteIcon />
+                </span>
               )}
               {excerptsByVerse[v.verse_id]?.length > 0 && (
                 <span
-                  className="verse-journal-dot"
+                  className="verse-icon verse-journal-icon"
                   title="Mentioned in journal"
                   onClick={(e) => {
                     e.stopPropagation()
                     openVerseView(v)
                   }}
-                />
+                >
+                  <JournalIcon />
+                </span>
               )}
               {highlightGroupsByVerse[v.verse_id]?.map((h) => (
                 <span

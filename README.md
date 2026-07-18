@@ -373,6 +373,13 @@ deep links resolve to the right chapter, empty state shows correctly with no hig
 cleanly reverted before commit (confirmed via grep, since it's a new untracked file `git diff`
 wouldn't show).
 
+**Verse indicators are real icons now, not all dots.** Highlights stay as color dots (the point
+there is color, per spec amendment v1.1 §A6); notes/reflections and journal mentions moved to
+actual icons — a small pencil glyph and a small book glyph — per spec §5.1's original "note icon /
+notebook icon" language, which Phase 1 had simplified away to plain dots for all three. New
+`VerseIndicatorIcons.tsx` (hand-written inline SVG, no icon library added). Verified live with all
+three indicator types rendering together on different verses of the same chapter.
+
 Still ahead in Phase 2: calendar, reading plans, TSK cross-references, "Today, I..." templates. One
 known unresolved bug from a previous session ("cannot highlight after committing a +Add
 note/reflection") is still open — see memory for the reproduction plan.
