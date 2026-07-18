@@ -32,6 +32,7 @@ export function JournalEntryCard({ entry, onDelete }: JournalEntryCardProps) {
     <article className="journal-card">
       <div className="journal-card-header">
         <div>
+          {entry.entry_type === 'reflection' && <span className="journal-card-badge">Reflection</span>}
           {entry.title && <h2>{entry.title}</h2>}
           <p className="journal-card-date">{date}</p>
         </div>

@@ -1223,3 +1223,42 @@ button.highlight-swatch {
   background: var(--accent-bg, rgba(107, 79, 160, 0.1));
   border-color: var(--accent);
 }
+
+.journal-type-filters {
+  display: flex;
+  gap: 6px;
+}
+
+.journal-type-filter {
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 4px 12px;
+  cursor: pointer;
+}
+
+.journal-type-filter:hover {
+  color: var(--text-h);
+}
+
+.journal-type-filter.active {
+  color: white;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.journal-card-badge {
+  display: inline-block;
+  font-family: var(--sans);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  padding: 2px 6px;
+  margin-bottom: 4px;
+}

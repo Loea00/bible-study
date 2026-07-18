@@ -10,10 +10,14 @@ export function useJournalEntries() {
 
   const refetch = useCallback(async () => {
     setLoading(true)
+    // Reflections appear in the same timeline as journal entries, per spec
+    // §5.3 ("in the journal timeline as a filterable type") — they're
+    // authored via useReflections.addReflection, a separate write path
+    // (different anchor semantics), so createEntry below stays journal-only.
     const { data } = await supabase
       .from('entries')
       .select('*')
-      .eq('entry_type', 'journal')
+      .in('entry_type', ['journal', 'reflection'])
       .order('created_at', { ascending: false })
     setEntries(data ?? [])
     setLoading(false)

@@ -11,6 +11,7 @@ export function Journal() {
   const targetRef = useRef<HTMLDivElement>(null)
   const [query, setQuery] = useState('')
   const [activeTag, setActiveTag] = useState<string | null>(null)
+  const [activeType, setActiveType] = useState<'all' | 'journal' | 'reflection'>('all')
 
   useEffect(() => {
     if (targetEntryId && targetRef.current) {
@@ -29,13 +30,14 @@ export function Journal() {
   const filteredEntries = useMemo(() => {
     const q = query.trim().toLowerCase()
     return entries.filter((entry) => {
+      if (activeType !== 'all' && entry.entry_type !== activeType) return false
       if (activeTag && !entry.tags.includes(activeTag)) return false
       if (!q) return true
       return entry.title?.toLowerCase().includes(q) || entry.body.toLowerCase().includes(q)
     })
-  }, [entries, query, activeTag])
+  }, [entries, query, activeTag, activeType])
 
-  const isFiltering = query.trim() !== '' || activeTag !== null
+  const isFiltering = query.trim() !== '' || activeTag !== null || activeType !== 'all'
 
   return (
     <div className="journal">
@@ -43,6 +45,18 @@ export function Journal() {
 
       {entries.length > 0 && (
         <div className="journal-search">
+          <div className="journal-type-filters">
+            {(['all', 'journal', 'reflection'] as const).map((type) => (
+              <button
+                key={type}
+                type="button"
+                className={`journal-type-filter${activeType === type ? ' active' : ''}`}
+                onClick={() => setActiveType(type)}
+              >
+                {type === 'all' ? 'All' : type === 'journal' ? 'Journal' : 'Reflection'}
+              </button>
+            ))}
+          </div>
           <input
             type="search"
             className="journal-search-input"

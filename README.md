@@ -314,9 +314,24 @@ in this working environment, same known limitation as every other write path bui
 `VersePanel`'s new Reflections section confirmed rendering via temporarily-mocked data, cleanly
 reverted before commit.
 
-Still ahead in Phase 2: Journal timeline reflection support (chunk 3 — reflections don't show up in
-`/journal` yet, spec calls for them appearing there "as a filterable type"), calendar, reading plans,
-TSK cross-references, "Today, I..." templates.
+**Journal timeline reflection support — chunk 3, closing out the docked-layout + Reflection mode
+plan — is now live.** `useJournalEntries.ts`'s fetch generalized from `.eq('entry_type', 'journal')`
+to `.in('entry_type', ['journal', 'reflection'])` (its write path, `createEntry`, stays
+journal-only — reflections are authored via `useReflections.addReflection` instead, a separate
+insert with different anchor semantics). `Journal.tsx` gained an "All / Journal / Reflection"
+filter-chip row, satisfying spec §5.3's "in the journal timeline as a filterable type," combining
+with the existing search/tag filters via AND semantics. `JournalEntryCard.tsx` gets a small
+"REFLECTION" badge when `entry_type === 'reflection'` — a text badge rather than a literal icon,
+matching the app's existing icon-light visual language. Verified end-to-end with mock journal +
+reflection entries: both entry types appear together by default, the Reflection filter correctly
+isolates just the reflection with its badge, cleanly reverted before commit.
+
+**This closes out the full 3-chunk plan** (docked side-panel layout → Reflection mode → Journal
+timeline support) that started from Aaron asking whether the reading-pane-plus-subordinate-panel
+layout he remembered from an earlier design conversation was buildable. Full plan file at
+`.claude/plans/expressive-zooming-galaxy.md`.
+
+Still ahead in Phase 2: calendar, reading plans, TSK cross-references, "Today, I..." templates.
 
 ## TODO — amendment v1.4 (theming), intentionally deferred
 
