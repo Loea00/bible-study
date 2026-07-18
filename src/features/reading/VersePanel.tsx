@@ -2,12 +2,14 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { Entry } from '../../types/db'
 import type { JournalExcerpt } from './useJournalExcerpts'
+import type { ReflectionExcerpt } from './useReflections'
 
 interface VersePanelProps {
   verseText: string
   reference: string
   notes: Entry[]
   journalExcerpts: JournalExcerpt[]
+  reflections: ReflectionExcerpt[]
   onDeleteNote: (entryId: string) => Promise<void>
   onClose: () => void
 }
@@ -19,7 +21,15 @@ interface VersePanelProps {
 // multi-verse group — this panel is deliberately single-verse-scoped and
 // can't represent that). Renders as plain content inside ReadingView's
 // docked side panel — no overlay/backdrop of its own.
-export function VersePanel({ verseText, reference, notes, journalExcerpts, onDeleteNote, onClose }: VersePanelProps) {
+export function VersePanel({
+  verseText,
+  reference,
+  notes,
+  journalExcerpts,
+  reflections,
+  onDeleteNote,
+  onClose,
+}: VersePanelProps) {
   const [deletingNoteId, setDeletingNoteId] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
 
@@ -93,7 +103,33 @@ export function VersePanel({ verseText, reference, notes, journalExcerpts, onDel
         </div>
       )}
 
-      {notes.length === 0 && journalExcerpts.length === 0 && (
+      {reflections.length > 0 && (
+        <div className="verse-panel-section">
+          <h3>Reflections</h3>
+          <div className="verse-panel-excerpts">
+            {reflections.map((r) => (
+              <div key={r.entryId} className="verse-panel-excerpt">
+                <div className="verse-panel-excerpt-header">
+                  {r.title && <span className="verse-panel-excerpt-title">{r.title}</span>}
+                  <span className="verse-panel-excerpt-date">
+                    {new Date(r.date).toLocaleDateString(undefined, {
+                      month: 'long',
+                      day: 'numeric',
+                      year: 'numeric',
+                    })}
+                  </span>
+                </div>
+                <p className="verse-panel-excerpt-text">{r.opening}</p>
+                <Link to={`/journal?entry=${r.entryId}`} className="verse-panel-excerpt-link">
+                  Open full entry →
+                </Link>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {notes.length === 0 && journalExcerpts.length === 0 && reflections.length === 0 && (
         <p className="placeholder">Nothing connected to this verse yet.</p>
       )}
     </div>

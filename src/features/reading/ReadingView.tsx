@@ -9,13 +9,15 @@ import { useWordTags } from './useWordTags'
 import { PassagePicker } from './PassagePicker'
 import { VersePanel } from './VersePanel'
 import { HighlightGroupPanel } from './HighlightGroupPanel'
+import { ReflectionComposer } from './ReflectionComposer'
 import { VerseText } from './VerseText'
 import { LexiconCard } from './LexiconCard'
 import { SelectionActionBar } from './SelectionActionBar'
 import { PendingGroupBar } from './PendingGroupBar'
 import { NoteComposer } from './NoteComposer'
+import { useReflections } from './useReflections'
 import { getSelectionSpans, getSelectionBoundingRect, clearSelection, type SelectionSpan } from './selection'
-import { BOOK_BY_CODE } from './books'
+import { BOOK_BY_CODE, formatReference } from './books'
 import type { Verse, HighlightColor } from '../../types/db'
 
 const TRANSLATIONS = ['KJV', 'ASV']
@@ -26,7 +28,15 @@ const TRANSLATIONS = ['KJV', 'ASV']
 type SidePanelState =
   | { mode: 'verse'; verse: Verse }
   | { mode: 'highlight'; highlightId: string }
+  | { mode: 'reflection'; spans: SelectionSpan[] }
   | null
+
+function formatSpansLabel(spans: SelectionSpan[]): string {
+  if (spans.length === 0) return ''
+  const first = formatReference(spans[0].verseId)
+  const last = formatReference(spans[spans.length - 1].verseId)
+  return first === last ? first : `${first} – ${last}`
+}
 
 export function ReadingView() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -57,6 +67,7 @@ export function ReadingView() {
     getHighlight,
   } = useHighlights(book, chapter, translation)
   const { excerptsByVerse } = useJournalExcerpts(book, chapter)
+  const { reflectionsByVerse, addReflection } = useReflections(book, chapter)
   const tagsByVerse = useWordTags(book, chapter, translation)
   useReadingSession(book, chapter)
   const bookName = BOOK_BY_CODE[book]?.name ?? book
@@ -186,6 +197,17 @@ export function ReadingView() {
     setNoteSpans([...pendingGroup, ...activeSelection.spans])
   }
 
+  // Spec §5.3: "select passage → Reflect" — anchors automatically to
+  // whatever's currently selected (folding in any +Add group too, same as
+  // Note), no manual tagging needed. Doesn't clear pendingGroup here —
+  // matches Note's behavior of preserving the group if the composer is
+  // closed without saving, so the user can retry.
+  function openReflectionFromSelection() {
+    if (!activeSelection) return
+    setSidePanel({ mode: 'reflection', spans: [...pendingGroup, ...activeSelection.spans] })
+    closeSelection()
+  }
+
   function openNoteFromPending() {
     if (pendingGroup.length === 0) return
     setNoteSpans(pendingGroup)
@@ -197,6 +219,13 @@ export function ReadingView() {
     setNoteSpans(null)
     clearPendingGroup()
     closeSelection()
+  }
+
+  async function handleSaveReflection(title: string, body: string) {
+    if (sidePanel?.mode !== 'reflection') return
+    await addReflection(sidePanel.spans, title, body, translation)
+    setSidePanel(null)
+    clearPendingGroup()
   }
 
   function openVerseView(v: Verse) {
@@ -242,6 +271,7 @@ export function ReadingView() {
           groupCount={pendingGroup.length}
           onHighlight={handleHighlightSelection}
           onNote={openNoteFromSelection}
+          onReflect={openReflectionFromSelection}
           onAddToGroup={handleAddToGroup}
           onClose={closeSelection}
         />
@@ -306,10 +336,10 @@ export function ReadingView() {
                 pending={pendingByVerse[v.verse_id] ?? []}
                 onWordTap={setSelectedWord}
               />
-              {notesByVerse[v.verse_id]?.length > 0 && (
+              {(notesByVerse[v.verse_id]?.length > 0 || reflectionsByVerse[v.verse_id]?.length > 0) && (
                 <span
                   className="verse-note-dot"
-                  title="Has a note"
+                  title="Has a note or reflection"
                   onClick={(e) => {
                     e.stopPropagation()
                     openVerseView(v)
@@ -349,6 +379,7 @@ export function ReadingView() {
             reference={`${bookName} ${sidePanel.verse.chapter}:${sidePanel.verse.verse}`}
             notes={notesByVerse[sidePanel.verse.verse_id] ?? []}
             journalExcerpts={excerptsByVerse[sidePanel.verse.verse_id] ?? []}
+            reflections={reflectionsByVerse[sidePanel.verse.verse_id] ?? []}
             onDeleteNote={(entryId) => deleteNote(sidePanel.verse.verse_id, entryId)}
             onClose={() => setSidePanel(null)}
           />
@@ -361,6 +392,14 @@ export function ReadingView() {
             onExtend={() => startEditHighlight(openHighlight.id)}
             onNote={() => openNoteFromHighlight(openHighlight.id)}
             onRemove={() => handleRemoveHighlightGroup(openHighlight.id)}
+            onClose={() => setSidePanel(null)}
+          />
+        )}
+
+        {sidePanel?.mode === 'reflection' && (
+          <ReflectionComposer
+            passageLabel={formatSpansLabel(sidePanel.spans)}
+            onSave={handleSaveReflection}
             onClose={() => setSidePanel(null)}
           />
         )}

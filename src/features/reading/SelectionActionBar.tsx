@@ -9,19 +9,20 @@ interface SelectionActionBarProps {
   groupCount: number
   onHighlight: (color: HighlightColor) => Promise<void>
   onNote: () => void
+  onReflect: () => void
   onAddToGroup: () => void
   onClose: () => void
 }
 
-// Reflect and Ask aren't built yet (reflection mode + AI assistant are
-// later Phase 2/3 surfaces), so the action bar is Highlight/Note/Copy/+Add
-// only for now — not the full spec 5.1 selection-action set.
+// Ask (AI) isn't built yet (that's a later Phase 3 surface), so the action
+// bar is Highlight/Note/Reflect/Copy/+Add — not the full spec 5.1 set.
 export function SelectionActionBar({
   rect,
   selectedText,
   groupCount,
   onHighlight,
   onNote,
+  onReflect,
   onAddToGroup,
   onClose,
 }: SelectionActionBarProps) {
@@ -73,6 +74,9 @@ export function SelectionActionBar({
       <div className="selection-bar-divider" />
       <button type="button" className="selection-bar-action" onClick={onNote}>
         {groupCount > 0 ? `Note (${groupCount + 1})` : 'Note'}
+      </button>
+      <button type="button" className="selection-bar-action" onClick={onReflect}>
+        Reflect
       </button>
       <button type="button" className="selection-bar-action" onClick={handleCopy}>
         {copied ? 'Copied' : 'Copy'}

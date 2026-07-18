@@ -283,11 +283,40 @@ centered), reading view full-width by default, highlight-dot correctly opens the
 covering the passage, drag-select/floating action bar unaffected, and the mobile bottom-sheet
 transition confirmed at a 400px viewport.
 
-Next up (chunk 2, not started yet): the actual Reflection mode feature — a new composer rendering in
-this same dock, anchored automatically to a selected passage.
+**Reflection mode (spec §5.3) — chunk 2 — is now live.** Selecting a passage and hitting the new
+**Reflect** button on the selection action bar (alongside Highlight/Note/Copy/+Add) opens a new
+`ReflectionComposer.tsx` in the docked side panel from chunk 1 — title (optional) + a free-write
+body, no manual tagging. Anchoring is fully automatic: the exact spans the passage was selected with
+(folding in any `+Add` group, same as Note) become `verse_references` rows with `ref_kind: 'anchor'`,
+same shape `useMarginNotes.ts` already writes for margin notes. Inline `@Book chapter:verse` tags to
+*other* passages within the reflection body still work — same `parseVerseTags` mechanism the journal
+editor uses, written as separate `ref_kind: 'inline'` rows. Both the anchor insert and the inline-tag
+insert, plus the `entries` row itself (`entry_type: 'reflection'`), needed zero schema changes —
+both values were already valid in the Phase 1 check constraints, just never written by any UI until
+now.
 
-Still ahead in Phase 2: Reflection mode (chunk 2 above), Journal timeline reflection support
-(chunk 3), calendar, reading plans, TSK cross-references, "Today, I..." templates.
+New `useReflections.ts` hook exposes `reflectionsByVerse` (fetched by joining `verse_references`
+where `ref_kind='anchor'` to `entries` where `entry_type='reflection'` — the same two-step shape
+`useJournalExcerpts.ts` already uses for inline tags — needed since a reflection's anchor can span
+multiple verses, not just the one verse `entries.anchor_start` stores) and `addReflection`.
+`VersePanel` gained a third "Reflections" section (title + first ~140 characters + "Open full
+entry", same visual treatment as the existing Journal-excerpts section). Per spec, margin notes and
+reflections share the same verse indicator — the existing `.verse-note-dot` — rather than a new dot
+color, since spec's own icon language groups them ("note icon = margin notes/reflections").
+
+Verified end-to-end in-browser: selecting a passage and clicking Reflect opens "Reflecting on
+Genesis 1:3" in the dock with the passage still fully visible and scrollable on the left; word-tap
+on the passage still opens the lexicon normally while the composer is open (spec's "lexicon works
+mid-composition"), confirming the earlier decision to keep lexicon a separate floating overlay
+rather than folding it into the dock was the right call; typing a body and clicking "Save reflection"
+correctly reaches `addReflection`'s auth check ("Not signed in" — expected, no authenticated session
+in this working environment, same known limitation as every other write path built this session);
+`VersePanel`'s new Reflections section confirmed rendering via temporarily-mocked data, cleanly
+reverted before commit.
+
+Still ahead in Phase 2: Journal timeline reflection support (chunk 3 — reflections don't show up in
+`/journal` yet, spec calls for them appearing there "as a filterable type"), calendar, reading plans,
+TSK cross-references, "Today, I..." templates.
 
 ## TODO — amendment v1.4 (theming), intentionally deferred
 
