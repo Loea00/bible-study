@@ -33,6 +33,7 @@ so opening the app to more users later is a matter of enabling sign-ups, not res
 - `src/features/auth/` — sign-in + session context
 - `src/features/reading/` — reading view (scripture-first home)
 - `src/features/journal/` — journal timeline + editor
+- `src/features/highlights/` — all-highlights list (`/highlights`)
 - `supabase/migrations/` — schema: `entries`, `verse_references`, `reading_sessions` (user
   content), `translations`/`verses` (bundled public-domain reference text), `highlights`
   (group-based spans per amendment v1.1), `strongs_lexicon`/`word_tags` (Strong's word-tap
@@ -357,8 +358,23 @@ browser-verified this time (not just build-checked):**
   Aaron named specifically, was checked live and already worked correctly — this dismiss gap was
   the more likely real culprit for the "stuck, can't back out" experience.)
 
+**New `/highlights` page — a running list of every highlight, across the whole Bible, not scoped to
+whatever chapter is currently open.** Requested directly: "a section that lists all of the
+highlights." New `src/features/highlights/` — `useAllHighlights.ts` fetches every `highlights` row
+unscoped (most-recent-first) plus the quoted text for every span across every highlight in one
+batched pass, grouped by translation (a highlight's own `translation` field, not the reading view's
+current one, since this page has no reading-view context) since different highlights could in
+principle have been made in different translations. `HighlightsPage.tsx` renders each as a card:
+color swatch, "N parts," an "Open in reading view →" deep link (to the first span's book/chapter),
+every piece with its own reference + quoted text (same visual pattern as `HighlightGroupPanel`/
+`AnchorScripture`), and a Remove button. New nav link between Journal and Log. Verified end-to-end
+with mock multi-part and single-part highlights: real KJV verse text pulled correctly for both,
+deep links resolve to the right chapter, empty state shows correctly with no highlights, mock
+cleanly reverted before commit (confirmed via grep, since it's a new untracked file `git diff`
+wouldn't show).
+
 Still ahead in Phase 2: calendar, reading plans, TSK cross-references, "Today, I..." templates. One
-known unresolved bug from the previous session ("cannot highlight after committing a +Add
+known unresolved bug from a previous session ("cannot highlight after committing a +Add
 note/reflection") is still open — see memory for the reproduction plan.
 
 ## TODO — amendment v1.4 (theming), intentionally deferred

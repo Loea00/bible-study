@@ -890,6 +890,39 @@ button.highlight-swatch {
   text-decoration: none;
 }
 
+.highlights-page {
+  font-family: var(--sans);
+}
+
+.highlights-count {
+  font-size: 13px;
+  color: var(--text);
+  opacity: 0.6;
+  margin: 0 0 20px;
+}
+
+.highlights-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.highlight-list-item {
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.highlight-list-open {
+  margin-left: auto;
+  font-size: 13px;
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.highlight-list-open:hover {
+  text-decoration: underline;
+}
+
 .reading-log {
   font-family: var(--sans);
 }
