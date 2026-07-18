@@ -122,10 +122,78 @@ body {
 }
 
 main {
+  font-family: var(--serif);
+}
+
+/* Journal and Log keep the earlier centered-column width; the reading view
+   (below) needs to go full-bleed for the docked side panel, so the width
+   constraint lives on each page's own root class instead of on `main`
+   globally. */
+.journal,
+.reading-log {
   max-width: 720px;
   margin: 0 auto;
   padding: 32px 24px;
-  font-family: var(--serif);
+}
+
+.reading-view {
+  display: flex;
+  align-items: flex-start;
+  width: 100%;
+}
+
+.reading-pane {
+  flex: 1;
+  min-width: 0;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 32px 24px;
+}
+
+/* Collapses to zero width, not reserved empty space, so the reading pane
+   stays full-width until something is actually selected. */
+.reading-side-panel {
+  width: 0;
+  overflow: hidden;
+  flex-shrink: 0;
+  transition: width 200ms ease;
+}
+
+.reading-side-panel.open {
+  width: 380px;
+  border-left: 1px solid var(--border);
+  padding: 32px 24px;
+  position: sticky;
+  top: 0;
+  max-height: 100vh;
+  overflow-y: auto;
+  font-family: var(--sans);
+}
+
+@media (max-width: 720px) {
+  .reading-view {
+    flex-direction: column;
+  }
+
+  .reading-side-panel {
+    position: fixed;
+    inset: auto 0 0 0;
+    width: auto;
+    height: 0;
+    max-height: 75vh;
+    border-left: none;
+    border-top: 1px solid var(--border);
+    border-radius: 12px 12px 0 0;
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.15);
+    background: var(--bg);
+    transition: height 200ms ease;
+    z-index: 15;
+  }
+
+  .reading-side-panel.open {
+    height: auto;
+    padding: 20px;
+  }
 }
 
 .placeholder {
@@ -446,6 +514,15 @@ button.highlight-swatch {
   max-height: 80vh;
   overflow-y: auto;
   padding: 20px;
+  font-family: var(--sans);
+}
+
+/* Docked side-panel content (VersePanel, HighlightGroupPanel) reuses every
+   .verse-panel-* typography/spacing class below but not .verse-panel's own
+   box model — the dock (.reading-side-panel.open) already owns sizing,
+   scrolling, and padding. NoteComposer still uses .verse-panel directly
+   since it stays a centered modal. */
+.side-panel-body {
   font-family: var(--sans);
 }
 

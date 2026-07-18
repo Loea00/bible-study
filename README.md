@@ -253,7 +253,41 @@ authenticated write path to create real entries to search.
   **Not built:** "reflect on the sum of the parts" — reflection mode doesn't exist anywhere in the
   app yet (Phase 2/3 per spec); only the note half of that request was buildable today.
 
-Still ahead in Phase 2: calendar, reading plans, TSK cross-references, "Today, I..." templates.
+**Docked side-panel layout — chunk 1 of Reflection mode (§5.3) — is now live.**
+Every piece of "content connected to a verse" (`VersePanel`, `HighlightGroupPanel`) used to render
+as a centered modal overlay covering the passage. That never matched spec §5.1's actual design
+("tapping a marked verse opens a panel... Mobile: side panel becomes a bottom sheet") or §5.3's
+Reflection mode ("Text slides aside; a writing page opens beside it. The passage stays pinned and
+readable while writing") — everything was a full-screen dim overlay, none of it docked. Aaron
+remembered the original side-panel design conversation and asked whether the true docked layout was
+buildable; this is the layout groundwork, landed as its own chunk before Reflection mode itself
+(chunk 2) is built on top of it.
+
+`ReadingView.tsx` is now a flex row: `.reading-pane` (the passage, keeps its familiar ~720px reading
+width via its own padding) and `.reading-side-panel`, which collapses to *zero* width — not reserved
+empty space — when nothing is selected, and opens to a docked 380px column on tap. On narrow
+viewports it switches to a fixed bottom sheet instead (slides up, rounded top corners, matching
+spec's mobile behavior). The global `main` element's old `max-width: 720px` (previously shared by
+every route) moved onto each page's own root class (`.journal`, `.reading-log`) so the reading view
+could go full-bleed without affecting Journal or the reading log.
+
+`VersePanel`/`HighlightGroupPanel` no longer wrap themselves in `.picker-overlay` — they're now
+plain content rendered inside the dock, with a new `.side-panel-body` class replacing `.verse-panel`'s
+box-model (max-width/max-height/background/border), since the dock itself now owns sizing and
+scrolling; `NoteComposer`/`LexiconCard`/`PassagePicker`/`ConcordanceView` are untouched and still
+float as modals (deliberately — see the "what's out of scope" note in the plan file if resuming this
+work later). `ReadingView`'s three separate note/highlight-viewer states collapsed into one
+`SidePanelState` discriminated union (`{mode:'verse'|'highlight', ...} | null`) so exactly one thing
+renders in the dock at a time. Verified in-browser: `/journal` and `/log` unaffected (still
+centered), reading view full-width by default, highlight-dot correctly opens the dock without
+covering the passage, drag-select/floating action bar unaffected, and the mobile bottom-sheet
+transition confirmed at a 400px viewport.
+
+Next up (chunk 2, not started yet): the actual Reflection mode feature — a new composer rendering in
+this same dock, anchored automatically to a selected passage.
+
+Still ahead in Phase 2: Reflection mode (chunk 2 above), Journal timeline reflection support
+(chunk 3), calendar, reading plans, TSK cross-references, "Today, I..." templates.
 
 ## TODO — amendment v1.4 (theming), intentionally deferred
 
