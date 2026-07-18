@@ -32,7 +32,7 @@ export function usePrayerLists() {
       .insert({ user_id: userId, name: name.trim(), sort_order: sortOrder })
       .select()
       .single()
-    if (error) throw error
+    if (error) throw new Error(error.message)
 
     setLists((prev) => [...prev, data])
     return data
@@ -40,7 +40,7 @@ export function usePrayerLists() {
 
   async function renameList(listId: string, name: string) {
     const { error } = await supabase.from('prayer_lists').update({ name: name.trim() }).eq('id', listId)
-    if (error) throw error
+    if (error) throw new Error(error.message)
     setLists((prev) => prev.map((l) => (l.id === listId ? { ...l, name: name.trim() } : l)))
   }
 
@@ -48,7 +48,7 @@ export function usePrayerLists() {
   // migration's `on delete set null`) rather than being deleted with it.
   async function deleteList(listId: string) {
     const { error } = await supabase.from('prayer_lists').delete().eq('id', listId)
-    if (error) throw error
+    if (error) throw new Error(error.message)
     setLists((prev) => prev.filter((l) => l.id !== listId))
   }
 

@@ -35,7 +35,7 @@ export function usePrayedMarks() {
       .insert({ request_id: requestId, user_id: userId, session_id: getActiveSessionId() })
       .select()
       .single()
-    if (error) throw error
+    if (error) throw new Error(error.message)
 
     setMarksByRequest((prev) => ({
       ...prev,

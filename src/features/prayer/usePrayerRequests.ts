@@ -33,7 +33,7 @@ export function usePrayerRequests() {
       })
       .select()
       .single()
-    if (error) throw error
+    if (error) throw new Error(error.message)
 
     setRequests((prev) => [data, ...prev])
     return data
@@ -46,7 +46,7 @@ export function usePrayerRequests() {
       .eq('id', requestId)
       .select()
       .single()
-    if (error) throw error
+    if (error) throw new Error(error.message)
     setRequests((prev) => prev.map((r) => (r.id === requestId ? data : r)))
   }
 
@@ -60,7 +60,7 @@ export function usePrayerRequests() {
       .eq('id', requestId)
       .select()
       .single()
-    if (error) throw error
+    if (error) throw new Error(error.message)
     setRequests((prev) => prev.map((r) => (r.id === requestId ? data : r)))
   }
 
@@ -70,13 +70,13 @@ export function usePrayerRequests() {
         ? { status }
         : { status, answered_at: null, answered_note: null }
     const { data, error } = await supabase.from('prayer_requests').update(update).eq('id', requestId).select().single()
-    if (error) throw error
+    if (error) throw new Error(error.message)
     setRequests((prev) => prev.map((r) => (r.id === requestId ? data : r)))
   }
 
   async function deleteRequest(requestId: string) {
     const { error } = await supabase.from('prayer_requests').delete().eq('id', requestId)
-    if (error) throw error
+    if (error) throw new Error(error.message)
     setRequests((prev) => prev.filter((r) => r.id !== requestId))
   }
 
