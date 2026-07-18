@@ -8,6 +8,7 @@ interface HighlightGroupPanelProps {
   translation: string
   onExtend: () => void
   onNote: () => void
+  onReflect: () => void
   onRemove: () => Promise<void>
   onClose: () => void
 }
@@ -19,7 +20,15 @@ interface HighlightGroupPanelProps {
 // group's spans can reach outside the chapter currently on screen. Renders
 // as plain content inside ReadingView's docked side panel — no
 // overlay/backdrop of its own.
-export function HighlightGroupPanel({ highlight, translation, onExtend, onNote, onRemove, onClose }: HighlightGroupPanelProps) {
+export function HighlightGroupPanel({
+  highlight,
+  translation,
+  onExtend,
+  onNote,
+  onReflect,
+  onRemove,
+  onClose,
+}: HighlightGroupPanelProps) {
   const [textByVerse, setTextByVerse] = useState<Record<string, string> | null>(null)
   const [removing, setRemoving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -101,6 +110,9 @@ export function HighlightGroupPanel({ highlight, translation, onExtend, onNote, 
         </button>
         <button type="button" className="selection-bar-action" onClick={onNote}>
           Note
+        </button>
+        <button type="button" className="selection-bar-action" onClick={onReflect}>
+          Reflect
         </button>
         <button type="button" className="verse-panel-note-delete" disabled={removing} onClick={handleRemove}>
           {removing ? 'Removing…' : 'Remove'}

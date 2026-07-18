@@ -1262,3 +1262,16 @@ button.highlight-swatch {
   padding: 2px 6px;
   margin-bottom: 4px;
 }
+
+.journal-card-reference {
+  display: inline-block;
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--accent);
+  text-decoration: none;
+  margin-top: 2px;
+}
+
+.journal-card-reference:hover {
+  text-decoration: underline;
+}

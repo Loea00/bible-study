@@ -7,6 +7,7 @@ interface PendingGroupBarProps {
   editing?: boolean
   onHighlight: (color: HighlightColor) => Promise<void>
   onNote: () => void
+  onReflect: () => void
   onClear: () => void
 }
 
@@ -16,7 +17,7 @@ interface PendingGroupBarProps {
 // reused for extending an existing highlight (see ReadingView's
 // startEditHighlight) — `editing` just changes the label and Clear's
 // implied meaning (cancel the edit, not just clear a fresh selection).
-export function PendingGroupBar({ count, editing, onHighlight, onNote, onClear }: PendingGroupBarProps) {
+export function PendingGroupBar({ count, editing, onHighlight, onNote, onReflect, onClear }: PendingGroupBarProps) {
   return (
     <div className="pending-bar">
       <span className="pending-bar-count">
@@ -36,6 +37,9 @@ export function PendingGroupBar({ count, editing, onHighlight, onNote, onClear }
       <div className="selection-bar-divider" />
       <button type="button" className="selection-bar-action" onClick={onNote}>
         Note
+      </button>
+      <button type="button" className="selection-bar-action" onClick={onReflect}>
+        Reflect
       </button>
       <button type="button" className="selection-bar-action" onClick={onClear}>
         {editing ? 'Cancel' : 'Clear'}

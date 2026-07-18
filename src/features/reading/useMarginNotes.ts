@@ -8,19 +8,48 @@ export function useMarginNotes(book: string, chapter: number) {
   const [notesByVerse, setNotesByVerse] = useState<Record<string, Entry[]>>({})
   const [loading, setLoading] = useState(true)
 
+  // A note can anchor across multiple, non-consecutive verses (like a
+  // highlight group) — reading only entries.anchor_start (the first verse)
+  // meant a multi-span note only ever appeared connected to one of its
+  // parts. Look up every ref_kind='anchor' row touching this chapter and
+  // join to the owning entry instead, the same two-step shape
+  // useReflections.ts/useJournalExcerpts.ts already use.
   const refetch = useCallback(async () => {
     setLoading(true)
-    const { data } = await supabase
+    const prefix = `${book}.${chapter}.`
+    const { data: refs } = await supabase
+      .from('verse_references')
+      .select('*')
+      .eq('ref_kind', 'anchor')
+      .like('verse_start', `${prefix}%`)
+
+    if (!refs || refs.length === 0) {
+      setNotesByVerse({})
+      setLoading(false)
+      return
+    }
+
+    const entryIds = [...new Set(refs.map((r) => r.entry_id))]
+    const { data: entries } = await supabase
       .from('entries')
       .select('*')
+      .in('id', entryIds)
       .eq('entry_type', 'margin_note')
-      .like('anchor_start', `${book}.${chapter}.%`)
-      .order('created_at', { ascending: true })
 
+    const entryById = new Map((entries ?? []).map((e) => [e.id, e]))
     const grouped: Record<string, Entry[]> = {}
-    for (const entry of data ?? []) {
-      if (!entry.anchor_start) continue
-      ;(grouped[entry.anchor_start] ??= []).push(entry)
+    // A multi-span note can have more than one anchor row for the same
+    // verse (rare, but possible) — dedupe per (verse, entry) so it doesn't
+    // show up twice in that verse's panel.
+    const seen = new Set<string>()
+
+    for (const ref of refs) {
+      const entry = entryById.get(ref.entry_id)
+      if (!entry) continue
+      const key = `${ref.verse_start}:${entry.id}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      ;(grouped[ref.verse_start] ??= []).push(entry)
     }
     setNotesByVerse(grouped)
     setLoading(false)
@@ -73,22 +102,23 @@ export function useMarginNotes(book: string, chapter: number) {
     )
     if (refError) throw refError
 
-    // Register under the anchor verse (matches how notes are fetched/kept
-    // in sync); notes anchored elsewhere in the chapter surface next load.
-    setNotesByVerse((prev) => ({
-      ...prev,
-      [anchorStart]: [...(prev[anchorStart] ?? []), entry],
-    }))
+    await refetch()
   }
 
-  async function deleteNote(verseId: string, entryId: string) {
+  async function deleteNote(entryId: string) {
     const { error } = await supabase.from('entries').delete().eq('id', entryId)
     if (error) throw error
 
-    setNotesByVerse((prev) => ({
-      ...prev,
-      [verseId]: (prev[verseId] ?? []).filter((n) => n.id !== entryId),
-    }))
+    // A multi-span note can appear under several verses — remove it from
+    // all of them, not just whichever verse's panel the delete was clicked
+    // from (same pattern useHighlights.removeHighlight already uses).
+    setNotesByVerse((prev) => {
+      const next: Record<string, Entry[]> = {}
+      for (const [verseId, list] of Object.entries(prev)) {
+        next[verseId] = list.filter((n) => n.id !== entryId)
+      }
+      return next
+    })
   }
 
   return { notesByVerse, loading, addNote, deleteNote }

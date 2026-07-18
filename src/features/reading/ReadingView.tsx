@@ -164,6 +164,12 @@ export function ReadingView() {
     setSidePanel(null)
   }
 
+  function openReflectionFromHighlight(highlightId: string) {
+    const spans = getHighlightSpans(highlightId)
+    if (spans.length === 0) return
+    setSidePanel({ mode: 'reflection', spans })
+  }
+
   async function handleRemoveHighlightGroup(highlightId: string) {
     await removeHighlight(highlightId)
     setSidePanel(null)
@@ -210,6 +216,11 @@ export function ReadingView() {
   function openNoteFromPending() {
     if (pendingGroup.length === 0) return
     setNoteSpans(pendingGroup)
+  }
+
+  function openReflectionFromPending() {
+    if (pendingGroup.length === 0) return
+    setSidePanel({ mode: 'reflection', spans: pendingGroup })
   }
 
   async function handleSaveNote(body: string) {
@@ -282,6 +293,7 @@ export function ReadingView() {
           editing={editingHighlightId !== null}
           onHighlight={handleHighlightPending}
           onNote={openNoteFromPending}
+          onReflect={openReflectionFromPending}
           onClear={clearPendingGroup}
         />
       )}
@@ -379,7 +391,7 @@ export function ReadingView() {
             notes={notesByVerse[sidePanel.verse.verse_id] ?? []}
             journalExcerpts={excerptsByVerse[sidePanel.verse.verse_id] ?? []}
             reflections={reflectionsByVerse[sidePanel.verse.verse_id] ?? []}
-            onDeleteNote={(entryId) => deleteNote(sidePanel.verse.verse_id, entryId)}
+            onDeleteNote={deleteNote}
             onClose={() => setSidePanel(null)}
           />
         )}
@@ -390,6 +402,7 @@ export function ReadingView() {
             translation={translation}
             onExtend={() => startEditHighlight(openHighlight.id)}
             onNote={() => openNoteFromHighlight(openHighlight.id)}
+            onReflect={() => openReflectionFromHighlight(openHighlight.id)}
             onRemove={() => handleRemoveHighlightGroup(openHighlight.id)}
             onClose={() => setSidePanel(null)}
           />
