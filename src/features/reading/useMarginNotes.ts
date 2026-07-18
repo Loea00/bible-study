@@ -85,7 +85,7 @@ export function useMarginNotes(book: string, chapter: number) {
       .select()
       .single()
 
-    if (error) throw error
+    if (error) throw new Error(error.message)
 
     const { error: refError } = await supabase.from('verse_references').insert(
       spans.map((s) => ({
@@ -100,7 +100,7 @@ export function useMarginNotes(book: string, chapter: number) {
         translation,
       })),
     )
-    if (refError) throw refError
+    if (refError) throw new Error(refError.message)
 
     await refetch()
   }
@@ -113,7 +113,7 @@ export function useMarginNotes(book: string, chapter: number) {
       .from('entries')
       .update({ body, updated_at: new Date().toISOString() })
       .eq('id', entryId)
-    if (error) throw error
+    if (error) throw new Error(error.message)
 
     setNotesByVerse((prev) => {
       const next: Record<string, Entry[]> = {}
@@ -126,7 +126,7 @@ export function useMarginNotes(book: string, chapter: number) {
 
   async function deleteNote(entryId: string) {
     const { error } = await supabase.from('entries').delete().eq('id', entryId)
-    if (error) throw error
+    if (error) throw new Error(error.message)
 
     // A multi-span note can appear under several verses — remove it from
     // all of them, not just whichever verse's panel the delete was clicked

@@ -51,7 +51,7 @@ export function useJournalEntries() {
       })
       .select()
       .single()
-    if (error) throw error
+    if (error) throw new Error(error.message)
 
     const verseTags = parseVerseTags(body)
     if (verseTags.length > 0) {
@@ -65,7 +65,7 @@ export function useJournalEntries() {
           ref_kind: 'inline' as const,
         })),
       )
-      if (refError) throw refError
+      if (refError) throw new Error(refError.message)
     }
 
     setEntries((prev) => [entry, ...prev])
@@ -89,14 +89,14 @@ export function useJournalEntries() {
       .eq('id', entryId)
       .select()
       .single()
-    if (error) throw error
+    if (error) throw new Error(error.message)
 
     const { error: deleteError } = await supabase
       .from('verse_references')
       .delete()
       .eq('entry_id', entryId)
       .eq('ref_kind', 'inline')
-    if (deleteError) throw deleteError
+    if (deleteError) throw new Error(deleteError.message)
 
     const verseTags = parseVerseTags(body)
     if (verseTags.length > 0) {
@@ -110,7 +110,7 @@ export function useJournalEntries() {
           ref_kind: 'inline' as const,
         })),
       )
-      if (refError) throw refError
+      if (refError) throw new Error(refError.message)
     }
 
     setEntries((prev) => prev.map((e) => (e.id === entryId ? entry : e)))
@@ -119,7 +119,7 @@ export function useJournalEntries() {
 
   async function deleteEntry(entryId: string) {
     const { error } = await supabase.from('entries').delete().eq('id', entryId)
-    if (error) throw error
+    if (error) throw new Error(error.message)
     setEntries((prev) => prev.filter((e) => e.id !== entryId))
   }
 

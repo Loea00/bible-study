@@ -83,7 +83,7 @@ export function useHighlights(book: string, chapter: number, translation: string
         end_offset: s.endOffset,
       })),
     })
-    if (error) throw error
+    if (error) throw new Error(error.message)
     await refetch()
   }
 
@@ -99,13 +99,13 @@ export function useHighlights(book: string, chapter: number, translation: string
         })),
       })
       .eq('id', highlightId)
-    if (error) throw error
+    if (error) throw new Error(error.message)
     await refetch()
   }
 
   async function removeHighlight(highlightId: string) {
     const { error } = await supabase.from('highlights').delete().eq('id', highlightId)
-    if (error) throw error
+    if (error) throw new Error(error.message)
     setRaw((prev) => prev.filter((h) => h.id !== highlightId))
     setByVerse((prev) => {
       const next: Record<string, StoredHighlight[]> = {}

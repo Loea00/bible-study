@@ -64,7 +64,7 @@ export function useAllHighlights() {
 
   async function removeHighlight(highlightId: string) {
     const { error } = await supabase.from('highlights').delete().eq('id', highlightId)
-    if (error) throw error
+    if (error) throw new Error(error.message)
     setHighlights((prev) => prev.filter((h) => h.id !== highlightId))
   }
 

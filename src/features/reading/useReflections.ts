@@ -96,7 +96,7 @@ export function useReflections(book: string, chapter: number) {
       })
       .select()
       .single()
-    if (error) throw error
+    if (error) throw new Error(error.message)
 
     // Anchored to the whole passage automatically (spec §5.3, ref_kind:
     // 'anchor') — one row per span, same shape useMarginNotes.addNote writes.
@@ -113,7 +113,7 @@ export function useReflections(book: string, chapter: number) {
         translation,
       })),
     )
-    if (anchorError) throw anchorError
+    if (anchorError) throw new Error(anchorError.message)
 
     // Inline @verse tags to *other* passages still work, connecting
     // passages through the user's thinking (spec §5.3) — same mechanism
@@ -130,7 +130,7 @@ export function useReflections(book: string, chapter: number) {
           ref_kind: 'inline' as const,
         })),
       )
-      if (inlineError) throw inlineError
+      if (inlineError) throw new Error(inlineError.message)
     }
 
     await refetch()
