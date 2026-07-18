@@ -1620,3 +1620,158 @@ button.highlight-swatch {
   color: var(--accent);
   border-color: var(--accent);
 }
+
+.prayer-mark-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 0;
+}
+
+.prayer-mark-button {
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--accent);
+  background: var(--accent-bg, rgba(107, 79, 160, 0.1));
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  padding: 4px 12px;
+  cursor: pointer;
+}
+
+.prayer-mark-button:hover {
+  background: var(--accent);
+  color: white;
+}
+
+.prayer-mark-button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.prayer-mark-whisper {
+  font-family: var(--sans);
+  font-size: 12px;
+  color: var(--text);
+  opacity: 0.55;
+}
+
+.prayer-mark-strip {
+  display: inline-flex;
+  gap: 3px;
+  flex-wrap: wrap;
+}
+
+.prayer-mark-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  opacity: 0.5;
+}
+
+.prayer-through-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.prayer-through-button {
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--text-h);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 5px 12px;
+  cursor: pointer;
+}
+
+.prayer-through-button:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.pray-through {
+  font-family: var(--sans);
+  max-width: 480px;
+  margin: 10vh auto 0;
+}
+
+.pray-through-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.pray-through-list-name {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text);
+  opacity: 0.6;
+  margin: 0;
+}
+
+.pray-through-exit {
+  border: none;
+  background: none;
+  color: var(--text);
+  opacity: 0.6;
+  font-family: var(--sans);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.pray-through-exit:hover {
+  opacity: 1;
+}
+
+.pray-through-card {
+  text-align: center;
+}
+
+.pray-through-progress {
+  font-size: 12px;
+  color: var(--text);
+  opacity: 0.5;
+  margin: 0 0 12px;
+}
+
+.pray-through-title {
+  font-family: var(--serif);
+  font-size: 24px;
+  font-weight: 500;
+  color: var(--text-h);
+  margin: 0 0 12px;
+}
+
+.pray-through-card .entry-body {
+  font-size: 17px;
+  margin-bottom: 24px;
+}
+
+.pray-through-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+
+.pray-through-skip {
+  border: none;
+  background: none;
+  color: var(--text);
+  opacity: 0.6;
+  font: inherit;
+  font-family: var(--sans);
+  cursor: pointer;
+}
+
+.pray-through-skip:hover {
+  opacity: 1;
+}

@@ -425,10 +425,31 @@ grouping by list plus an Unlisted bucket, status badges and filter chips, the ed
 pre-selecting the request's current list, the "mark answered" inline note form, and list rename —
 all cleanly reverted before commit.
 
-Still ahead in Phase 2: prayer tracker stages two/three (above), calendar, reading plans, TSK
-cross-references, "Today, I..." templates. One known unresolved bug from a previous session
-("cannot highlight after committing a +Add note/reflection") is still open — see memory for the
-reproduction plan.
+**Prayer tracker stage two: the prayed-mark gesture and "pray through my list" flow are live**
+(spec-amendment-v1-2 §B3/§B4). New `usePrayedMarks.ts` hook — one-tap, writing-free by design
+(timestamp + optional `session_id` link to the active reading session, no note), fetched unscoped
+and grouped by request like the other Phase-2-scale hooks. `PrayerRequestCard.tsx` gained an "I
+prayed for this" button, a soft relative-time "Last prayed…" whisper, and a quiet dot-strip
+timeline (§B3: "a quiet visual rhythm, not a ledger of numbers") — deliberately no numeric mark
+count shown next to the button itself. New `PrayThroughFlow.tsx`: steps through one list's open
+(active/ongoing) requests at a time, sorted least-recently-prayed-first so untouched requests
+surface naturally (a gentle nudge, not guilt — §B3's "quiet daily view" principle folded into
+ordering rather than a separate surface); mark-and-advance, Skip, or Exit anytime; ends with a
+plain "That's everyone in {list}." statement, no completion framing, no checklist scoring, per
+spec's explicit "not a checklist grind." `PrayerPage.tsx` gained a "Pray through {list} (N)" button
+row, independent of the status filter (so it's still reachable while viewing Answered/Archived).
+The spec's "answered ledger" (§B3) is already satisfied by the existing Answered status filter from
+stage one — spec calls this out as "a Phase 2 freebie (it is a status filter)," so no separate view
+was built. A full request-detail page (§B3's "fifth lens" — prayed timeline + interleaved history
+as its own route) is deferred; today's card carries the same information compactly. Verified live
+with mocked lists/requests/marks: dot-strip count, last-prayed whisper, pray-through buttons only
+appearing for lists with open requests, the full flow (progress counter, Skip advancing, the quiet
+completion state, Exit/Done returning cleanly to the page) — reverted cleanly before commit.
+
+Still ahead in Phase 2: prayer tracker stage three (`entries.request_id` integration — schema
+already exists, wiring is what's left), calendar, reading plans, TSK cross-references, "Today,
+I..." templates. One known unresolved bug from a previous session ("cannot highlight after
+committing a +Add note/reflection") is still open — see memory for the reproduction plan.
 
 ## TODO — amendment v1.4 (theming), intentionally deferred
 

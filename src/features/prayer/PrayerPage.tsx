@@ -1,8 +1,10 @@
 import { useMemo, useState } from 'react'
 import { usePrayerLists } from './usePrayerLists'
 import { usePrayerRequests } from './usePrayerRequests'
+import { usePrayedMarks } from './usePrayedMarks'
 import { PrayerRequestCard } from './PrayerRequestCard'
-import type { PrayerRequestStatus } from '../../types/db'
+import { PrayThroughFlow } from './PrayThroughFlow'
+import type { PrayedMark, PrayerRequest, PrayerRequestStatus } from '../../types/db'
 
 type StatusFilter = 'open' | 'answered' | 'archived' | 'all'
 
@@ -12,10 +14,23 @@ function matchesFilter(status: PrayerRequestStatus, filter: StatusFilter): boole
   return status === filter
 }
 
+// Never-prayed-for requests sort first (spec §B3's "requests you haven't
+// touched lately," applied gently as ordering rather than a guilt nudge).
+function sortForPrayThrough(items: PrayerRequest[], marksByRequest: Record<string, PrayedMark[]>): PrayerRequest[] {
+  function lastPrayedAt(r: PrayerRequest): number {
+    const marks = marksByRequest[r.id]
+    return marks && marks.length > 0 ? new Date(marks[0].created_at).getTime() : -Infinity
+  }
+  return [...items].sort((a, b) => lastPrayedAt(a) - lastPrayedAt(b))
+}
+
 export function PrayerPage() {
   const { lists, loading: listsLoading, createList, renameList, deleteList } = usePrayerLists()
   const { requests, loading: requestsLoading, createRequest, updateRequest, markAnswered, setStatus, deleteRequest } =
     usePrayerRequests()
+  const { marksByRequest, addMark } = usePrayedMarks()
+
+  const [prayThrough, setPrayThrough] = useState<{ name: string; requests: PrayerRequest[] } | null>(null)
 
   const [newTitle, setNewTitle] = useState('')
   const [newDescription, setNewDescription] = useState('')
@@ -73,6 +88,40 @@ export function PrayerPage() {
   }, [requests, filter])
 
   const hasAnyVisible = [...grouped.values()].some((v) => v.length > 0)
+
+  // Independent of the status filter above — "pray through" only ever
+  // touches open requests, so it stays available even while viewing the
+  // Answered or Archived filter.
+  const openByList = useMemo(() => {
+    const byList = new Map<string, PrayerRequest[]>()
+    for (const r of requests) {
+      if (r.status !== 'active' && r.status !== 'ongoing') continue
+      const key = r.list_id ?? 'unlisted'
+      const bucket = byList.get(key)
+      if (bucket) bucket.push(r)
+      else byList.set(key, [r])
+    }
+    return byList
+  }, [requests])
+
+  const hasAnyOpen = [...openByList.values()].some((v) => v.length > 0)
+
+  function startPrayThrough(key: string, name: string) {
+    setPrayThrough({ name, requests: sortForPrayThrough(openByList.get(key) ?? [], marksByRequest) })
+  }
+
+  if (prayThrough) {
+    return (
+      <div className="prayer-page">
+        <PrayThroughFlow
+          listName={prayThrough.name}
+          requests={prayThrough.requests}
+          onMark={addMark}
+          onExit={() => setPrayThrough(null)}
+        />
+      </div>
+    )
+  }
 
   return (
     <div className="prayer-page">
@@ -163,6 +212,34 @@ export function PrayerPage() {
         )}
       </div>
 
+      {hasAnyOpen && (
+        <div className="prayer-through-bar">
+          {lists.map((l) => {
+            const open = openByList.get(l.id) ?? []
+            if (open.length === 0) return null
+            return (
+              <button
+                key={l.id}
+                type="button"
+                className="prayer-through-button"
+                onClick={() => startPrayThrough(l.id, l.name)}
+              >
+                Pray through {l.name} ({open.length})
+              </button>
+            )
+          })}
+          {(() => {
+            const open = openByList.get('unlisted') ?? []
+            if (open.length === 0) return null
+            return (
+              <button type="button" className="prayer-through-button" onClick={() => startPrayThrough('unlisted', 'Unlisted')}>
+                Pray through Unlisted ({open.length})
+              </button>
+            )
+          })()}
+        </div>
+      )}
+
       <div className="journal-type-filters">
         {(['open', 'answered', 'archived', 'all'] as const).map((f) => (
           <button
@@ -195,9 +272,11 @@ export function PrayerPage() {
                     key={r.id}
                     request={r}
                     lists={lists}
+                    marks={marksByRequest[r.id] ?? []}
                     onEdit={updateRequest}
                     onSetStatus={setStatus}
                     onMarkAnswered={markAnswered}
+                    onMarkPrayed={addMark}
                     onDelete={deleteRequest}
                   />
                 ))}
@@ -217,9 +296,11 @@ export function PrayerPage() {
                     key={r.id}
                     request={r}
                     lists={lists}
+                    marks={marksByRequest[r.id] ?? []}
                     onEdit={updateRequest}
                     onSetStatus={setStatus}
                     onMarkAnswered={markAnswered}
+                    onMarkPrayed={addMark}
                     onDelete={deleteRequest}
                   />
                 ))}

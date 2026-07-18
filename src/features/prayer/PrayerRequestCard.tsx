@@ -1,12 +1,14 @@
 import { useState } from 'react'
-import type { PrayerList, PrayerRequest, PrayerRequestStatus } from '../../types/db'
+import type { PrayedMark, PrayerList, PrayerRequest, PrayerRequestStatus } from '../../types/db'
 
 interface PrayerRequestCardProps {
   request: PrayerRequest
   lists: PrayerList[]
+  marks: PrayedMark[]
   onEdit: (requestId: string, title: string, description: string, listId: string | null) => Promise<unknown>
   onSetStatus: (requestId: string, status: PrayerRequestStatus) => Promise<unknown>
   onMarkAnswered: (requestId: string, note: string) => Promise<unknown>
+  onMarkPrayed: (requestId: string) => Promise<unknown>
   onDelete: (requestId: string) => Promise<void>
 }
 
@@ -17,7 +19,29 @@ const STATUS_LABEL: Record<PrayerRequestStatus, string> = {
   archived: 'Archived',
 }
 
-export function PrayerRequestCard({ request, lists, onEdit, onSetStatus, onMarkAnswered, onDelete }: PrayerRequestCardProps) {
+// "Last prayed" whisper (spec §B3) — a soft relative time, not a precise
+// timestamp; exact times live in each dot's title attribute instead.
+function formatRelative(iso: string): string {
+  const minutes = Math.floor((Date.now() - new Date(iso).getTime()) / 60000)
+  if (minutes < 1) return 'just now'
+  if (minutes < 60) return `${minutes} minute${minutes === 1 ? '' : 's'} ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`
+  const days = Math.floor(hours / 24)
+  if (days < 7) return `${days} day${days === 1 ? '' : 's'} ago`
+  return new Date(iso).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })
+}
+
+export function PrayerRequestCard({
+  request,
+  lists,
+  marks,
+  onEdit,
+  onSetStatus,
+  onMarkAnswered,
+  onMarkPrayed,
+  onDelete,
+}: PrayerRequestCardProps) {
   const [editing, setEditing] = useState(false)
   const [title, setTitle] = useState(request.title)
   const [description, setDescription] = useState(request.description)
@@ -28,6 +52,7 @@ export function PrayerRequestCard({ request, lists, onEdit, onSetStatus, onMarkA
   const [answerNote, setAnswerNote] = useState('')
 
   const [busy, setBusy] = useState(false)
+  const [marking, setMarking] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -82,6 +107,18 @@ export function PrayerRequestCard({ request, lists, onEdit, onSetStatus, onMarkA
       setError(err instanceof Error ? err.message : 'Could not mark this answered.')
     } finally {
       setBusy(false)
+    }
+  }
+
+  async function handleMarkPrayed() {
+    setMarking(true)
+    setError(null)
+    try {
+      await onMarkPrayed(request.id)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not save that.')
+    } finally {
+      setMarking(false)
     }
   }
 
@@ -154,6 +191,25 @@ export function PrayerRequestCard({ request, lists, onEdit, onSetStatus, onMarkA
       </div>
 
       {request.description && <p className="entry-body">{request.description}</p>}
+
+      <div className="prayer-mark-row">
+        <button type="button" className="prayer-mark-button" onClick={handleMarkPrayed} disabled={marking}>
+          {marking ? 'Marking…' : 'I prayed for this'}
+        </button>
+        <span className="prayer-mark-whisper">
+          {marks.length === 0 ? 'Not marked yet' : `Last prayed ${formatRelative(marks[0].created_at)}`}
+        </span>
+        {marks.length > 0 && (
+          <span className="prayer-mark-strip" aria-hidden="true">
+            {[...marks]
+              .slice(0, 20)
+              .reverse()
+              .map((m) => (
+                <span key={m.id} className="prayer-mark-dot" title={new Date(m.created_at).toLocaleString()} />
+              ))}
+          </span>
+        )}
+      </div>
 
       {request.status === 'answered' && request.answered_note && (
         <div className="prayer-answered-note">
