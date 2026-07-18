@@ -17,6 +17,7 @@ import { SelectionActionBar } from './SelectionActionBar'
 import { PendingGroupBar } from './PendingGroupBar'
 import { NoteComposer } from './NoteComposer'
 import { useReflections } from './useReflections'
+import { usePrayerRequestTitles } from '../prayer/usePrayerRequestTitles'
 import { getSelectionSpans, getSelectionBoundingRect, clearSelection, type SelectionSpan } from './selection'
 import { BOOK_BY_CODE, formatReference } from './books'
 import type { Verse, HighlightColor } from '../../types/db'
@@ -68,6 +69,7 @@ export function ReadingView() {
   } = useHighlights(book, chapter, translation)
   const { excerptsByVerse } = useJournalExcerpts(book, chapter)
   const { reflectionsByVerse, addReflection } = useReflections(book, chapter)
+  const requestTitleById = usePrayerRequestTitles()
   const tagsByVerse = useWordTags(book, chapter, translation)
   useReadingSession(book, chapter)
   const bookName = BOOK_BY_CODE[book]?.name ?? book
@@ -408,6 +410,7 @@ export function ReadingView() {
             notes={notesByVerse[sidePanel.verse.verse_id] ?? []}
             journalExcerpts={excerptsByVerse[sidePanel.verse.verse_id] ?? []}
             reflections={reflectionsByVerse[sidePanel.verse.verse_id] ?? []}
+            requestTitleById={requestTitleById}
             onEditNote={updateNote}
             onDeleteNote={deleteNote}
             onClose={() => setSidePanel(null)}

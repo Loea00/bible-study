@@ -473,10 +473,26 @@ across all three files: history composer + chronological list + inline verse-tag
 Prayer page, and the Journal fold-in (badge, back-link, filter chip) — reverted cleanly, build
 clean, committed and pushed.
 
-Still ahead in Phase 2: the deferred cross-surface integrations above, calendar, reading plans, TSK
-cross-references, "Today, I..." templates. One known unresolved bug from a previous session
-("cannot highlight after committing a +Add note/reflection") is still open — see memory for the
-reproduction plan.
+**Both deferred cross-surface integrations from stage three are now done** (spec-amendment-v1-2
+§B3's list) — this closes out the prayer tracker's Phase 2 core entirely. `useJournalExcerpts.ts`
+now also picks up prayer-attached entries (they have no anchor of their own, so an inline `@verse`
+tag is the only way one can surface in a verse's side panel — the mechanism was already there,
+just scoped to `entry_type: 'journal'` only). `VersePanel.tsx` splits the result into two sections
+by type: "Journal" stays as before, a new "Prayer" section shows the entry's kind
+(Update/Word/Concern), its excerpt, and a "From: {request title} →" link back to `/prayer`
+(resolved via the same `usePrayerRequestTitles.ts` from the Journal integration — no new fetch
+pattern). Separately, `useReadingLog.ts` gained `loadSessionPrayedMarks`, and expanding a session
+in the reading log now shows "Prayed for N requests" (counting *distinct requests*, not raw taps)
+above its entry list when marks happened during that session — the reading log's entry-type label
+was also a binary `isNote ? 'Note' : 'Journal'` before this, silently mislabeling reflections and
+now prayer entries too; fixed with a proper label map (`Note`/`Journal`/`Reflection`/`Update`/
+`Word`/`Concern`) while in the file. Verified live with mocks: the verse panel's Prayer section on
+a real Genesis 1:1 with a mocked `@verse`-tagged Word entry, and the reading log's prayed-count
+line on a mocked session — reverted cleanly, build clean, committed and pushed.
+
+Still ahead in Phase 2: calendar, reading plans, TSK cross-references, "Today, I..." templates. One
+known unresolved bug from a previous session ("cannot highlight after committing a +Add
+note/reflection") is still open — see memory for the reproduction plan.
 
 ## TODO — amendment v1.4 (theming), intentionally deferred
 

@@ -33,6 +33,7 @@ export function useReadingLog() {
   const [loading, setLoading] = useState(true)
   const [notesThisMonth, setNotesThisMonth] = useState(0)
   const [entriesBySession, setEntriesBySession] = useState<Record<string, Entry[]>>({})
+  const [prayedCountBySession, setPrayedCountBySession] = useState<Record<string, number>>({})
 
   const refetch = useCallback(async () => {
     setLoading(true)
@@ -67,6 +68,15 @@ export function useReadingLog() {
     setEntriesBySession((prev) => ({ ...prev, [sessionId]: data ?? [] }))
   }
 
+  // Distinct requests, not raw mark count — "prayed for 2 requests" (spec
+  // §B3) counts what was prayed for, not how many taps happened.
+  async function loadSessionPrayedMarks(sessionId: string) {
+    if (prayedCountBySession[sessionId] !== undefined) return
+    const { data } = await supabase.from('prayed_marks').select('request_id').eq('session_id', sessionId)
+    const distinctRequests = new Set((data ?? []).map((m) => m.request_id))
+    setPrayedCountBySession((prev) => ({ ...prev, [sessionId]: distinctRequests.size }))
+  }
+
   return {
     sessions,
     loading,
@@ -74,5 +84,7 @@ export function useReadingLog() {
     streak: computeStreak(sessions),
     entriesBySession,
     loadSessionEntries,
+    prayedCountBySession,
+    loadSessionPrayedMarks,
   }
 }

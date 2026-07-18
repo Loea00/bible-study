@@ -1074,6 +1074,12 @@ button.highlight-swatch {
   font-size: 14px;
 }
 
+.log-session-prayed {
+  font-size: 13px;
+  color: var(--accent);
+  margin: 0 0 8px;
+}
+
 .log-session-entry-type {
   font-size: 11px;
   text-transform: uppercase;

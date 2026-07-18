@@ -22,9 +22,26 @@ function formatTimeSpan(startedAt: string, endedAt: string | null): string {
   return `${dateStr} · ${startTime} · ${durationMin} min`
 }
 
+const ENTRY_TYPE_LABEL: Record<string, string> = {
+  margin_note: 'Note',
+  journal: 'Journal',
+  reflection: 'Reflection',
+  prayer_update: 'Update',
+  word: 'Word',
+  concern: 'Concern',
+}
+
 export function ReadingLog() {
-  const { sessions, loading, notesThisMonth, streak, entriesBySession, loadSessionEntries } =
-    useReadingLog()
+  const {
+    sessions,
+    loading,
+    notesThisMonth,
+    streak,
+    entriesBySession,
+    loadSessionEntries,
+    prayedCountBySession,
+    loadSessionPrayedMarks,
+  } = useReadingLog()
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
   const now = new Date()
@@ -40,6 +57,7 @@ export function ReadingLog() {
     }
     setExpandedId(sessionId)
     loadSessionEntries(sessionId)
+    loadSessionPrayedMarks(sessionId)
   }
 
   return (
@@ -85,10 +103,16 @@ export function ReadingLog() {
 
             {expandedId === session.id && (
               <div className="log-session-entries">
+                {(prayedCountBySession[session.id] ?? 0) > 0 && (
+                  <p className="log-session-prayed">
+                    Prayed for {prayedCountBySession[session.id]} request
+                    {prayedCountBySession[session.id] === 1 ? '' : 's'}
+                  </p>
+                )}
                 {entriesBySession[session.id] === undefined && (
                   <p className="placeholder">Loading…</p>
                 )}
-                {entriesBySession[session.id]?.length === 0 && (
+                {entriesBySession[session.id]?.length === 0 && (prayedCountBySession[session.id] ?? 0) === 0 && (
                   <p className="placeholder">Nothing written during this session.</p>
                 )}
                 {entriesBySession[session.id]?.map((entry) => {
@@ -96,7 +120,7 @@ export function ReadingLog() {
                   const anchorParts = isNote && entry.anchor_start ? entry.anchor_start.split('.') : null
                   return (
                     <div key={entry.id} className="log-session-entry">
-                      <span className="log-session-entry-type">{isNote ? 'Note' : 'Journal'}</span>
+                      <span className="log-session-entry-type">{ENTRY_TYPE_LABEL[entry.entry_type] ?? entry.entry_type}</span>
                       {isNote ? (
                         <Link
                           to={anchorParts ? `/?book=${anchorParts[0]}&chapter=${anchorParts[1]}` : '/'}

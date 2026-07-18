@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import type { Entry } from '../../types/db'
+import type { Entry, EntryType } from '../../types/db'
 import type { JournalExcerpt } from './useJournalExcerpts'
 import type { ReflectionExcerpt } from './useReflections'
 import { AnchorScripture } from './AnchorScripture'
@@ -11,9 +11,16 @@ interface VersePanelProps {
   notes: Entry[]
   journalExcerpts: JournalExcerpt[]
   reflections: ReflectionExcerpt[]
+  requestTitleById: Record<string, string>
   onEditNote: (entryId: string, body: string) => Promise<void>
   onDeleteNote: (entryId: string) => Promise<void>
   onClose: () => void
+}
+
+const PRAYER_KIND_LABEL: Partial<Record<EntryType, string>> = {
+  prayer_update: 'Update',
+  word: 'Word',
+  concern: 'Concern',
 }
 
 interface NoteItemProps {
@@ -119,10 +126,14 @@ export function VersePanel({
   notes,
   journalExcerpts,
   reflections,
+  requestTitleById,
   onEditNote,
   onDeleteNote,
   onClose,
 }: VersePanelProps) {
+  const pureJournalExcerpts = journalExcerpts.filter((ex) => ex.entryType === 'journal')
+  const prayerExcerpts = journalExcerpts.filter((ex) => ex.entryType !== 'journal')
+
   return (
     <div className="side-panel-body">
       <div className="verse-panel-header">
@@ -144,11 +155,11 @@ export function VersePanel({
         </div>
       )}
 
-      {journalExcerpts.length > 0 && (
+      {pureJournalExcerpts.length > 0 && (
         <div className="verse-panel-section">
           <h3>Journal</h3>
           <div className="verse-panel-excerpts">
-            {journalExcerpts.map((ex) => (
+            {pureJournalExcerpts.map((ex) => (
               <div key={ex.entryId} className="verse-panel-excerpt">
                 <div className="verse-panel-excerpt-header">
                   {ex.title && <span className="verse-panel-excerpt-title">{ex.title}</span>}
@@ -161,6 +172,40 @@ export function VersePanel({
                   </span>
                 </div>
                 <p className="verse-panel-excerpt-text">{ex.excerpt}</p>
+                <Link to={`/journal?entry=${ex.entryId}`} className="verse-panel-excerpt-link">
+                  Open full entry →
+                </Link>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {prayerExcerpts.length > 0 && (
+        <div className="verse-panel-section">
+          <h3>Prayer</h3>
+          <div className="verse-panel-excerpts">
+            {prayerExcerpts.map((ex) => (
+              <div key={ex.entryId} className="verse-panel-excerpt">
+                <div className="verse-panel-excerpt-header">
+                  <span className="verse-panel-excerpt-title">
+                    {PRAYER_KIND_LABEL[ex.entryType]}
+                    {ex.title ? ` · ${ex.title}` : ''}
+                  </span>
+                  <span className="verse-panel-excerpt-date">
+                    {new Date(ex.date).toLocaleDateString(undefined, {
+                      month: 'long',
+                      day: 'numeric',
+                      year: 'numeric',
+                    })}
+                  </span>
+                </div>
+                <p className="verse-panel-excerpt-text">{ex.excerpt}</p>
+                {ex.requestId && requestTitleById[ex.requestId] && (
+                  <Link to="/prayer" className="verse-panel-excerpt-link">
+                    From: {requestTitleById[ex.requestId]} →
+                  </Link>
+                )}
                 <Link to={`/journal?entry=${ex.entryId}`} className="verse-panel-excerpt-link">
                   Open full entry →
                 </Link>
