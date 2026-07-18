@@ -3,9 +3,10 @@
 Phase 1 scaffold: React + TypeScript (Vite) frontend, Supabase (Postgres/auth) backend. See
 `bible-study-app-spec.md` for the full product spec, plus `spec-amendment-v1-1-highlights.md`
 (span anchoring, unified across notes/highlights/journal tags), `spec-amendment-v1-2-prayer-social.md`
-(Phase 2+ prayer system, AI grounding, social — roadmap only, no code yet), and
-`spec-amendment-v1-4-theming.md` (token-based theme system, 4 themes + light/dark — **designed,
-deliberately not started**; see TODO below).
+(Phase 2+ prayer system, AI grounding, social — core prayer tracker now in progress, see Status;
+AI grounding and social sharing are still roadmap only), and `spec-amendment-v1-4-theming.md`
+(token-based theme system, 4 themes + light/dark — **designed, deliberately not started**; see
+TODO below).
 
 ## Setup
 
@@ -34,10 +35,12 @@ so opening the app to more users later is a matter of enabling sign-ups, not res
 - `src/features/reading/` — reading view (scripture-first home)
 - `src/features/journal/` — journal timeline + editor
 - `src/features/highlights/` — all-highlights list (`/highlights`)
+- `src/features/prayer/` — prayer tracker (`/prayer`) — lists, requests, status (see Status)
 - `supabase/migrations/` — schema: `entries`, `verse_references`, `reading_sessions` (user
   content), `translations`/`verses` (bundled public-domain reference text), `highlights`
   (group-based spans per amendment v1.1), `strongs_lexicon`/`word_tags` (Strong's word-tap
-  lexicon, live — see Status)
+  lexicon, live — see Status), `prayer_lists`/`prayer_requests`/`prayed_marks` (prayer tracker
+  core per amendment v1.2, see Status)
 
 ## Seeding scripture text
 
@@ -404,9 +407,28 @@ with mocked data end-to-end for all three: note edit, journal entry edit (includ
 `@Gen 1:1` tag correctly re-resolving after save), reflection/note icon split rendering distinctly
 side by side.
 
-Still ahead in Phase 2: calendar, reading plans, TSK cross-references, "Today, I..." templates. One
-known unresolved bug from a previous session ("cannot highlight after committing a +Add
-note/reflection") is still open — see memory for the reproduction plan.
+**Prayer tracker core has started** (spec-amendment-v1-2 §B2, staged build: schema+CRUD+page →
+prayed_marks gesture+answered ledger → entries integration — this is stage one). New migration
+`0008_prayer_core.sql` adds `prayer_lists` (user-defined groupings), `prayer_requests` (title,
+description, `status` — active/ongoing/answered/archived — `answered_note`, plus a `visibility`
+column and `grounding`/`grounding_generated_at` columns that ship now but stay unused until Phase
+3/4 AI grounding and social sharing, per the amendment's "no later migration is disruptive" rule),
+and `prayed_marks` (the one-tap "I prayed for this," schema-only for now — no UI yet, that's stage
+two). `entries` gained a nullable `request_id` and three new `entry_type` values (`prayer_update`,
+`word`, `concern`) for prayer-attached writing, also schema-only until stage three wires it up.
+New `/prayer` route (`src/features/prayer/`): `usePrayerLists.ts`/`usePrayerRequests.ts` (CRUD
+hooks matching the `useHighlights`/`useAllHighlights` conventions), `PrayerPage.tsx` (composer,
+list management with inline rename, status filter chips — Open/Answered/Archived/All — requests
+grouped by list), `PrayerRequestCard.tsx` (edit, status-transition buttons per current status, an
+inline answer-note form for marking answered, delete). Verified live with mocked lists/requests:
+grouping by list plus an Unlisted bucket, status badges and filter chips, the edit form correctly
+pre-selecting the request's current list, the "mark answered" inline note form, and list rename —
+all cleanly reverted before commit.
+
+Still ahead in Phase 2: prayer tracker stages two/three (above), calendar, reading plans, TSK
+cross-references, "Today, I..." templates. One known unresolved bug from a previous session
+("cannot highlight after committing a +Add note/reflection") is still open — see memory for the
+reproduction plan.
 
 ## TODO — amendment v1.4 (theming), intentionally deferred
 

@@ -130,7 +130,8 @@ main {
    constraint lives on each page's own root class instead of on `main`
    globally. */
 .journal,
-.reading-log {
+.reading-log,
+.prayer-page {
   max-width: 720px;
   margin: 0 auto;
   padding: 32px 24px;
@@ -1412,4 +1413,210 @@ button.highlight-swatch {
 
 .journal-card-reference:hover {
   text-decoration: underline;
+}
+
+.prayer-page {
+  font-family: var(--sans);
+}
+
+.prayer-list-select {
+  font: inherit;
+  font-family: var(--sans);
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-h);
+  align-self: flex-start;
+}
+
+.prayer-lists-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 20px 0;
+}
+
+.prayer-list-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-h);
+  background: var(--code-bg, rgba(128, 128, 128, 0.1));
+  border-radius: 12px;
+  padding: 4px 6px 4px 12px;
+}
+
+.prayer-list-pill-editing {
+  padding: 4px;
+  background: none;
+  border: 1px solid var(--border);
+}
+
+.prayer-list-pill-action {
+  border: none;
+  background: none;
+  color: var(--text);
+  opacity: 0.55;
+  font-family: var(--sans);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+
+.prayer-list-pill-action:hover {
+  opacity: 1;
+  color: var(--accent);
+}
+
+.prayer-list-rename-input {
+  font: inherit;
+  font-family: var(--sans);
+  font-size: 13px;
+  padding: 3px 6px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-h);
+  width: 120px;
+}
+
+.prayer-list-add {
+  border: 1px dashed var(--border);
+  background: none;
+  color: var(--text);
+  opacity: 0.75;
+  font-family: var(--sans);
+  font-size: 13px;
+  border-radius: 12px;
+  padding: 4px 12px;
+  cursor: pointer;
+}
+
+.prayer-list-add:hover {
+  opacity: 1;
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.prayer-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  margin-top: 24px;
+}
+
+.prayer-group-title {
+  font-family: var(--serif);
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--text-h);
+  margin: 0 0 12px;
+}
+
+.prayer-card {
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.prayer-status-badge {
+  display: inline-block;
+  font-family: var(--sans);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-radius: 4px;
+  padding: 2px 6px;
+  margin-bottom: 4px;
+}
+
+.prayer-status-active {
+  color: var(--accent);
+  border: 1px solid var(--accent);
+}
+
+.prayer-status-ongoing {
+  color: var(--highlight-blue);
+  border: 1px solid var(--highlight-blue);
+}
+
+.prayer-status-answered {
+  color: var(--highlight-green);
+  border: 1px solid var(--highlight-green);
+}
+
+.prayer-status-archived {
+  color: var(--text);
+  opacity: 0.6;
+  border: 1px solid var(--border);
+}
+
+.prayer-answered-note {
+  background: var(--highlight-green-wash);
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin: 8px 0;
+}
+
+.prayer-answered-note h3 {
+  font-family: var(--sans);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text);
+  opacity: 0.6;
+  margin: 0 0 4px;
+}
+
+.prayer-answered-note p {
+  font-family: var(--serif);
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--text-h);
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.prayer-answer-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.prayer-answer-form textarea {
+  font: inherit;
+  font-family: var(--serif);
+  font-size: 15px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-h);
+  resize: vertical;
+}
+
+.prayer-status-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.prayer-status-actions button {
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 4px 12px;
+  cursor: pointer;
+}
+
+.prayer-status-actions button:hover {
+  color: var(--accent);
+  border-color: var(--accent);
 }

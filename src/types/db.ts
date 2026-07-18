@@ -7,7 +7,14 @@
 // query-result inference silently collapses to `never` when Row/Insert/
 // Update reference a named interface instead of a type alias.
 
-export type EntryType = 'margin_note' | 'journal' | 'reflection' | 'templated_journal'
+export type EntryType =
+  | 'margin_note'
+  | 'journal'
+  | 'reflection'
+  | 'templated_journal'
+  | 'prayer_update'
+  | 'word'
+  | 'concern'
 export type RefKind = 'anchor' | 'inline'
 export type HighlightColor = 'yellow' | 'green' | 'blue' | 'pink' | 'purple'
 
@@ -25,6 +32,9 @@ export type Entry = {
   anchor_end: string | null
   tags: string[]
   session_id: string | null
+  // Prayer-attached writing (spec-amendment-v1-2 §B2) — null for every
+  // other entry_type.
+  request_id: string | null
 }
 
 export type VerseReference = {
@@ -109,15 +119,54 @@ export type WordTag = {
   morph: string | null
 }
 
+export type PrayerRequestStatus = 'active' | 'ongoing' | 'answered' | 'archived'
+export type PrayerVisibility = 'private' | 'shared' | 'group' | 'public'
+
+export type PrayerList = {
+  id: string
+  user_id: string
+  name: string
+  sort_order: number
+  created_at: string
+}
+
+// grounding is the cached AI scripture-grounding payload (spec-amendment
+// v1.2 §B5, Phase 3) — untyped JSON for now since Layer 2 isn't built yet.
+export type PrayerRequest = {
+  id: string
+  user_id: string
+  list_id: string | null
+  created_at: string
+  title: string
+  description: string
+  status: PrayerRequestStatus
+  answered_at: string | null
+  answered_note: string | null
+  visibility: PrayerVisibility
+  grounding: Record<string, unknown> | null
+  grounding_generated_at: string | null
+}
+
+// The one-tap "I prayed for this" — deliberately writing-free (spec
+// §B2: "gestures, not thoughts").
+export type PrayedMark = {
+  id: string
+  request_id: string
+  user_id: string
+  created_at: string
+  session_id: string | null
+}
+
 export type Database = {
   public: {
     Tables: {
       entries: {
         Row: Entry
-        Insert: Omit<Entry, 'id' | 'created_at' | 'updated_at'> & {
+        Insert: Omit<Entry, 'id' | 'created_at' | 'updated_at' | 'request_id'> & {
           id?: string
           created_at?: string
           updated_at?: string
+          request_id?: string | null
         }
         Update: Partial<Entry>
         Relationships: []
@@ -167,6 +216,36 @@ export type Database = {
         Row: WordTag
         Insert: Omit<WordTag, 'id'> & { id?: string }
         Update: Partial<WordTag>
+        Relationships: []
+      }
+      prayer_lists: {
+        Row: PrayerList
+        Insert: Omit<PrayerList, 'id' | 'created_at'> & { id?: string; created_at?: string }
+        Update: Partial<PrayerList>
+        Relationships: []
+      }
+      prayer_requests: {
+        Row: PrayerRequest
+        Insert: Omit<
+          PrayerRequest,
+          'id' | 'created_at' | 'status' | 'answered_at' | 'answered_note' | 'visibility' | 'grounding' | 'grounding_generated_at'
+        > & {
+          id?: string
+          created_at?: string
+          status?: PrayerRequestStatus
+          answered_at?: string | null
+          answered_note?: string | null
+          visibility?: PrayerVisibility
+          grounding?: Record<string, unknown> | null
+          grounding_generated_at?: string | null
+        }
+        Update: Partial<PrayerRequest>
+        Relationships: []
+      }
+      prayed_marks: {
+        Row: PrayedMark
+        Insert: Omit<PrayedMark, 'id' | 'created_at'> & { id?: string; created_at?: string }
+        Update: Partial<PrayedMark>
         Relationships: []
       }
     }

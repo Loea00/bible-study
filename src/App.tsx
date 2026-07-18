@@ -6,6 +6,7 @@ import { ReadingView } from './features/reading/ReadingView'
 import { Journal } from './features/journal/Journal'
 import { ReadingLog } from './features/log/ReadingLog'
 import { HighlightsPage } from './features/highlights/HighlightsPage'
+import { PrayerPage } from './features/prayer/PrayerPage'
 
 function AppShell() {
   const { session, loading } = useAuth()
@@ -22,6 +23,7 @@ function AppShell() {
           <Route path="/journal" element={<Journal />} />
           <Route path="/log" element={<ReadingLog />} />
           <Route path="/highlights" element={<HighlightsPage />} />
+          <Route path="/prayer" element={<PrayerPage />} />
         </Routes>
       </main>
     </div>
