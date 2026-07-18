@@ -1,9 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
-import { BOOKS, parseVerseId, formatReference } from './books'
-
-const BOOK_ORDER = new Map(BOOKS.map((b, i) => [b.code, i]))
+import { parseVerseId, formatReference, compareVerseIds } from './books'
 
 interface Occurrence {
   verse_id: string
@@ -34,14 +32,7 @@ export function ConcordanceView({ strongsId, lemma, onClose }: ConcordanceViewPr
           return
         }
         const rows = (data ?? []) as Occurrence[]
-        rows.sort((a, b) => {
-          const pa = parseVerseId(a.verse_id)
-          const pb = parseVerseId(b.verse_id)
-          const bookDiff = (BOOK_ORDER.get(pa.book) ?? 0) - (BOOK_ORDER.get(pb.book) ?? 0)
-          if (bookDiff !== 0) return bookDiff
-          if (pa.chapter !== pb.chapter) return pa.chapter - pb.chapter
-          return pa.verse - pb.verse
-        })
+        rows.sort((a, b) => compareVerseIds(a.verse_id, b.verse_id))
         setOccurrences(rows)
       })
 

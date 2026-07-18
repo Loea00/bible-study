@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { Entry } from '../../types/db'
 import { EntryBody } from './EntryBody'
+import { AnchorScripture } from '../reading/AnchorScripture'
 import { parseVerseId, formatReference } from '../reading/books'
 
 interface JournalEntryCardProps {
@@ -62,6 +63,7 @@ export function JournalEntryCard({ entry, onDelete }: JournalEntryCardProps) {
           {deleting ? 'Deleting…' : 'Delete'}
         </button>
       </div>
+      {entry.entry_type === 'reflection' && <AnchorScripture entryId={entry.id} />}
       <EntryBody text={entry.body} />
       {entry.tags.length > 0 && (
         <div className="journal-card-tags">

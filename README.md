@@ -331,7 +331,35 @@ timeline support) that started from Aaron asking whether the reading-pane-plus-s
 layout he remembered from an earlier design conversation was buildable. Full plan file at
 `.claude/plans/expressive-zooming-galaxy.md`.
 
-Still ahead in Phase 2: calendar, reading plans, TSK cross-references, "Today, I..." templates.
+**Follow-up bug report from Aaron's live use, three fixes plus one new capability, all
+browser-verified this time (not just build-checked):**
+
+- **New: quoted scripture visible next to notes/reflections, expandable.** New shared
+  `AnchorScripture.tsx` component — a "Show scripture ▾" toggle that, on first expand, fetches
+  every `verse_references` row for that entry (`ref_kind='anchor'`), sorted canonically (new
+  `compareVerseIds` in `books.ts` — proper Bible order, not lexicographic string sort, promoted
+  out of `ConcordanceView.tsx`'s local copy since this made a third use), then the matching verse
+  text, and renders each piece with its own reference. Wired into both `JournalEntryCard.tsx`
+  (reflections) and `VersePanel.tsx` (both margin notes and reflections) — the same "sum of the
+  parts" need HighlightGroupPanel already solved for highlights, now solved for notes/reflections
+  too, and in the *same space* the note/reflection itself is shown, not a separate navigation away.
+- **Fixed — a note/reflection dot only showed the one verse next to it, not the whole group.**
+  Root cause: `VersePanel` is deliberately single-verse-scoped (by design, since it also holds
+  distinct notes per verse), so even after the `useMarginNotes` anchor-read fix, opening it from
+  any one dot only ever showed that verse's own text — never the *other* verses the same
+  note/reflection touched. `AnchorScripture` above is the fix: every note and reflection listed in
+  `VersePanel` now has its own expandable "show every linked verse," regardless of which dot opened
+  the panel.
+- **Fixed — no way to dismiss `SelectionActionBar` without completing an action.** Found while
+  investigating Aaron's "no way to close the panel" report: the bar received an `onClose` prop but
+  never rendered a button for it — the only way out was Highlight/Note/Reflect/Copy succeeding, or
+  `+Add`. Added an explicit "×" dismiss button. (`HighlightGroupPanel`'s own Close button, which
+  Aaron named specifically, was checked live and already worked correctly — this dismiss gap was
+  the more likely real culprit for the "stuck, can't back out" experience.)
+
+Still ahead in Phase 2: calendar, reading plans, TSK cross-references, "Today, I..." templates. One
+known unresolved bug from the previous session ("cannot highlight after committing a +Add
+note/reflection") is still open — see memory for the reproduction plan.
 
 ## TODO — amendment v1.4 (theming), intentionally deferred
 

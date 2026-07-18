@@ -89,3 +89,16 @@ export function formatReference(verseId: string): string {
   const name = BOOK_BY_CODE[book]?.name ?? book
   return `${name} ${chapter}:${verse}`
 }
+
+const BOOK_ORDER = new Map(BOOKS.map((b, i) => [b.code, i]))
+
+// Canonical Bible order, not lexicographic — "GEN.1.10" must sort after
+// "GEN.1.2", which plain string comparison gets wrong.
+export function compareVerseIds(a: string, b: string): number {
+  const pa = parseVerseId(a)
+  const pb = parseVerseId(b)
+  const bookDiff = (BOOK_ORDER.get(pa.book) ?? 0) - (BOOK_ORDER.get(pb.book) ?? 0)
+  if (bookDiff !== 0) return bookDiff
+  if (pa.chapter !== pb.chapter) return pa.chapter - pb.chapter
+  return pa.verse - pb.verse
+}

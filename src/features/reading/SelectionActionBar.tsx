@@ -84,6 +84,9 @@ export function SelectionActionBar({
       <button type="button" className="selection-bar-action" onClick={onAddToGroup}>
         + Add
       </button>
+      <button type="button" className="selection-bar-close" aria-label="Dismiss" onClick={onClose}>
+        ×
+      </button>
       {error && <p className="error">{error}</p>}
     </div>
   )

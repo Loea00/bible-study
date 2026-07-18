@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import type { Entry } from '../../types/db'
 import type { JournalExcerpt } from './useJournalExcerpts'
 import type { ReflectionExcerpt } from './useReflections'
+import { AnchorScripture } from './AnchorScripture'
 
 interface VersePanelProps {
   verseText: string
@@ -60,16 +61,19 @@ export function VersePanel({
           <h3>Margin notes</h3>
           <div className="verse-panel-notes">
             {notes.map((note) => (
-              <div key={note.id} className="verse-panel-note">
-                <p>{note.body}</p>
-                <button
-                  type="button"
-                  className="verse-panel-note-delete"
-                  onClick={() => handleDeleteNote(note.id)}
-                  disabled={deletingNoteId === note.id}
-                >
-                  {deletingNoteId === note.id ? 'Deleting…' : 'Delete'}
-                </button>
+              <div key={note.id} className="verse-panel-note-wrap">
+                <div className="verse-panel-note">
+                  <p>{note.body}</p>
+                  <button
+                    type="button"
+                    className="verse-panel-note-delete"
+                    onClick={() => handleDeleteNote(note.id)}
+                    disabled={deletingNoteId === note.id}
+                  >
+                    {deletingNoteId === note.id ? 'Deleting…' : 'Delete'}
+                  </button>
+                </div>
+                <AnchorScripture entryId={note.id} />
               </div>
             ))}
             {deleteError && <p className="error">{deleteError}</p>}
@@ -123,6 +127,7 @@ export function VersePanel({
                 <Link to={`/journal?entry=${r.entryId}`} className="verse-panel-excerpt-link">
                   Open full entry →
                 </Link>
+                <AnchorScripture entryId={r.entryId} />
               </div>
             ))}
           </div>
