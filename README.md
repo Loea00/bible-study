@@ -380,6 +380,30 @@ notebook icon" language, which Phase 1 had simplified away to plain dots for all
 `VerseIndicatorIcons.tsx` (hand-written inline SVG, no icon library added). Verified live with all
 three indicator types rendering together on different verses of the same chapter.
 
+**Reflections got their own icon (heart), separate from margin notes (pencil).** Aaron: notes are
+"scholastic," reflections are "experiential or opinion" — sharing one icon (per spec §5.1's literal
+"note icon = margin notes/reflections" grouping) undersold that real distinction. `ReadingView.tsx`
+now renders two independent conditions/icons instead of one combined one; a verse can show both at
+once if it has both. New `ReflectionIcon` in `VerseIndicatorIcons.tsx`, colored via
+`--highlight-pink` (warmer than the note icon's `--accent`) for an extra, non-shape signal.
+
+**Journal entries, reflections, and margin notes are all editable now** — previously create + delete
+only. `useJournalEntries.ts` gained `updateEntry(entryId, title, body, tags)`, which works for both
+`entry_type`s since editing never touches `anchor_start`/`anchor_end` or the `ref_kind='anchor'`
+verse_references a reflection's passage anchor depends on — it only reconciles inline `@verse` tags
+(delete the old `ref_kind='inline'` rows, re-insert from the new body) alongside the title/body/tags
+update. `JournalEntryCard.tsx` gets an Edit button that swaps the card into the same field set as
+the top-of-page composer, with Save/Cancel. `useMarginNotes.ts` gained `updateNote(entryId, body)` —
+simpler, since a note's anchor spans are immutable by design (remove-and-recreate is the model, same
+as highlights) and notes don't carry inline tags. `VersePanel.tsx`'s margin-notes list was refactored
+into a `NoteItem` sub-component so each note manages its own edit/delete/error state independently
+rather than sharing one set of state across the whole list. Reflections are edited via the Journal
+page (same `JournalEntryCard` mechanism already covers them) — `VersePanel`'s Reflections section
+stays view-only with its existing "Open full entry" link, not a second edit surface. Verified live
+with mocked data end-to-end for all three: note edit, journal entry edit (including an inline
+`@Gen 1:1` tag correctly re-resolving after save), reflection/note icon split rendering distinctly
+side by side.
+
 Still ahead in Phase 2: calendar, reading plans, TSK cross-references, "Today, I..." templates. One
 known unresolved bug from a previous session ("cannot highlight after committing a +Add
 note/reflection") is still open — see memory for the reproduction plan.

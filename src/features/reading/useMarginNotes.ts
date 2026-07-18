@@ -105,6 +105,25 @@ export function useMarginNotes(book: string, chapter: number) {
     await refetch()
   }
 
+  // Body text only — a note's anchor spans are immutable once created
+  // (remove-and-recreate is the model, same as highlights), so this never
+  // touches verse_references.
+  async function updateNote(entryId: string, body: string) {
+    const { error } = await supabase
+      .from('entries')
+      .update({ body, updated_at: new Date().toISOString() })
+      .eq('id', entryId)
+    if (error) throw error
+
+    setNotesByVerse((prev) => {
+      const next: Record<string, Entry[]> = {}
+      for (const [verseId, list] of Object.entries(prev)) {
+        next[verseId] = list.map((n) => (n.id === entryId ? { ...n, body } : n))
+      }
+      return next
+    })
+  }
+
   async function deleteNote(entryId: string) {
     const { error } = await supabase.from('entries').delete().eq('id', entryId)
     if (error) throw error
@@ -121,5 +140,5 @@ export function useMarginNotes(book: string, chapter: number) {
     })
   }
 
-  return { notesByVerse, loading, addNote, deleteNote }
+  return { notesByVerse, loading, addNote, updateNote, deleteNote }
 }

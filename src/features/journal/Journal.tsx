@@ -5,7 +5,7 @@ import { JournalEditor } from './JournalEditor'
 import { JournalEntryCard } from './JournalEntryCard'
 
 export function Journal() {
-  const { entries, loading, createEntry, deleteEntry } = useJournalEntries()
+  const { entries, loading, createEntry, updateEntry, deleteEntry } = useJournalEntries()
   const [searchParams] = useSearchParams()
   const targetEntryId = searchParams.get('entry')
   const targetRef = useRef<HTMLDivElement>(null)
@@ -96,7 +96,7 @@ export function Journal() {
             ref={entry.id === targetEntryId ? targetRef : undefined}
             className={entry.id === targetEntryId ? 'journal-card-target' : undefined}
           >
-            <JournalEntryCard entry={entry} onDelete={deleteEntry} />
+            <JournalEntryCard entry={entry} onEdit={updateEntry} onDelete={deleteEntry} />
           </div>
         ))}
       </div>

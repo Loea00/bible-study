@@ -11,7 +11,7 @@ import { VersePanel } from './VersePanel'
 import { HighlightGroupPanel } from './HighlightGroupPanel'
 import { ReflectionComposer } from './ReflectionComposer'
 import { VerseText } from './VerseText'
-import { NoteIcon, JournalIcon } from './VerseIndicatorIcons'
+import { NoteIcon, ReflectionIcon, JournalIcon } from './VerseIndicatorIcons'
 import { LexiconCard } from './LexiconCard'
 import { SelectionActionBar } from './SelectionActionBar'
 import { PendingGroupBar } from './PendingGroupBar'
@@ -57,7 +57,7 @@ export function ReadingView() {
   const [editingHighlightId, setEditingHighlightId] = useState<string | null>(null)
 
   const { verses, loading, error } = useVerses(book, chapter, translation)
-  const { notesByVerse, addNote, deleteNote } = useMarginNotes(book, chapter)
+  const { notesByVerse, addNote, updateNote, deleteNote } = useMarginNotes(book, chapter)
   const {
     highlightsByVerse,
     createHighlight,
@@ -348,16 +348,28 @@ export function ReadingView() {
                 pending={pendingByVerse[v.verse_id] ?? []}
                 onWordTap={setSelectedWord}
               />
-              {(notesByVerse[v.verse_id]?.length > 0 || reflectionsByVerse[v.verse_id]?.length > 0) && (
+              {notesByVerse[v.verse_id]?.length > 0 && (
                 <span
                   className="verse-icon verse-note-icon"
-                  title="Has a note or reflection"
+                  title="Has a note"
                   onClick={(e) => {
                     e.stopPropagation()
                     openVerseView(v)
                   }}
                 >
                   <NoteIcon />
+                </span>
+              )}
+              {reflectionsByVerse[v.verse_id]?.length > 0 && (
+                <span
+                  className="verse-icon verse-reflection-icon"
+                  title="Has a reflection"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    openVerseView(v)
+                  }}
+                >
+                  <ReflectionIcon />
                 </span>
               )}
               {excerptsByVerse[v.verse_id]?.length > 0 && (
@@ -396,6 +408,7 @@ export function ReadingView() {
             notes={notesByVerse[sidePanel.verse.verse_id] ?? []}
             journalExcerpts={excerptsByVerse[sidePanel.verse.verse_id] ?? []}
             reflections={reflectionsByVerse[sidePanel.verse.verse_id] ?? []}
+            onEditNote={updateNote}
             onDeleteNote={deleteNote}
             onClose={() => setSidePanel(null)}
           />

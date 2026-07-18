@@ -7,6 +7,7 @@ import { parseVerseId, formatReference } from '../reading/books'
 
 interface JournalEntryCardProps {
   entry: Entry
+  onEdit: (entryId: string, title: string, body: string, tags: string[]) => Promise<unknown>
   onDelete: (entryId: string) => Promise<void>
 }
 
@@ -22,9 +23,14 @@ function formatAnchorRange(anchorStart: string, anchorEnd: string): string {
     : `${formatReference(anchorStart)} – ${formatReference(anchorEnd)}`
 }
 
-export function JournalEntryCard({ entry, onDelete }: JournalEntryCardProps) {
+export function JournalEntryCard({ entry, onEdit, onDelete }: JournalEntryCardProps) {
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [editing, setEditing] = useState(false)
+  const [title, setTitle] = useState(entry.title ?? '')
+  const [body, setBody] = useState(entry.body)
+  const [tagsInput, setTagsInput] = useState(entry.tags.join(', '))
+  const [saving, setSaving] = useState(false)
 
   const date = new Date(entry.created_at).toLocaleDateString(undefined, {
     month: 'long',
@@ -43,6 +49,73 @@ export function JournalEntryCard({ entry, onDelete }: JournalEntryCardProps) {
     }
   }
 
+  function startEdit() {
+    setTitle(entry.title ?? '')
+    setBody(entry.body)
+    setTagsInput(entry.tags.join(', '))
+    setError(null)
+    setEditing(true)
+  }
+
+  async function handleSaveEdit() {
+    if (!body.trim()) return
+    setSaving(true)
+    setError(null)
+    try {
+      const tags = tagsInput
+        .split(',')
+        .map((t) => t.trim())
+        .filter(Boolean)
+      await onEdit(entry.id, title, body, tags)
+      setEditing(false)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not save the changes.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (editing) {
+    return (
+      <article className="journal-card">
+        <div className="journal-editor">
+          <input
+            className="journal-title-input"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Title (optional)"
+          />
+          <textarea
+            className="journal-body-input"
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            rows={8}
+          />
+          <input
+            className="journal-tags-input"
+            value={tagsInput}
+            onChange={(e) => setTagsInput(e.target.value)}
+            placeholder="Topical tags, comma separated (optional)"
+          />
+          <div className="journal-card-edit-actions">
+            <button type="button" onClick={handleSaveEdit} disabled={saving || !body.trim()}>
+              {saving ? 'Saving…' : 'Save'}
+            </button>
+            <button
+              type="button"
+              className="journal-card-edit-cancel"
+              onClick={() => setEditing(false)}
+              disabled={saving}
+            >
+              Cancel
+            </button>
+          </div>
+          {error && <p className="error">{error}</p>}
+        </div>
+      </article>
+    )
+  }
+
   return (
     <article className="journal-card">
       <div className="journal-card-header">
@@ -59,9 +132,14 @@ export function JournalEntryCard({ entry, onDelete }: JournalEntryCardProps) {
             </Link>
           )}
         </div>
-        <button type="button" className="journal-card-delete" onClick={handleDelete} disabled={deleting}>
-          {deleting ? 'Deleting…' : 'Delete'}
-        </button>
+        <div className="journal-card-actions">
+          <button type="button" className="journal-card-edit" onClick={startEdit}>
+            Edit
+          </button>
+          <button type="button" className="journal-card-delete" onClick={handleDelete} disabled={deleting}>
+            {deleting ? 'Deleting…' : 'Delete'}
+          </button>
+        </div>
       </div>
       {entry.entry_type === 'reflection' && <AnchorScripture entryId={entry.id} />}
       <EntryBody text={entry.body} />

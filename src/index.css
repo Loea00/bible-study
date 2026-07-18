@@ -373,6 +373,10 @@ main {
   color: var(--accent);
 }
 
+.verse-reflection-icon {
+  color: var(--highlight-pink);
+}
+
 .verse-journal-icon {
   color: var(--text);
   opacity: 0.55;
@@ -616,6 +620,14 @@ button.highlight-swatch {
   white-space: pre-wrap;
 }
 
+.verse-panel-note-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.verse-panel-note-edit-btn,
 .verse-panel-note-delete {
   border: none;
   background: none;
@@ -626,12 +638,29 @@ button.highlight-swatch {
   cursor: pointer;
   padding: 0;
   white-space: nowrap;
-  flex-shrink: 0;
+}
+
+.verse-panel-note-edit-btn:hover {
+  opacity: 1;
+  color: var(--accent);
 }
 
 .verse-panel-note-delete:hover {
   opacity: 1;
   color: #c0392b;
+}
+
+.verse-panel-note-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--code-bg, rgba(128, 128, 128, 0.08));
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+
+.verse-panel-note-edit .journal-body-input {
+  font-size: 15px;
 }
 
 .verse-panel-excerpts {
@@ -811,6 +840,14 @@ button.highlight-swatch {
   margin: 2px 0 0;
 }
 
+.journal-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.journal-card-edit,
 .journal-card-delete {
   border: none;
   background: none;
@@ -821,12 +858,37 @@ button.highlight-swatch {
   cursor: pointer;
   padding: 0;
   white-space: nowrap;
-  flex-shrink: 0;
+}
+
+.journal-card-edit:hover {
+  opacity: 1;
+  color: var(--accent);
 }
 
 .journal-card-delete:hover {
   opacity: 1;
   color: #c0392b;
+}
+
+.journal-card-edit-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.journal-card-edit-cancel {
+  border: none;
+  background: none;
+  color: var(--text);
+  opacity: 0.6;
+  font-family: var(--sans);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.journal-card-edit-cancel:hover {
+  opacity: 1;
 }
 
 .entry-body {

@@ -11,14 +11,105 @@ interface VersePanelProps {
   notes: Entry[]
   journalExcerpts: JournalExcerpt[]
   reflections: ReflectionExcerpt[]
+  onEditNote: (entryId: string, body: string) => Promise<void>
   onDeleteNote: (entryId: string) => Promise<void>
   onClose: () => void
 }
 
-// View + delete only — creating notes now happens via text selection (spec
-// amendment v1.1 §A9), not from this panel. This panel is what opens when
-// tapping an *existing* note-dot or journal-dot. Highlights have their own
-// dedicated HighlightGroupPanel (a highlight can be a non-consecutive,
+interface NoteItemProps {
+  note: Entry
+  onEdit: (entryId: string, body: string) => Promise<void>
+  onDelete: (entryId: string) => Promise<void>
+}
+
+function NoteItem({ note, onEdit, onDelete }: NoteItemProps) {
+  const [editing, setEditing] = useState(false)
+  const [body, setBody] = useState(note.body)
+  const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function handleSave() {
+    if (!body.trim()) return
+    setSaving(true)
+    setError(null)
+    try {
+      await onEdit(note.id, body)
+      setEditing(false)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not save the note.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleDelete() {
+    setDeleting(true)
+    setError(null)
+    try {
+      await onDelete(note.id)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not delete the note.')
+      setDeleting(false)
+    }
+  }
+
+  if (editing) {
+    return (
+      <div className="verse-panel-note-wrap">
+        <div className="verse-panel-note-edit">
+          <textarea
+            className="journal-body-input"
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            rows={3}
+            autoFocus
+          />
+          <div className="journal-card-edit-actions">
+            <button type="button" onClick={handleSave} disabled={saving || !body.trim()}>
+              {saving ? 'Saving…' : 'Save'}
+            </button>
+            <button
+              type="button"
+              className="journal-card-edit-cancel"
+              onClick={() => {
+                setBody(note.body)
+                setEditing(false)
+              }}
+              disabled={saving}
+            >
+              Cancel
+            </button>
+          </div>
+          {error && <p className="error">{error}</p>}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="verse-panel-note-wrap">
+      <div className="verse-panel-note">
+        <p>{note.body}</p>
+        <div className="verse-panel-note-actions">
+          <button type="button" className="verse-panel-note-edit-btn" onClick={() => setEditing(true)}>
+            Edit
+          </button>
+          <button type="button" className="verse-panel-note-delete" onClick={handleDelete} disabled={deleting}>
+            {deleting ? 'Deleting…' : 'Delete'}
+          </button>
+        </div>
+      </div>
+      <AnchorScripture entryId={note.id} />
+      {error && <p className="error">{error}</p>}
+    </div>
+  )
+}
+
+// View + delete/edit only — creating notes now happens via text selection
+// (spec amendment v1.1 §A9), not from this panel. This panel is what opens
+// when tapping an *existing* note-dot or journal-dot. Highlights have their
+// own dedicated HighlightGroupPanel (a highlight can be a non-consecutive,
 // multi-verse group — this panel is deliberately single-verse-scoped and
 // can't represent that). Renders as plain content inside ReadingView's
 // docked side panel — no overlay/backdrop of its own.
@@ -28,24 +119,10 @@ export function VersePanel({
   notes,
   journalExcerpts,
   reflections,
+  onEditNote,
   onDeleteNote,
   onClose,
 }: VersePanelProps) {
-  const [deletingNoteId, setDeletingNoteId] = useState<string | null>(null)
-  const [deleteError, setDeleteError] = useState<string | null>(null)
-
-  async function handleDeleteNote(entryId: string) {
-    setDeletingNoteId(entryId)
-    setDeleteError(null)
-    try {
-      await onDeleteNote(entryId)
-    } catch (err) {
-      setDeleteError(err instanceof Error ? err.message : 'Could not delete the note.')
-    } finally {
-      setDeletingNoteId(null)
-    }
-  }
-
   return (
     <div className="side-panel-body">
       <div className="verse-panel-header">
@@ -61,22 +138,8 @@ export function VersePanel({
           <h3>Margin notes</h3>
           <div className="verse-panel-notes">
             {notes.map((note) => (
-              <div key={note.id} className="verse-panel-note-wrap">
-                <div className="verse-panel-note">
-                  <p>{note.body}</p>
-                  <button
-                    type="button"
-                    className="verse-panel-note-delete"
-                    onClick={() => handleDeleteNote(note.id)}
-                    disabled={deletingNoteId === note.id}
-                  >
-                    {deletingNoteId === note.id ? 'Deleting…' : 'Delete'}
-                  </button>
-                </div>
-                <AnchorScripture entryId={note.id} />
-              </div>
+              <NoteItem key={note.id} note={note} onEdit={onEditNote} onDelete={onDeleteNote} />
             ))}
-            {deleteError && <p className="error">{deleteError}</p>}
           </div>
         </div>
       )}
