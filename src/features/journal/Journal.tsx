@@ -3,15 +3,20 @@ import { useSearchParams } from 'react-router-dom'
 import { useJournalEntries } from './useJournalEntries'
 import { JournalEditor } from './JournalEditor'
 import { JournalEntryCard } from './JournalEntryCard'
+import { usePrayerRequestTitles } from '../prayer/usePrayerRequestTitles'
+import type { EntryType } from '../../types/db'
+
+const PRAYER_TYPES: EntryType[] = ['prayer_update', 'word', 'concern']
 
 export function Journal() {
   const { entries, loading, createEntry, updateEntry, deleteEntry } = useJournalEntries()
+  const requestTitleById = usePrayerRequestTitles()
   const [searchParams] = useSearchParams()
   const targetEntryId = searchParams.get('entry')
   const targetRef = useRef<HTMLDivElement>(null)
   const [query, setQuery] = useState('')
   const [activeTag, setActiveTag] = useState<string | null>(null)
-  const [activeType, setActiveType] = useState<'all' | 'journal' | 'reflection'>('all')
+  const [activeType, setActiveType] = useState<'all' | 'journal' | 'reflection' | 'prayer'>('all')
 
   useEffect(() => {
     if (targetEntryId && targetRef.current) {
@@ -30,7 +35,8 @@ export function Journal() {
   const filteredEntries = useMemo(() => {
     const q = query.trim().toLowerCase()
     return entries.filter((entry) => {
-      if (activeType !== 'all' && entry.entry_type !== activeType) return false
+      if (activeType === 'prayer' && !PRAYER_TYPES.includes(entry.entry_type)) return false
+      if (activeType !== 'all' && activeType !== 'prayer' && entry.entry_type !== activeType) return false
       if (activeTag && !entry.tags.includes(activeTag)) return false
       if (!q) return true
       return entry.title?.toLowerCase().includes(q) || entry.body.toLowerCase().includes(q)
@@ -46,14 +52,14 @@ export function Journal() {
       {entries.length > 0 && (
         <div className="journal-search">
           <div className="journal-type-filters">
-            {(['all', 'journal', 'reflection'] as const).map((type) => (
+            {(['all', 'journal', 'reflection', 'prayer'] as const).map((type) => (
               <button
                 key={type}
                 type="button"
                 className={`journal-type-filter${activeType === type ? ' active' : ''}`}
                 onClick={() => setActiveType(type)}
               >
-                {type === 'all' ? 'All' : type === 'journal' ? 'Journal' : 'Reflection'}
+                {type === 'all' ? 'All' : type === 'journal' ? 'Journal' : type === 'reflection' ? 'Reflection' : 'Prayer'}
               </button>
             ))}
           </div>
@@ -96,7 +102,12 @@ export function Journal() {
             ref={entry.id === targetEntryId ? targetRef : undefined}
             className={entry.id === targetEntryId ? 'journal-card-target' : undefined}
           >
-            <JournalEntryCard entry={entry} onEdit={updateEntry} onDelete={deleteEntry} />
+            <JournalEntryCard
+              entry={entry}
+              onEdit={updateEntry}
+              onDelete={deleteEntry}
+              requestTitle={entry.request_id ? requestTitleById[entry.request_id] : undefined}
+            />
           </div>
         ))}
       </div>

@@ -9,6 +9,16 @@ interface JournalEntryCardProps {
   entry: Entry
   onEdit: (entryId: string, title: string, body: string, tags: string[]) => Promise<unknown>
   onDelete: (entryId: string) => Promise<void>
+  // Only set for prayer-attached entries (entry.request_id present) — the
+  // title of the request this entry belongs to, resolved by the caller
+  // (usePrayerRequestTitles) rather than fetched per-card.
+  requestTitle?: string
+}
+
+const PRAYER_ENTRY_LABEL: Partial<Record<Entry['entry_type'], string>> = {
+  prayer_update: 'Update',
+  word: 'Word',
+  concern: 'Concern',
 }
 
 // A reflection's anchor can span multiple, non-consecutive verses (like a
@@ -23,7 +33,7 @@ function formatAnchorRange(anchorStart: string, anchorEnd: string): string {
     : `${formatReference(anchorStart)} – ${formatReference(anchorEnd)}`
 }
 
-export function JournalEntryCard({ entry, onEdit, onDelete }: JournalEntryCardProps) {
+export function JournalEntryCard({ entry, onEdit, onDelete, requestTitle }: JournalEntryCardProps) {
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [editing, setEditing] = useState(false)
@@ -121,6 +131,9 @@ export function JournalEntryCard({ entry, onEdit, onDelete }: JournalEntryCardPr
       <div className="journal-card-header">
         <div>
           {entry.entry_type === 'reflection' && <span className="journal-card-badge">Reflection</span>}
+          {PRAYER_ENTRY_LABEL[entry.entry_type] && (
+            <span className="journal-card-badge">{PRAYER_ENTRY_LABEL[entry.entry_type]}</span>
+          )}
           {entry.title && <h2>{entry.title}</h2>}
           <p className="journal-card-date">{date}</p>
           {entry.entry_type === 'reflection' && entry.anchor_start && entry.anchor_end && (
@@ -129,6 +142,11 @@ export function JournalEntryCard({ entry, onEdit, onDelete }: JournalEntryCardPr
               className="journal-card-reference"
             >
               {formatAnchorRange(entry.anchor_start, entry.anchor_end)}
+            </Link>
+          )}
+          {requestTitle && (
+            <Link to="/prayer" className="journal-card-reference">
+              From: {requestTitle} →
             </Link>
           )}
         </div>

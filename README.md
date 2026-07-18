@@ -446,10 +446,37 @@ with mocked lists/requests/marks: dot-strip count, last-prayed whisper, pray-thr
 appearing for lists with open requests, the full flow (progress counter, Skip advancing, the quiet
 completion state, Exit/Done returning cleanly to the page) — reverted cleanly before commit.
 
-Still ahead in Phase 2: prayer tracker stage three (`entries.request_id` integration — schema
-already exists, wiring is what's left), calendar, reading plans, TSK cross-references, "Today,
-I..." templates. One known unresolved bug from a previous session ("cannot highlight after
-committing a +Add note/reflection") is still open — see memory for the reproduction plan.
+**Prayer requests now have a lifecycle history** (spec-amendment-v1-2 §B2/§B3, stage three, prompted
+by Aaron wanting a way to capture insight that comes while meditating/praying on a request over
+days or longer — this is what `entries.request_id` and the `prayer_update`/`word`/`concern` entry
+types were already reserved for). New `usePrayerEntries.ts` (request-scoped CRUD, chronological
+oldest-first since it's a narrative, not a feed) and `PrayerRequestHistory.tsx`, an expandable
+section on each request card (▾ Show history, matching `AnchorScripture`'s expand pattern — lazy-
+fetches only once opened) with a small composer (pick Update/Word/Concern, write, save) and the
+existing entries listed with edit/delete. Entries support the same `@Book chapter:verse` inline
+tagging journal entries do — cross-referencing scripture was free to add by reusing
+`parseVerseTags`/`EntryBody`, not a new system. **Confirmed for the record: prayer requests never
+disappear on their own** — `answered`/`archived` only change the `status` column; the row and
+everything attached to it persist until an explicit Delete.
+
+Prayer-attached entries also now fold into the **Journal timeline** (`useJournalEntries.ts` fetch
+widened to include the three new types), reusing its existing search box and gaining a new
+"Prayer" filter chip, a type badge (Update/Word/Concern), and a "From: {request title} →" link
+back to `/prayer` (resolved via new `usePrayerRequestTitles.ts`, a lightweight id→title lookup —
+no join needed). This is deliberately how "searchable and cross-referenced" was satisfied: one
+shared search surface across journal/reflection/prayer writing, rather than a second search UI
+built just for prayer. **Explicitly deferred** (noted so it isn't forgotten, not silently dropped):
+surfacing these entries in the reading view's verse side panel and in reading-log session
+summaries ("prayed for 2 requests") — both are real spec items (§B3's cross-surface integration
+list) but are reading-feature integration points, not part of this round. Verified live with mocks
+across all three files: history composer + chronological list + inline verse-tag resolution on the
+Prayer page, and the Journal fold-in (badge, back-link, filter chip) — reverted cleanly, build
+clean, committed and pushed.
+
+Still ahead in Phase 2: the deferred cross-surface integrations above, calendar, reading plans, TSK
+cross-references, "Today, I..." templates. One known unresolved bug from a previous session
+("cannot highlight after committing a +Add note/reflection") is still open — see memory for the
+reproduction plan.
 
 ## TODO — amendment v1.4 (theming), intentionally deferred
 

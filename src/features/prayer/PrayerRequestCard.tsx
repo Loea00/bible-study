@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { PrayedMark, PrayerList, PrayerRequest, PrayerRequestStatus } from '../../types/db'
+import { PrayerRequestHistory } from './PrayerRequestHistory'
 
 interface PrayerRequestCardProps {
   request: PrayerRequest
@@ -54,6 +55,7 @@ export function PrayerRequestCard({
   const [busy, setBusy] = useState(false)
   const [marking, setMarking] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [historyOpen, setHistoryOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const date = new Date(request.created_at).toLocaleDateString(undefined, {
@@ -269,6 +271,11 @@ export function PrayerRequestCard({
           )}
         </div>
       )}
+
+      <button type="button" className="anchor-scripture-toggle" onClick={() => setHistoryOpen((o) => !o)}>
+        {historyOpen ? '▲ Hide history' : '▾ Show history'}
+      </button>
+      {historyOpen && <PrayerRequestHistory requestId={request.id} />}
 
       {error && <p className="error">{error}</p>}
     </article>

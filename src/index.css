@@ -1775,3 +1775,108 @@ button.highlight-swatch {
 .pray-through-skip:hover {
   opacity: 1;
 }
+
+.prayer-history {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.prayer-history-composer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.prayer-history-composer button,
+.prayer-history-entry-edit button {
+  align-self: flex-start;
+  padding: 6px 14px;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: var(--accent);
+  color: white;
+  font: inherit;
+  font-family: var(--sans);
+  cursor: pointer;
+}
+
+.prayer-history-composer button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.prayer-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.prayer-history-entry,
+.prayer-history-entry-edit {
+  background: var(--code-bg, rgba(128, 128, 128, 0.08));
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+
+.prayer-history-entry-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.prayer-history-entry-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.prayer-history-entry-kind {
+  font-family: var(--sans);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-radius: 4px;
+  padding: 2px 6px;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+}
+
+.prayer-history-kind-word {
+  color: var(--highlight-purple);
+  border-color: var(--highlight-purple);
+}
+
+.prayer-history-kind-concern {
+  color: var(--highlight-blue);
+  border-color: var(--highlight-blue);
+}
+
+.prayer-history-entry-date {
+  font-family: var(--sans);
+  font-size: 12px;
+  color: var(--text);
+  opacity: 0.55;
+}
+
+.prayer-history-entry-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.prayer-history-entry-title {
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--text-h);
+  margin: 0 0 4px;
+}
+
+.prayer-history-entry .entry-body,
+.prayer-history-entry-edit textarea {
+  font-size: 15px;
+}
