@@ -100,6 +100,17 @@ versification table). Downloads and caches `data/TSK.zip`, produces `data/tsk_cr
 data-fidelity note (a real drift bug was found and fixed after the first pass, and a small ~0.1%
 residual tail gap remains, deliberately left as-is rather than chased further).
 
+**To get this live**, since only the anon key is available in this environment (no DDL/service-role
+credentials):
+1. Run `supabase/migrations/0009_tsk_cross_references.sql` via the Supabase SQL Editor — creates
+   `tsk_cross_references` with the same open-read RLS policy as `strongs_lexicon`/`word_tags`.
+2. Import `data/tsk_cross_references.csv` via Table Editor → `tsk_cross_references` → Import data
+   from CSV. At 362,504 rows / ~10 MB, this is roughly the same order of magnitude as the
+   `word_tags_ot.csv` import (227,196 rows) that worked fine in one pass — but if the importer
+   times out or stalls, split it first (`split -l 100000 data/tsk_cross_references.csv
+   data/tsk_chunk_`, re-add the CSV header to each chunk, import one chunk at a time) rather than
+   troubleshooting a single giant import.
+
 ```
 python3 scripts/transform_word_tags.py
 ```
@@ -137,8 +148,7 @@ autocomplete-while-typing, a deliberate Phase 1 simplification vs. the spec's de
 The verse side panel is now the spec's "payoff feature" for real: tapping a verse shows margin
 notes and journal excerpts (title, date, surrounding text, "Open full entry" deep-link that
 scrolls to and highlights the entry on the journal page) grouped together, plus a quiet dot
-indicator per type in the running text. Reflections and TSK cross-references aren't in the panel
-yet since neither surface exists (Phase 2/3 per spec).
+indicator per type in the running text.
 
 Reading sessions auto-capture in the background (`src/features/reading/useReadingSession.ts`):
 opening the reading view starts or continues a session (rolling forward on each passage change,
@@ -577,12 +587,26 @@ Result: **all 66 books, 362,504 cross-reference rows**, `data/tsk_cross_referenc
 deliberately left as-is rather than chased further; likely just a couple of genuinely-empty tail
 entries, not a repeat of the structural bug above.
 
-Still ahead: schema (a new reference table, read-only like `strongs_lexicon`/`word_tags`) + import
-+ a "Cross-references" section in the reading view's verse side panel (per spec §5.1) — none of
-that exists yet, this was purely the data-sourcing stage. Also still ahead: calendar, reading
-plans, "Today, I..." templates. One known unresolved bug from a previous session ("cannot
-highlight after committing a +Add note/reflection") is still open — see memory for the
-reproduction plan.
+**Schema, types, and the reading-view UI for TSK cross-references are now built.**
+`supabase/migrations/0009_tsk_cross_references.sql` adds `tsk_cross_references` (same read-only,
+open-RLS pattern as `strongs_lexicon`/`word_tags`). `useCrossReferences.ts` fetches chapter-scoped
+and groups by `from_verse_id`, same shape as `useJournalExcerpts`. Discoverability was a genuine
+open question — TSK cross-references exist for nearly every verse, but the docked side panel
+previously only opened via an existing note/reflection/journal icon, which would've made almost
+all of this new data unreachable. Resolved by adding a **"Refs" action to the existing
+tap-verse-number floating bar** (`SelectionActionBar.tsx`) alongside Note/Reflect/Copy/+Add —
+opens the docked panel for that verse, works on any verse, no new gesture. The panel's new
+"Cross-references" section (`VersePanel.tsx`) renders each target as a link
+(`formatReferenceRange()` in `books.ts`, new) back into the reading view. Verified live via the
+TEMP-VERIFY mock-data technique (real end-to-end verification needs the migration applied and
+CSV imported — see "Seeding TSK cross-references" above — which hasn't happened yet on the live
+DB). **Migration 0009 isn't applied to the live Supabase database yet** — Aaron needs to run it
+manually via the SQL Editor, then import `data/tsk_cross_references.csv` via Table Editor, before
+cross-references will actually show real data in production.
+
+Still ahead: calendar, reading plans, "Today, I..." templates. One known unresolved bug from a
+previous session ("cannot highlight after committing a +Add note/reflection") is still open — see
+memory for the reproduction plan.
 
 ## TODO — amendment v1.4 (theming), intentionally deferred
 

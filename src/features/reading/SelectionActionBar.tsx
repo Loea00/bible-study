@@ -10,12 +10,13 @@ interface SelectionActionBarProps {
   onHighlight: (color: HighlightColor) => Promise<void>
   onNote: () => void
   onReflect: () => void
+  onRefs: () => void
   onAddToGroup: () => void
   onClose: () => void
 }
 
 // Ask (AI) isn't built yet (that's a later Phase 3 surface), so the action
-// bar is Highlight/Note/Reflect/Copy/+Add — not the full spec 5.1 set.
+// bar is Highlight/Note/Reflect/Refs/Copy/+Add — not the full spec 5.1 set.
 export function SelectionActionBar({
   rect,
   selectedText,
@@ -23,6 +24,7 @@ export function SelectionActionBar({
   onHighlight,
   onNote,
   onReflect,
+  onRefs,
   onAddToGroup,
   onClose,
 }: SelectionActionBarProps) {
@@ -77,6 +79,9 @@ export function SelectionActionBar({
       </button>
       <button type="button" className="selection-bar-action" onClick={onReflect}>
         Reflect
+      </button>
+      <button type="button" className="selection-bar-action" onClick={onRefs}>
+        Refs
       </button>
       <button type="button" className="selection-bar-action" onClick={handleCopy}>
         {copied ? 'Copied' : 'Copy'}

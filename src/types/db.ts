@@ -157,6 +157,17 @@ export type PrayedMark = {
   session_id: string | null
 }
 
+// Treasury of Scripture Knowledge (spec §5.1 "TSK cross-references in
+// panel"). to_verse_start/to_verse_end are both set even for a
+// single-verse target (start = end) — same convention verse_references
+// already uses for a single-verse span.
+export type TskCrossReference = {
+  id: string
+  from_verse_id: string
+  to_verse_start: string
+  to_verse_end: string
+}
+
 export type Database = {
   public: {
     Tables: {
@@ -246,6 +257,12 @@ export type Database = {
         Row: PrayedMark
         Insert: Omit<PrayedMark, 'id' | 'created_at'> & { id?: string; created_at?: string }
         Update: Partial<PrayedMark>
+        Relationships: []
+      }
+      tsk_cross_references: {
+        Row: TskCrossReference
+        Insert: TskCrossReference
+        Update: Partial<TskCrossReference>
         Relationships: []
       }
     }

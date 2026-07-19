@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import type { Entry, EntryType } from '../../types/db'
+import type { Entry, EntryType, TskCrossReference } from '../../types/db'
 import type { JournalExcerpt } from './useJournalExcerpts'
 import type { ReflectionExcerpt } from './useReflections'
 import { AnchorScripture } from './AnchorScripture'
+import { formatReferenceRange, parseVerseId } from './books'
 
 interface VersePanelProps {
   verseText: string
@@ -11,6 +12,7 @@ interface VersePanelProps {
   notes: Entry[]
   journalExcerpts: JournalExcerpt[]
   reflections: ReflectionExcerpt[]
+  crossReferences: TskCrossReference[]
   requestTitleById: Record<string, string>
   onEditNote: (entryId: string, body: string) => Promise<void>
   onDeleteNote: (entryId: string) => Promise<void>
@@ -126,6 +128,7 @@ export function VersePanel({
   notes,
   journalExcerpts,
   reflections,
+  crossReferences,
   requestTitleById,
   onEditNote,
   onDeleteNote,
@@ -242,9 +245,28 @@ export function VersePanel({
         </div>
       )}
 
-      {notes.length === 0 && journalExcerpts.length === 0 && reflections.length === 0 && (
-        <p className="placeholder">Nothing connected to this verse yet.</p>
+      {crossReferences.length > 0 && (
+        <div className="verse-panel-section">
+          <h3>Cross-references</h3>
+          <ul className="verse-panel-refs">
+            {crossReferences.map((ref) => {
+              const target = parseVerseId(ref.to_verse_start)
+              return (
+                <li key={ref.id}>
+                  <Link to={`/?book=${target.book}&chapter=${target.chapter}`} className="verse-panel-ref-link">
+                    {formatReferenceRange(ref.to_verse_start, ref.to_verse_end)}
+                  </Link>
+                </li>
+              )
+            })}
+          </ul>
+        </div>
       )}
+
+      {notes.length === 0 &&
+        journalExcerpts.length === 0 &&
+        reflections.length === 0 &&
+        crossReferences.length === 0 && <p className="placeholder">Nothing connected to this verse yet.</p>}
     </div>
   )
 }

@@ -4,6 +4,7 @@ import { useVerses } from './useVerses'
 import { useMarginNotes } from './useMarginNotes'
 import { useHighlights } from './useHighlights'
 import { useJournalExcerpts } from './useJournalExcerpts'
+import { useCrossReferences } from './useCrossReferences'
 import { useReadingSession } from './useReadingSession'
 import { useWordTags } from './useWordTags'
 import { PassagePicker } from './PassagePicker'
@@ -68,6 +69,7 @@ export function ReadingView() {
     getHighlight,
   } = useHighlights(book, chapter, translation)
   const { excerptsByVerse } = useJournalExcerpts(book, chapter)
+  const { crossReferencesByVerse } = useCrossReferences(book, chapter)
   const { reflectionsByVerse, addReflection } = useReflections(book, chapter)
   const requestTitleById = usePrayerRequestTitles()
   const tagsByVerse = useWordTags(book, chapter, translation)
@@ -245,6 +247,16 @@ export function ReadingView() {
     setSidePanel({ mode: 'verse', verse: v })
   }
 
+  // "Refs" (action bar): opens the docked panel for whichever verse the
+  // active selection starts in — cross-references are per-verse, unlike
+  // Note/Reflect which can span the whole selection.
+  function handleRefsFromSelection() {
+    if (!activeSelection) return
+    const v = versesById[activeSelection.spans[0].verseId]
+    if (v) openVerseView(v)
+    closeSelection()
+  }
+
   const pendingByVerse: Record<string, SelectionSpan[]> = {}
   for (const span of pendingGroup) {
     ;(pendingByVerse[span.verseId] ??= []).push(span)
@@ -285,6 +297,7 @@ export function ReadingView() {
           onHighlight={handleHighlightSelection}
           onNote={openNoteFromSelection}
           onReflect={openReflectionFromSelection}
+          onRefs={handleRefsFromSelection}
           onAddToGroup={handleAddToGroup}
           onClose={closeSelection}
         />
@@ -410,6 +423,7 @@ export function ReadingView() {
             notes={notesByVerse[sidePanel.verse.verse_id] ?? []}
             journalExcerpts={excerptsByVerse[sidePanel.verse.verse_id] ?? []}
             reflections={reflectionsByVerse[sidePanel.verse.verse_id] ?? []}
+            crossReferences={crossReferencesByVerse[sidePanel.verse.verse_id] ?? []}
             requestTitleById={requestTitleById}
             onEditNote={updateNote}
             onDeleteNote={deleteNote}

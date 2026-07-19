@@ -90,6 +90,23 @@ export function formatReference(verseId: string): string {
   return `${name} ${chapter}:${verse}`
 }
 
+// For a TSK-style (start, end) target pair — collapses to a single
+// reference when start === end, otherwise a range, shortened when the
+// range shares a book/chapter with its start (e.g. "Genesis 1:1-3").
+export function formatReferenceRange(startId: string, endId: string): string {
+  if (startId === endId) return formatReference(startId)
+  const start = parseVerseId(startId)
+  const end = parseVerseId(endId)
+  const startRef = formatReference(startId)
+  if (start.book === end.book && start.chapter === end.chapter) {
+    return `${startRef}-${end.verse}`
+  }
+  if (start.book === end.book) {
+    return `${startRef}-${end.chapter}:${end.verse}`
+  }
+  return `${startRef}-${formatReference(endId)}`
+}
+
 const BOOK_ORDER = new Map(BOOKS.map((b, i) => [b.code, i]))
 
 // Canonical Bible order, not lexicographic — "GEN.1.10" must sort after

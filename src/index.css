@@ -714,6 +714,27 @@ button.highlight-swatch {
   text-decoration: none;
 }
 
+.verse-panel-refs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.verse-panel-ref-link {
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--accent);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.verse-panel-ref-link:hover {
+  text-decoration: underline;
+}
+
 .verse-panel-form {
   display: flex;
   flex-direction: column;
