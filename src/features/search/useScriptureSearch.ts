@@ -6,6 +6,10 @@ import type { Verse } from '../../types/db'
 // Full-text search over verses.search_vector (migration 0010) — a Postgres
 // generated tsvector column, so this is a plain textSearch() call, no RPC
 // needed. Capped at 200 results, same spirit as the concordance's 300-cap.
+// type: 'websearch' (-> websearch_to_tsquery) gives search-engine syntax for
+// free: "quoted text" is an exact phrase, bare words AND together, "OR" and
+// leading "-" work too — exactly what a search box should support without
+// hand-rolling phrase parsing.
 export function useScriptureSearch() {
   const [results, setResults] = useState<Verse[]>([])
   const [loading, setLoading] = useState(false)
@@ -24,7 +28,7 @@ export function useScriptureSearch() {
       .from('verses')
       .select('verse_id, translation_code, book, chapter, verse, text')
       .eq('translation_code', translation)
-      .textSearch('search_vector', trimmed, { type: 'plain', config: 'english' })
+      .textSearch('search_vector', trimmed, { type: 'websearch', config: 'english' })
       .limit(200)
     setLoading(false)
     if (error) {

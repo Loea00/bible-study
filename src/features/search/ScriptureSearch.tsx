@@ -23,7 +23,7 @@ export function ScriptureSearch() {
         <input
           type="search"
           className="journal-search-input"
-          placeholder="Search scripture…"
+          placeholder='Search scripture… (use "quotes" for an exact phrase)'
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           autoFocus
@@ -43,7 +43,10 @@ export function ScriptureSearch() {
         <p className="placeholder">No verses match "{query.trim()}".</p>
       )}
       {!loading && query.trim() === '' && (
-        <p className="placeholder">Search for a word or phrase across the whole Bible.</p>
+        <p className="placeholder">
+          Search for a word or phrase across the whole Bible. Wrap text in "quotes" for an exact
+          phrase, or prefix a word with - to exclude it.
+        </p>
       )}
       {results.length === 200 && (
         <p className="scripture-search-cap">Showing the first 200 matches — try a more specific phrase.</p>
