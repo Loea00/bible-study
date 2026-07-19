@@ -601,6 +601,23 @@ opens the docked panel for that verse, works on any verse, no new gesture. The p
 TEMP-VERIFY mock-data technique, then re-verified against the live database once Aaron applied
 migration 0009 and imported the full CSV — **TSK cross-references are fully live end-to-end.**
 
+Also fixed the same day: following a cross-reference link dropped you at the top of the target
+chapter (no indication of which verse) and left the docked panel showing stale data for the verse
+you navigated *from*. Cross-reference links now carry a `verse` query param; `ReadingView` opens
+the panel for the verse you land on and scrolls/highlights it (`.verse-target` CSS).
+
+**Scripture full-text search is live** (`/search`, `src/features/search/`) — search any word or
+phrase across the whole Bible, not just your own writing (which the Journal search box already
+covered). Migration `0010_verse_search.sql` adds a generated `tsvector` column
+(`verses.search_vector`, auto-maintained from `text`, no trigger needed) plus a GIN index;
+`useScriptureSearch.ts` is a plain `supabase-js` `.textSearch()` call — no RPC needed, unlike the
+concordance's `verses_for_strongs()`. Results link into the reading view via
+`/?book=&chapter=&verse=`, reusing the scroll-to-verse behavior above. Debounced search-as-you-type
+(300ms), capped at 200 results. **Migration 0010 needs to be applied manually** (same as every
+other migration — see Setup) before search will actually return results; verified the UI renders
+and errors cleanly without it (`column verses.search_vector does not exist`), not yet verified
+against real results.
+
 Still ahead: calendar, reading plans, "Today, I..." templates. One known unresolved bug from a
 previous session ("cannot highlight after committing a +Add note/reflection") is still open — see
 memory for the reproduction plan.

@@ -10,6 +10,7 @@ export function NavBar() {
         <NavLink to="/" end>
           Reading
         </NavLink>
+        <NavLink to="/search">Search</NavLink>
         <NavLink to="/journal">Journal</NavLink>
         <NavLink to="/prayer">Prayer</NavLink>
         <NavLink to="/highlights">Highlights</NavLink>
