@@ -253,7 +253,10 @@ export function VersePanel({
               const target = parseVerseId(ref.to_verse_start)
               return (
                 <li key={ref.id}>
-                  <Link to={`/?book=${target.book}&chapter=${target.chapter}`} className="verse-panel-ref-link">
+                  <Link
+                    to={`/?book=${target.book}&chapter=${target.chapter}&verse=${target.verse}`}
+                    className="verse-panel-ref-link"
+                  >
                     {formatReferenceRange(ref.to_verse_start, ref.to_verse_end)}
                   </Link>
                 </li>

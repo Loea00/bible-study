@@ -45,6 +45,8 @@ export function ReadingView() {
   const [searchParams, setSearchParams] = useSearchParams()
   const book = searchParams.get('book') ?? 'GEN'
   const chapter = Number.parseInt(searchParams.get('chapter') ?? '1', 10) || 1
+  const targetVerse = searchParams.get('verse')
+  const targetVerseRef = useRef<HTMLParagraphElement>(null)
   const [translation, setTranslation] = useState('KJV')
   const [pickerOpen, setPickerOpen] = useState(false)
   const [sidePanel, setSidePanel] = useState<SidePanelState>(null)
@@ -78,6 +80,24 @@ export function ReadingView() {
   const versesById = Object.fromEntries(verses.map((v) => [v.verse_id, v]))
   const versesByIdRef = useRef(versesById)
   versesByIdRef.current = versesById
+
+  // Landing from a cross-reference/deep link (?verse=N): scroll to it and
+  // open the docked panel for it, replacing whatever was showing before —
+  // otherwise the panel keeps pointing at the verse you navigated *from*,
+  // which is now in a different chapter and shows nothing.
+  useEffect(() => {
+    if (!targetVerse) return
+    const v = versesById[`${book}.${chapter}.${targetVerse}`]
+    if (!v) return
+    setSidePanel({ mode: 'verse', verse: v })
+    // Deferred: right after a route change the browser hasn't settled layout
+    // yet, and scrollIntoView computed against a not-yet-laid-out viewport
+    // can land wildly off target. setTimeout over requestAnimationFrame since
+    // rAF doesn't fire at all in a backgrounded tab.
+    setTimeout(() => {
+      targetVerseRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }, 0)
+  }, [book, chapter, targetVerse, verses.length])
 
   function handleSelect(newBook: string, newChapter: number) {
     setSearchParams({ book: newBook, chapter: String(newChapter) })
@@ -351,7 +371,11 @@ export function ReadingView() {
             {bookName} {chapter}
           </h1>
           {verses.map((v) => (
-            <p key={v.verse_id} className="verse">
+            <p
+              key={v.verse_id}
+              className={String(v.verse) === targetVerse ? 'verse verse-target' : 'verse'}
+              ref={String(v.verse) === targetVerse ? targetVerseRef : undefined}
+            >
               <span className="verse-num" onClick={(e) => handleVerseNumberTap(v, e)}>
                 {v.verse}
               </span>

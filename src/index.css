@@ -337,6 +337,11 @@ main {
   user-select: text;
 }
 
+.verse-target {
+  background: var(--accent-bg, rgba(107, 79, 160, 0.14));
+  transition: background 2s ease;
+}
+
 .verse-num {
   font-family: var(--sans);
   font-size: 12px;
