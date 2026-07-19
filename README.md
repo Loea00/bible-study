@@ -80,7 +80,7 @@ mirror of it; fine for personal use (where we are now), but revisit before distr
 to other users — see `spec-amendment` discussion in memory/session history if picking this back
 up. Emailed CrossWire (`modules@crosswire.org`) for clarification; no response yet as of writing.
 
-## Seeding TSK cross-references (in progress — see Status)
+## Seeding TSK cross-references
 
 **Treasury of Scripture Knowledge**, from the CrossWire SWORD module (confirmed
 `DistributionLicense=Public Domain` directly in the module's own `mods.d/tsk.conf` — genuinely
@@ -94,11 +94,11 @@ python3 scripts/transform_tsk.py
 ```
 
 Requires `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` in the environment (it cross-checks its
-walk against the already-imported `verses` table's chapter/verse counts — see Status for why).
-Downloads and caches `data/TSK.zip`, produces `data/tsk_cross_references.csv`
-(`from_verse_id,to_verse_start,to_verse_end`). **Currently covers Genesis–Job and the full New
-Testament only** (237,748 rows) — Psalms onward is deliberately excluded pending a fix; see
-Status for the exact gap and why it was cut rather than shipped uncertain.
+walk against the already-imported `verses` table's chapter/verse counts rather than a guessed
+versification table). Downloads and caches `data/TSK.zip`, produces `data/tsk_cross_references.csv`
+(`from_verse_id,to_verse_start,to_verse_end`) — **all 66 books, 362,504 rows.** See Status for the
+data-fidelity note (a real drift bug was found and fixed after the first pass, and a small ~0.1%
+residual tail gap remains, deliberately left as-is rather than chased further).
 
 ```
 python3 scripts/transform_word_tags.py
@@ -542,43 +542,47 @@ separator (only `-`) — `1,3` means two singles, `1-3` means a range; conflatin
 clicking the 6-verse chip fetched and joined all six verses' real text in order, correctly skipping
 verse 6 — reverted cleanly, build clean, committed and pushed.
 
-**TSK cross-reference sourcing started** (biggest lift of the remaining Phase 2 items — this round
+**TSK cross-reference sourcing is complete** (biggest lift of the remaining Phase 2 items — this
 was sourcing only, per the plan; schema/import/UI panel still ahead). First had to pick a real
 data source: the obvious fast path (`scrollmapper/bible_databases`'s `sources/extras/
 cross_references.txt`, same repo already trusted for KJV/ASV) turned out to be openbible.info's
 compiled-and-voted dataset — CC-BY, not public domain, and only ~345k rows against the spec's
-"~640k." Given the choice between that and a real public-domain source, went with the latter: the
-CrossWire SWORD `TSK` module, confirmed `DistributionLicense=Public Domain` directly in its own
-`mods.d/tsk.conf`.
+"~640k." Went with the real public-domain source instead: the CrossWire SWORD `TSK` module,
+confirmed `DistributionLicense=Public Domain` directly in its own `mods.d/tsk.conf`.
 
 No existing tool reads this module's format (`pysword` only supports Bible-type "ztext" modules,
 not "zCom" commentaries), so `scripts/transform_tsk.py` hand-decodes the binary index files —
 block index (12 bytes: offset/compressed-size/uncompressed-size), verse index (10 bytes: block
-number/start offset/length), zlib-compressed per-book blocks. Getting the verse-index walk right
-took real trial and error: chapter-outline headers (self-identifying `<scripRef passage="Ge
-2:1">`) turned out not to appear on every chapter — most chapters have no editorial outline at
-all — so the walk had to peek each slot and only consume it as a header when it actually looks
-like one, otherwise treat that same slot as verse 1. Chapter/verse *counts* per chapter come from
-our own already-imported `verses` table (queried live via the anon key) rather than a guessed
-versification table, which is what let a real mismatch surface: **Psalms' titled psalms drift out
-of alignment** — some psalms with superscriptions appear to use a different verse-numbering
-convention than our own KJV table expects (a known versification quirk: whether a superscription
-counts as verse 1), and the resulting cursor drift cascades into every OT book after Psalms
-(confirmed by direct byte-position inspection, not just row-count guessing). Rather than ship
-cross-references that might be silently misaligned, **Psalms through Malachi are excluded from
-this pass** — the script explicitly cuts off after Job and only walks Genesis–Job plus the full
-NT (both verified correct against known content, e.g. Genesis 1:1's extracted refs exactly match
-what was hand-confirmed earlier: Job 26:7, Isa 45:18, Jer 4:23, Na 2:10, Job 26:14, Ps 33:6,
-104:30, Isa 40:12-14). Result: **237,748 cross-reference rows**, `data/tsk_cross_references.csv`
-(gitignored per existing convention — only the script is committed).
+number/start offset/length), zlib-compressed per-book blocks. Chapter/verse *counts* come from our
+own already-imported `verses` table (queried live via the anon key) rather than a guessed
+versification table — this is what let a real bug surface across two rounds:
 
-Still ahead: fix the Psalms versification desync (needs investigating whether SWORD's TSK module
-counts psalm superscriptions as verse 1 inconsistently, or something else entirely) and extend
-sourcing through the rest of the OT; then schema (a new reference table, read-only like
-`strongs_lexicon`/`word_tags`) + import + a "Cross-references" section in the reading view's verse
-side panel (per spec §5.1). Also still ahead: calendar, reading plans, "Today, I..." templates. One
-known unresolved bug from a previous session ("cannot highlight after committing a +Add
-note/reflection") is still open — see memory for the reproduction plan.
+- **Round one** (first session): assumed each chapter has at most one "outline" header
+  (self-identifying `<scripRef passage="Ge 2:1">`) at its very start. Genesis validated perfectly
+  against this model (all 50 chapters), so it shipped as "Genesis–Job + NT verified, Psalms
+  onward excluded" — but that model was wrong, just wrong in a way Genesis happened not to expose.
+- **Round two** (this session): direct byte inspection of Exodus found **four** separate
+  `passage=` header anchors within chapter 1 alone (Ex 1:1, 1:8, 1:15, 1:22 — one per narrative
+  section break, each followed by that section's real verse content). Headers aren't
+  one-per-chapter at all; they can appear anywhere, including never. The walk was rewritten to
+  peek *every* slot (not just the first one per chapter) and skip any that look like a header,
+  however many a chapter has. Re-verified against known content across the *whole* Bible this
+  time, not just Genesis — Psalm 23:1, Psalm 100:1, Isaiah 53:5, and John 3:16 all pulled
+  semantically correct cross-references (e.g. Isa 53:5's "wounded for our transgressions" pulling
+  in Lamentations' lament verses).
+
+Result: **all 66 books, 362,504 cross-reference rows**, `data/tsk_cross_references.csv`
+(gitignored per existing convention — only the script is committed). A small residual gap remains
+(~27 of 24,115 OT slots and the very last NT verse, Revelation 22:21, weren't consumed) —
+deliberately left as-is rather than chased further; likely just a couple of genuinely-empty tail
+entries, not a repeat of the structural bug above.
+
+Still ahead: schema (a new reference table, read-only like `strongs_lexicon`/`word_tags`) + import
++ a "Cross-references" section in the reading view's verse side panel (per spec §5.1) — none of
+that exists yet, this was purely the data-sourcing stage. Also still ahead: calendar, reading
+plans, "Today, I..." templates. One known unresolved bug from a previous session ("cannot
+highlight after committing a +Add note/reflection") is still open — see memory for the
+reproduction plan.
 
 ## TODO — amendment v1.4 (theming), intentionally deferred
 

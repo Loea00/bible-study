@@ -16,12 +16,18 @@ index files:
   ot.bzv / nt.bzv  verse index  -- 10 bytes/entry: block number(u32),
                                     start offset(u32), length(u16), all LE
 
-Verse *content* is walked self-calibrating rather than against a
-precomputed versification table: every chapter is preceded by exactly one
-"outline" entry whose ThML starts `<scripRef passage="Ge 2:1">` (a
-self-identifying chapter/verse anchor used to make the chapter's summary
-outline clickable) -- entries between one header and the next are that
-chapter's verses 1..N in order, empty ones included. Real cross-reference
+Verse *content* is walked against a precomputed versification table (our
+own already-imported `verses` table, queried live) rather than trusting
+raw entry positions: each book gets exactly one book-intro slot
+(unconditional -- e.g. Exodus's is real prose, "The title of this Book is
+derived from the Septuagint..."), then for each chapter the walk peeks
+*every* slot before treating it as verse content. Slots that start with a
+self-identifying `<scripRef passage="Ge 2:1">` anchor are skipped rather
+than counted as a verse -- these are NOT one-per-chapter (direct
+inspection found FOUR such anchors within Exodus 1 alone, one per
+narrative section break, each followed by that section's real verse
+content), so peeking only the first slot of a chapter silently ate real
+verse content and desynced everything downstream. Real cross-reference
 content is a *bare* `<scripRef>...</scripRef>` (no passage= attribute),
 holding a ";"-separated list of citations that may carry book/chapter
 forward across list items (see parse_citation_list below).
@@ -165,14 +171,15 @@ LEADING_SLOTS = 3
 
 def walk_testament(zcom, book_order, chapter_counts, testament_label, warnings):
     """
-    Hybrid walk: book-intro slots are unconditional (exactly one per book,
-    confirmed present for every book -- e.g. Exodus's is real prose, "The
-    title of this Book is derived from the Septuagint..."), but a chapter's
-    outline-header slot is NOT (most chapters have no editorial outline at
-    all -- e.g. Exodus 1 goes straight into verse-1 content with no header
-    slot in between). So each chapter peeks at the next entry: only consume
-    it as a header if it actually looks like one (self-identifying
-    `<scripRef passage="...">`); otherwise treat that same entry as verse 1.
+    Book-intro slots are unconditional (exactly one per book, confirmed
+    present for every book -- e.g. Exodus's is real prose, "The title of
+    this Book is derived from the Septuagint..."). Outline/header slots are
+    NOT one-per-chapter, though -- direct inspection of Exodus's raw block
+    found FOUR self-identifying anchors within chapter 1 alone (Ex 1:1,
+    1:8, 1:15, 1:22 -- one per narrative section break), each immediately
+    followed by that section's real verse content. So this peeks before
+    EVERY verse slot (not just the first one per chapter) and skips any
+    slot that looks like a header, however many of them a chapter has.
     """
     verse_content = {}
     abbrev_to_code = {}
@@ -186,32 +193,32 @@ def walk_testament(zcom, book_order, chapter_counts, testament_label, warnings):
             warnings.append(f"No chapter data for {book} in verses table -- skipped")
             continue
         for chapter in chapters:
-            if cursor >= total:
-                warnings.append(f"Ran off the end of {testament_label} data at {book} {chapter} (cursor {cursor}/{total})")
-                break
-
-            peek_raw = zcom.entry(cursor)
-            peek_text = peek_raw.decode("utf-8", errors="replace") if peek_raw is not None else ""
-            m = HEADER_RE.search(peek_text[:40]) if peek_raw is not None else None
-            first_verse_raw = None
-            if m:
-                abbrev_to_code.setdefault(m.group(1), book)
-                cursor += 1  # consume the header, verse 1 is the next slot
-            else:
-                first_verse_raw = peek_raw  # this slot IS verse 1, don't skip it
-
             n_verses = chapter_counts[(book, chapter)]
-            for verse in range(1, n_verses + 1):
-                if verse == 1 and not m:
-                    raw = first_verse_raw
-                else:
-                    if cursor >= total:
-                        warnings.append(f"Ran off the end of {testament_label} data inside {book} {chapter}:{verse}")
-                        break
-                    raw = zcom.entry(cursor)
-                    cursor += 1
+            verse = 1
+            guard = 0
+            while verse <= n_verses:
+                guard += 1
+                if guard > n_verses * 4 + 20:
+                    warnings.append(f"Too many header slots inside {book} {chapter} -- bailing to avoid an infinite loop")
+                    break
+                if cursor >= total:
+                    warnings.append(f"Ran off the end of {testament_label} data inside {book} {chapter}:{verse}")
+                    break
+                raw = zcom.entry(cursor)
+                cursor += 1
+                text = raw.decode("utf-8", errors="replace") if raw is not None else ""
+                m = HEADER_RE.search(text[:40]) if raw is not None else None
+                if m:
+                    abbrev_to_code.setdefault(m.group(1), book)
+                    continue  # header/outline anchor -- not a verse, don't advance
                 if raw is not None:
-                    verse_content[(book, chapter, verse)] = raw.decode("utf-8", errors="replace")
+                    verse_content[(book, chapter, verse)] = text
+                verse += 1
+            if cursor >= total:
+                break
+        if cursor >= total:
+            warnings.append(f"Ran off the end of {testament_label} data at {book} -- remaining books skipped")
+            break
 
     if cursor != total:
         warnings.append(f"{testament_label}: consumed {cursor} of {total} slots (expected an exact match)")
@@ -319,21 +326,8 @@ def main():
     nt = ZCom(zf, "nt")
 
     warnings = []
-    # PSA onward is EXCLUDED for now: Psalms' titled psalms appear to use a
-    # different verse-numbering convention than our own KJV table expects
-    # (a well-known versification quirk -- some schemes count a psalm's
-    # superscription as verse 1, others don't), which desyncs the walk's
-    # cursor and cascades misalignment into every OT book after Psalms.
-    # Verified correct (direct byte-position inspection, not just row
-    # counts) through Job; Psalms through Malachi need a follow-up pass
-    # before they can be trusted. See README/memory for the full note.
-    OT_VERIFIED_CUTOFF = "JOB"
-    ot_books_to_walk = OT_BOOKS[: OT_BOOKS.index(OT_VERIFIED_CUTOFF) + 1]
-    excluded_ot_books = OT_BOOKS[OT_BOOKS.index(OT_VERIFIED_CUTOFF) + 1 :]
-
-    ot_content, ot_abbrev = walk_testament(ot, ot_books_to_walk, chapter_counts, "OT", warnings)
+    ot_content, ot_abbrev = walk_testament(ot, OT_BOOKS, chapter_counts, "OT", warnings)
     nt_content, nt_abbrev = walk_testament(nt, NT_BOOKS, chapter_counts, "NT", warnings)
-    print(f"Excluded from this pass (Psalms-onward versification desync, needs follow-up): {excluded_ot_books}")
 
     abbrev_to_code = {**ot_abbrev, **nt_abbrev}
 
