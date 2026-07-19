@@ -598,11 +598,8 @@ tap-verse-number floating bar** (`SelectionActionBar.tsx`) alongside Note/Reflec
 opens the docked panel for that verse, works on any verse, no new gesture. The panel's new
 "Cross-references" section (`VersePanel.tsx`) renders each target as a link
 (`formatReferenceRange()` in `books.ts`, new) back into the reading view. Verified live via the
-TEMP-VERIFY mock-data technique (real end-to-end verification needs the migration applied and
-CSV imported — see "Seeding TSK cross-references" above — which hasn't happened yet on the live
-DB). **Migration 0009 isn't applied to the live Supabase database yet** — Aaron needs to run it
-manually via the SQL Editor, then import `data/tsk_cross_references.csv` via Table Editor, before
-cross-references will actually show real data in production.
+TEMP-VERIFY mock-data technique, then re-verified against the live database once Aaron applied
+migration 0009 and imported the full CSV — **TSK cross-references are fully live end-to-end.**
 
 Still ahead: calendar, reading plans, "Today, I..." templates. One known unresolved bug from a
 previous session ("cannot highlight after committing a +Add note/reflection") is still open — see
