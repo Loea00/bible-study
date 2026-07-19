@@ -490,6 +490,25 @@ now prayer entries too; fixed with a proper label map (`Note`/`Journal`/`Reflect
 a real Genesis 1:1 with a mocked `@verse`-tagged Word entry, and the reading log's prayed-count
 line on a mocked session — reverted cleanly, build clean, committed and pushed.
 
+**Inline `@verse` tags now support ranges** — `@1 Cor 6:19-20` and `@1 Cor 6:19&20` both tag verses
+19 *and* 20, not just 19. `verseTagParser.ts`'s `TAG_PATTERN` gained an optional trailing
+`[-&]<verse>` group (capped at a 50-verse span so a stray "-2026" typo can't silently explode into
+dozens of tagged verses); `ParsedTag` changed from a single `verse`/`verseId` to `verseStart`/
+`verseEnd`/`verseIds: string[]`. Every consumer of the old shape was updated: `VerseTagChip.tsx`
+now renders a range reference ("1 Corinthians 6:19-20") and fetches+joins every verse's text in
+order (`.in('verse_id', verseIds)` doesn't preserve order, so the join is done by walking
+`verseIds` after the fetch, not by trusting row order back). The three insert sites
+(`useJournalEntries.ts`, `useReflections.ts`, `usePrayerEntries.ts`) now `flatMap` each tag's
+`verseIds` into one `verse_references` row per verse (same `entry_id`/`position`, following the
+existing convention — every ref_kind, anchor or inline, already represents multi-verse coverage as
+N single-verse rows, never a genuine start≠end range row, so this reuses that pattern rather than
+inventing a new one). `useJournalExcerpts.ts`'s match condition changed from an equality check
+(`t.verseId === ref.verse_start`) to membership (`t.verseIds.includes(ref.verse_start)`) so a
+range-tagged entry correctly surfaces in *every* covered verse's side panel, not just the first.
+Verified live: a mocked entry with both range syntaxes plus a plain single-verse tag all rendered
+correctly, and clicking the range chip fetched and joined both verses' real KJV text in order —
+reverted cleanly, build clean, committed and pushed.
+
 Still ahead in Phase 2: calendar, reading plans, TSK cross-references, "Today, I..." templates. One
 known unresolved bug from a previous session ("cannot highlight after committing a +Add
 note/reflection") is still open — see memory for the reproduction plan.

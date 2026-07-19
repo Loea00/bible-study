@@ -17,8 +17,9 @@ export function EntryBody({ text }: { text: string }) {
         key={`c${i}`}
         book={tag.book}
         chapter={tag.chapter}
-        verse={tag.verse}
-        verseId={tag.verseId}
+        verseStart={tag.verseStart}
+        verseEnd={tag.verseEnd}
+        verseIds={tag.verseIds}
       />,
     )
     cursor = tag.end

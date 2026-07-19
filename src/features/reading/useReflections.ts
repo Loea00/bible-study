@@ -121,14 +121,16 @@ export function useReflections(book: string, chapter: number) {
     const inlineTags = parseVerseTags(body)
     if (inlineTags.length > 0) {
       const { error: inlineError } = await supabase.from('verse_references').insert(
-        inlineTags.map((t) => ({
-          entry_id: entry.id,
-          user_id: userId,
-          verse_start: t.verseId,
-          verse_end: t.verseId,
-          position: t.start,
-          ref_kind: 'inline' as const,
-        })),
+        inlineTags.flatMap((t) =>
+          t.verseIds.map((verseId) => ({
+            entry_id: entry.id,
+            user_id: userId,
+            verse_start: verseId,
+            verse_end: verseId,
+            position: t.start,
+            ref_kind: 'inline' as const,
+          })),
+        ),
       )
       if (inlineError) throw new Error(inlineError.message)
     }

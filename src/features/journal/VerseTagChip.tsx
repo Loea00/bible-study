@@ -6,17 +6,19 @@ import { BOOK_BY_CODE } from '../reading/books'
 interface VerseTagChipProps {
   book: string
   chapter: number
-  verse: number
-  verseId: string
+  verseStart: number
+  verseEnd: number
+  verseIds: string[]
 }
 
-export function VerseTagChip({ book, chapter, verse, verseId }: VerseTagChipProps) {
+export function VerseTagChip({ book, chapter, verseStart, verseEnd, verseIds }: VerseTagChipProps) {
   const [open, setOpen] = useState(false)
   const [text, setText] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
   const bookName = BOOK_BY_CODE[book]?.name ?? book
-  const reference = `${bookName} ${chapter}:${verse}`
+  const reference =
+    verseStart === verseEnd ? `${bookName} ${chapter}:${verseStart}` : `${bookName} ${chapter}:${verseStart}-${verseEnd}`
 
   async function handleToggle() {
     const next = !open
@@ -25,11 +27,17 @@ export function VerseTagChip({ book, chapter, verse, verseId }: VerseTagChipProp
       setLoading(true)
       const { data } = await supabase
         .from('verses')
-        .select('text')
-        .eq('verse_id', verseId)
+        .select('verse_id, text')
+        .in('verse_id', verseIds)
         .eq('translation_code', 'KJV')
-        .maybeSingle()
-      setText(data?.text ?? 'Verse text not found.')
+      // .in() doesn't preserve order, so re-join by walking verseIds
+      // ourselves rather than trusting the returned row order.
+      const textById = new Map((data ?? []).map((v) => [v.verse_id, v.text]))
+      const joined = verseIds
+        .map((id) => textById.get(id))
+        .filter((t): t is string => Boolean(t))
+        .join(' ')
+      setText(joined || 'Verse text not found.')
       setLoading(false)
     }
   }

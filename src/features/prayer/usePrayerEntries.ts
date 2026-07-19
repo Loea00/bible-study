@@ -60,14 +60,16 @@ export function usePrayerEntries(requestId: string) {
     const verseTags = parseVerseTags(body)
     if (verseTags.length > 0) {
       const { error: refError } = await supabase.from('verse_references').insert(
-        verseTags.map((t) => ({
-          entry_id: entry.id,
-          user_id: userId,
-          verse_start: t.verseId,
-          verse_end: t.verseId,
-          position: t.start,
-          ref_kind: 'inline' as const,
-        })),
+        verseTags.flatMap((t) =>
+          t.verseIds.map((verseId) => ({
+            entry_id: entry.id,
+            user_id: userId,
+            verse_start: verseId,
+            verse_end: verseId,
+            position: t.start,
+            ref_kind: 'inline' as const,
+          })),
+        ),
       )
       if (refError) throw new Error(refError.message)
     }
@@ -99,14 +101,16 @@ export function usePrayerEntries(requestId: string) {
     const verseTags = parseVerseTags(body)
     if (verseTags.length > 0) {
       const { error: refError } = await supabase.from('verse_references').insert(
-        verseTags.map((t) => ({
-          entry_id: entryId,
-          user_id: userId,
-          verse_start: t.verseId,
-          verse_end: t.verseId,
-          position: t.start,
-          ref_kind: 'inline' as const,
-        })),
+        verseTags.flatMap((t) =>
+          t.verseIds.map((verseId) => ({
+            entry_id: entryId,
+            user_id: userId,
+            verse_start: verseId,
+            verse_end: verseId,
+            position: t.start,
+            ref_kind: 'inline' as const,
+          })),
+        ),
       )
       if (refError) throw new Error(refError.message)
     }

@@ -51,7 +51,7 @@ export function useJournalExcerpts(book: string, chapter: number) {
       const entry = entryById.get(ref.entry_id)
       if (!entry) continue
       const tag = parseVerseTags(entry.body).find(
-        (t) => t.start === ref.position && t.verseId === ref.verse_start,
+        (t) => t.start === ref.position && t.verseIds.includes(ref.verse_start),
       )
       if (!tag) continue
       ;(grouped[ref.verse_start] ??= []).push({
