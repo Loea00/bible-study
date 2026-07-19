@@ -613,10 +613,9 @@ covered). Migration `0010_verse_search.sql` adds a generated `tsvector` column
 `useScriptureSearch.ts` is a plain `supabase-js` `.textSearch()` call — no RPC needed, unlike the
 concordance's `verses_for_strongs()`. Results link into the reading view via
 `/?book=&chapter=&verse=`, reusing the scroll-to-verse behavior above. Debounced search-as-you-type
-(300ms), capped at 200 results. **Migration 0010 needs to be applied manually** (same as every
-other migration — see Setup) before search will actually return results; verified the UI renders
-and errors cleanly without it (`column verses.search_vector does not exist`), not yet verified
-against real results.
+(300ms), capped at 200 results. Migration applied by Aaron same day; verified against real data
+(searching "shepherd" correctly returns every occurrence in canonical order, Genesis 46:32 through
+1 Peter 5:4, stemmed matches like "shepherds"/"shepherd's" included) — **fully live.**
 
 Still ahead: calendar, reading plans, "Today, I..." templates. One known unresolved bug from a
 previous session ("cannot highlight after committing a +Add note/reflection") is still open — see
