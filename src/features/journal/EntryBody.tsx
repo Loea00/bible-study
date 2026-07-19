@@ -17,8 +17,7 @@ export function EntryBody({ text }: { text: string }) {
         key={`c${i}`}
         book={tag.book}
         chapter={tag.chapter}
-        verseStart={tag.verseStart}
-        verseEnd={tag.verseEnd}
+        verseNumbers={tag.verseNumbers}
         verseIds={tag.verseIds}
       />,
     )

@@ -505,9 +505,22 @@ N single-verse rows, never a genuine start≠end range row, so this reuses that 
 inventing a new one). `useJournalExcerpts.ts`'s match condition changed from an equality check
 (`t.verseId === ref.verse_start`) to membership (`t.verseIds.includes(ref.verse_start)`) so a
 range-tagged entry correctly surfaces in *every* covered verse's side panel, not just the first.
-Verified live: a mocked entry with both range syntaxes plus a plain single-verse tag all rendered
-correctly, and clicking the range chip fetched and joined both verses' real KJV text in order —
-reverted cleanly, build clean, committed and pushed.
+**Generalized further same day: `@verse` tags now support full comma/&-separated lists, including
+non-consecutive verses and mixed ranges+singles** — `@Gen 1:1,3&5` and `@Gen 1:1-4,5&7` both work,
+not just a plain `N-M` range. `ParsedTag` changed again from `verseStart`/`verseEnd` to
+`verseNumbers: number[]` (sorted, deduplicated — an overlapping list like `1-4,3&5` collapses
+cleanly rather than double-inserting verse 3). New `expandVerseList()` tokenizes on `,`/`&`, expands
+any `N-M` token, dedupes and sorts; new exported `formatVerseRanges()` re-compresses the sorted list
+back into a clean canonical display (`[1,2,3,4,5,7]` → `"1-5, 7"`) regardless of how the user
+actually typed it — mixed separators, out of order, overlapping ranges all normalize to the same
+tidy chip text. `VerseTagChip.tsx` and `EntryBody.tsx` updated to the new shape; the three insert
+sites and `useJournalExcerpts.ts`'s match were untouched this round since they only ever depended
+on `.verseIds`/`.start`, which didn't change shape. Comma was deliberately NOT added as a range
+separator (only `-`) — `1,3` means two singles, `1-3` means a range; conflating them would make
+`1,3-5` ambiguous. Verified live: `@Gen 1:1,3&5` → "Genesis 1:1, 3, 5", `@Gen 1:1-4,5&7` → "Genesis
+1:1-5, 7" (5 correctly merges into the preceding range), a plain `@Gen 1:2` still works, and
+clicking the 6-verse chip fetched and joined all six verses' real text in order, correctly skipping
+verse 6 — reverted cleanly, build clean, committed and pushed.
 
 Still ahead in Phase 2: calendar, reading plans, TSK cross-references, "Today, I..." templates. One
 known unresolved bug from a previous session ("cannot highlight after committing a +Add

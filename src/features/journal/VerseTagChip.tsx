@@ -2,23 +2,22 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { BOOK_BY_CODE } from '../reading/books'
+import { formatVerseRanges } from './verseTagParser'
 
 interface VerseTagChipProps {
   book: string
   chapter: number
-  verseStart: number
-  verseEnd: number
+  verseNumbers: number[]
   verseIds: string[]
 }
 
-export function VerseTagChip({ book, chapter, verseStart, verseEnd, verseIds }: VerseTagChipProps) {
+export function VerseTagChip({ book, chapter, verseNumbers, verseIds }: VerseTagChipProps) {
   const [open, setOpen] = useState(false)
   const [text, setText] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
   const bookName = BOOK_BY_CODE[book]?.name ?? book
-  const reference =
-    verseStart === verseEnd ? `${bookName} ${chapter}:${verseStart}` : `${bookName} ${chapter}:${verseStart}-${verseEnd}`
+  const reference = `${bookName} ${chapter}:${formatVerseRanges(verseNumbers)}`
 
   async function handleToggle() {
     const next = !open
