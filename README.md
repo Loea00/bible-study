@@ -80,6 +80,26 @@ mirror of it; fine for personal use (where we are now), but revisit before distr
 to other users — see `spec-amendment` discussion in memory/session history if picking this back
 up. Emailed CrossWire (`modules@crosswire.org`) for clarification; no response yet as of writing.
 
+## Seeding TSK cross-references (in progress — see Status)
+
+**Treasury of Scripture Knowledge**, from the CrossWire SWORD module (confirmed
+`DistributionLicense=Public Domain` directly in the module's own `mods.d/tsk.conf` — genuinely
+public domain, not the CC-BY openbible.info compilation that was considered and rejected first).
+No off-the-shelf reader exists for this format (it's a "zCom" commentary module; `pysword` only
+reads Bible-type "ztext" modules), so `scripts/transform_tsk.py` hand-decodes the binary index
+files — see the script's own docstring for the exact byte layout.
+
+```
+python3 scripts/transform_tsk.py
+```
+
+Requires `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` in the environment (it cross-checks its
+walk against the already-imported `verses` table's chapter/verse counts — see Status for why).
+Downloads and caches `data/TSK.zip`, produces `data/tsk_cross_references.csv`
+(`from_verse_id,to_verse_start,to_verse_end`). **Currently covers Genesis–Job and the full New
+Testament only** (237,748 rows) — Psalms onward is deliberately excluded pending a fix; see
+Status for the exact gap and why it was cut rather than shipped uncertain.
+
 ```
 python3 scripts/transform_word_tags.py
 ```
@@ -522,7 +542,41 @@ separator (only `-`) — `1,3` means two singles, `1-3` means a range; conflatin
 clicking the 6-verse chip fetched and joined all six verses' real text in order, correctly skipping
 verse 6 — reverted cleanly, build clean, committed and pushed.
 
-Still ahead in Phase 2: calendar, reading plans, TSK cross-references, "Today, I..." templates. One
+**TSK cross-reference sourcing started** (biggest lift of the remaining Phase 2 items — this round
+was sourcing only, per the plan; schema/import/UI panel still ahead). First had to pick a real
+data source: the obvious fast path (`scrollmapper/bible_databases`'s `sources/extras/
+cross_references.txt`, same repo already trusted for KJV/ASV) turned out to be openbible.info's
+compiled-and-voted dataset — CC-BY, not public domain, and only ~345k rows against the spec's
+"~640k." Given the choice between that and a real public-domain source, went with the latter: the
+CrossWire SWORD `TSK` module, confirmed `DistributionLicense=Public Domain` directly in its own
+`mods.d/tsk.conf`.
+
+No existing tool reads this module's format (`pysword` only supports Bible-type "ztext" modules,
+not "zCom" commentaries), so `scripts/transform_tsk.py` hand-decodes the binary index files —
+block index (12 bytes: offset/compressed-size/uncompressed-size), verse index (10 bytes: block
+number/start offset/length), zlib-compressed per-book blocks. Getting the verse-index walk right
+took real trial and error: chapter-outline headers (self-identifying `<scripRef passage="Ge
+2:1">`) turned out not to appear on every chapter — most chapters have no editorial outline at
+all — so the walk had to peek each slot and only consume it as a header when it actually looks
+like one, otherwise treat that same slot as verse 1. Chapter/verse *counts* per chapter come from
+our own already-imported `verses` table (queried live via the anon key) rather than a guessed
+versification table, which is what let a real mismatch surface: **Psalms' titled psalms drift out
+of alignment** — some psalms with superscriptions appear to use a different verse-numbering
+convention than our own KJV table expects (a known versification quirk: whether a superscription
+counts as verse 1), and the resulting cursor drift cascades into every OT book after Psalms
+(confirmed by direct byte-position inspection, not just row-count guessing). Rather than ship
+cross-references that might be silently misaligned, **Psalms through Malachi are excluded from
+this pass** — the script explicitly cuts off after Job and only walks Genesis–Job plus the full
+NT (both verified correct against known content, e.g. Genesis 1:1's extracted refs exactly match
+what was hand-confirmed earlier: Job 26:7, Isa 45:18, Jer 4:23, Na 2:10, Job 26:14, Ps 33:6,
+104:30, Isa 40:12-14). Result: **237,748 cross-reference rows**, `data/tsk_cross_references.csv`
+(gitignored per existing convention — only the script is committed).
+
+Still ahead: fix the Psalms versification desync (needs investigating whether SWORD's TSK module
+counts psalm superscriptions as verse 1 inconsistently, or something else entirely) and extend
+sourcing through the rest of the OT; then schema (a new reference table, read-only like
+`strongs_lexicon`/`word_tags`) + import + a "Cross-references" section in the reading view's verse
+side panel (per spec §5.1). Also still ahead: calendar, reading plans, "Today, I..." templates. One
 known unresolved bug from a previous session ("cannot highlight after committing a +Add
 note/reflection") is still open — see memory for the reproduction plan.
 
