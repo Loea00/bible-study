@@ -4,33 +4,38 @@ import { compareVerseIds } from '../reading/books'
 import type { Verse } from '../../types/db'
 
 // Full-text search over verses.search_vector (migration 0010) — a Postgres
-// generated tsvector column, so this is a plain textSearch() call, no RPC
-// needed. Capped at 200 results, same spirit as the concordance's 300-cap.
-// type: 'websearch' (-> websearch_to_tsquery) gives search-engine syntax for
-// free: "quoted text" is meant to be an exact phrase, bare words AND
-// together, "OR" and leading "-" work too.
+// generated tsvector column. Unquoted queries use websearch_to_tsquery
+// (type: 'websearch') for stemmed recall — "shepherd" also matches
+// "shepherds".
 //
-// BUT: Postgres's 'english' config strips common words as stopwords —
-// "was", "the", "is", "a"... — and a quoted phrase built entirely out of
-// stopwords (e.g. "was the word") degrades to an empty/near-empty tsquery,
-// silently losing the phrase requirement and matching almost anything.
-// Since Bible text is full of exactly these words ("the LORD", "I am"),
-// a query that's ENTIRELY one quoted phrase is instead run as a literal
-// case-insensitive substring match (ilike) — genuinely exact, immune to
-// stemming/stopwords, and matches what a user typing quotes actually wants.
+// A quoted "phrase" gets two queries: an ilike literal substring match
+// (genuinely exact — immune to stemming and to Postgres's english config
+// treating "was"/"the"/"is" etc. as stopwords, which silently breaks
+// phraseto_tsquery/websearch_to_tsquery phrase matching on Bible text,
+// which is dense with exactly those words) for `exactResults`, plus a
+// websearch_to_tsquery run on the same words (phrase requirement dropped)
+// for `relatedResults` — verses that mention the same words but not as
+// that exact phrase. relatedResults excludes anything already in
+// exactResults so the two lists never overlap.
 function escapeIlike(text: string): string {
   return text.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_')
 }
 
+const VERSE_COLUMNS = 'verse_id, translation_code, book, chapter, verse, text'
+
 export function useScriptureSearch() {
-  const [results, setResults] = useState<Verse[]>([])
+  const [exactResults, setExactResults] = useState<Verse[]>([])
+  const [relatedResults, setRelatedResults] = useState<Verse[]>([])
+  const [isPhraseQuery, setIsPhraseQuery] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const search = useCallback(async (query: string, translation: string) => {
     const trimmed = query.trim()
     if (!trimmed) {
-      setResults([])
+      setExactResults([])
+      setRelatedResults([])
+      setIsPhraseQuery(false)
       setError(null)
       return
     }
@@ -38,14 +43,37 @@ export function useScriptureSearch() {
     setError(null)
 
     const phraseMatch = trimmed.match(/^"(.+)"$/)
-    const base = supabase
-      .from('verses')
-      .select('verse_id, translation_code, book, chapter, verse, text')
-      .eq('translation_code', translation)
-    const { data, error } = await (phraseMatch
-      ? base.ilike('text', `%${escapeIlike(phraseMatch[1])}%`).limit(200)
-      : base.textSearch('search_vector', trimmed, { type: 'websearch', config: 'english' }).limit(200))
+    setIsPhraseQuery(phraseMatch !== null)
+    const table = () => supabase.from('verses').select(VERSE_COLUMNS).eq('translation_code', translation)
 
+    if (phraseMatch) {
+      const phrase = phraseMatch[1]
+      const [exact, related] = await Promise.all([
+        table().ilike('text', `%${escapeIlike(phrase)}%`).limit(200),
+        table().textSearch('search_vector', phrase, { type: 'websearch', config: 'english' }).limit(200),
+      ])
+      setLoading(false)
+      if (exact.error) {
+        setError(exact.error.message)
+        return
+      }
+      if (related.error) {
+        setError(related.error.message)
+        return
+      }
+      const exactRows = (exact.data ?? []) as Verse[]
+      exactRows.sort((a, b) => compareVerseIds(a.verse_id, b.verse_id))
+      const exactIds = new Set(exactRows.map((v) => v.verse_id))
+      const relatedRows = ((related.data ?? []) as Verse[]).filter((v) => !exactIds.has(v.verse_id))
+      relatedRows.sort((a, b) => compareVerseIds(a.verse_id, b.verse_id))
+      setExactResults(exactRows)
+      setRelatedResults(relatedRows)
+      return
+    }
+
+    const { data, error } = await table()
+      .textSearch('search_vector', trimmed, { type: 'websearch', config: 'english' })
+      .limit(200)
     setLoading(false)
     if (error) {
       setError(error.message)
@@ -53,8 +81,9 @@ export function useScriptureSearch() {
     }
     const rows = (data ?? []) as Verse[]
     rows.sort((a, b) => compareVerseIds(a.verse_id, b.verse_id))
-    setResults(rows)
+    setExactResults(rows)
+    setRelatedResults([])
   }, [])
 
-  return { results, loading, error, search }
+  return { exactResults, relatedResults, isPhraseQuery, loading, error, search }
 }

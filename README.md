@@ -634,6 +634,16 @@ stemming/stopword stripping. Unquoted queries still use `websearch_to_tsquery` f
 recall. Verified live: `"was the word"` now returns exactly the 5 verses containing that literal
 phrase, John 1:1 included; unquoted `shepherd` still stemmed-matches as before.
 
+**Results grouped by exactness, same day**, per Aaron's follow-up ask — a quoted search should
+surface exact matches as their own group up top, not interleaved with looser matches. A quoted
+query now runs *two* queries: the `ilike` exact match (above) plus a `websearch_to_tsquery` on the
+same words with the phrase requirement dropped, for verses that mention the same words but not as
+that literal phrase — deduped against the exact set. `ScriptureSearch.tsx` renders these as two
+sections, "Exact matches" then "Related matches" (with a hint that it's not the exact phrase);
+plain unquoted queries keep the original flat single-list UI, unchanged. Verified live:
+`"in the beginning"` shows 19 exact matches (Genesis 1:1, John 1:1, every literal "in the
+beginning of..." included) followed by 115 related, non-overlapping matches.
+
 Still ahead: calendar, reading plans, "Today, I..." templates. One known unresolved bug from a
 previous session ("cannot highlight after committing a +Add note/reflection") is still open — see
 memory for the reproduction plan.
