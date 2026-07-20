@@ -111,6 +111,43 @@ credentials):
    data/tsk_chunk_`, re-add the CSV header to each chunk, import one chunk at a time) rather than
    troubleshooting a single giant import.
 
+## Seeding commentary data
+
+**Matthew Henry's Concise Commentary (MHCC)**, from the CrossWire SWORD module (confirmed
+`DistributionLicense=Public Domain` in the module's own `mods.d/mhcc.conf` — "Public Domain--Copy
+Freely"). First of the three spec-named commentaries (Matthew Henry, Barnes, JFB — see spec §102);
+staged one at a time per the agreed approach, MHCC picked first since its per-verse structure is
+closest to TSK's, letting the extraction reuse the same zCom-decoding approach.
+
+```
+python3 scripts/transform_mhcc.py
+```
+
+Requires `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` (same chapter/verse ground-truth pattern as
+TSK). Produces `data/mhcc_commentary.csv` (`source,verse_start,verse_end,body`) — **4,047 entries
+across all 66 books.**
+
+**A real, non-trivial bug was found and fixed while building this** (not just a residual gap like
+TSK's): the zCom format here has an extra wrinkle TSK didn't — chapters are preceded by junk
+*empty* index slots in addition to a `<chapter n="N">` marker, and the first version of the walk
+miscounted those empty slots as verse content. That silently ate into each chapter's verse budget
+before its real content even started, so the chapter's walk ran out of budget partway through its
+*actual* verses — Psalm 23:1 was showing Psalm 22's commentary, one whole chapter behind. Root
+cause and fix confirmed by direct byte inspection of the Job 41→42 and Psalm 21→22→23 boundaries
+(see `scripts/transform_mhcc.py`'s docstring/comments). The fix makes each chapter actively *seek*
+its own header (skipping any junk, empty or not, without counting it) rather than trusting
+cumulative cursor arithmetic — self-correcting at every chapter boundary. Re-verified after the fix
+against Genesis 1:1, Psalm 22:1, Psalm 23:1, John 1:1, Romans 8:28, Ephesians 2:8, Revelation
+22:21, and Malachi 4:6 — all correct. One accepted content gap, not an extraction bug: John
+3:9-21 (including 3:16) has no MHCC entry at all — confirmed via direct byte inspection that the
+module's own index slots for that range are genuinely empty, not a walk error; the concise edition
+apparently just doesn't comment on that section individually.
+
+**To get this live**, same anon-key-only constraint as everything else: run
+`supabase/migrations/0011_commentary_entries.sql` via the SQL Editor, then import
+`data/mhcc_commentary.csv` via Table Editor → `commentary_entries`. At 4,047 rows / ~4 MB this is
+small — no chunking should be needed.
+
 ```
 python3 scripts/transform_word_tags.py
 ```
@@ -643,6 +680,24 @@ sections, "Exact matches" then "Related matches" (with a hint that it's not the 
 plain unquoted queries keep the original flat single-list UI, unchanged. Verified live:
 `"in the beginning"` shows 19 exact matches (Genesis 1:1, John 1:1, every literal "in the
 beginning of..." included) followed by 115 related, non-overlapping matches.
+
+**Fixed same day: the deployed site 404'd on any direct load or hard refresh of a route other than
+`/`** (e.g. `/search`, `/journal`) — Vercel had no rewrite rule telling it to fall back to
+`index.html` for client-side routes, so a fresh request for `/search` hit the server directly and
+found no matching static file. Added `vercel.json` with a catch-all rewrite to `index.html`. This
+was very likely the real cause behind an earlier "hard refresh on /search shows no change" report.
+
+**Commentaries started** (spec §102, Phase 2+) — Matthew Henry's Concise Commentary (MHCC) is the
+first of three planned public-domain commentaries, picked as the starting point since its
+per-verse structure let the extraction reuse the TSK zCom-decoding approach. New
+`commentary_entries` table (migration `0011_commentary_entries.sql`, generalized via a `source`
+column so JFB/MHC can reuse it later without a new migration), `useCommentary.ts`, and a
+"Commentary" section in `VersePanel.tsx` alongside Cross-references. See "Seeding commentary data"
+above for the real desync bug found and fixed while building the extraction script — worth reading
+if resuming commentary work, since the same empty-slot-padding issue could recur in JFB/MHC's own
+zCom data. **Migration 0011 needs to be applied manually** before commentary data shows for real;
+verified live via TEMP-VERIFY mock data in the meantime (Psalm 23:1 rendering correctly alongside
+its cross-references).
 
 Still ahead: calendar, reading plans, "Today, I..." templates. One known unresolved bug from a
 previous session ("cannot highlight after committing a +Add note/reflection") is still open — see

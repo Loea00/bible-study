@@ -5,6 +5,7 @@ import { useMarginNotes } from './useMarginNotes'
 import { useHighlights } from './useHighlights'
 import { useJournalExcerpts } from './useJournalExcerpts'
 import { useCrossReferences } from './useCrossReferences'
+import { useCommentary } from './useCommentary'
 import { useReadingSession } from './useReadingSession'
 import { useWordTags } from './useWordTags'
 import { PassagePicker } from './PassagePicker'
@@ -72,6 +73,7 @@ export function ReadingView() {
   } = useHighlights(book, chapter, translation)
   const { excerptsByVerse } = useJournalExcerpts(book, chapter)
   const { crossReferencesByVerse } = useCrossReferences(book, chapter)
+  const { commentaryByVerse } = useCommentary(book, chapter)
   const { reflectionsByVerse, addReflection } = useReflections(book, chapter)
   const requestTitleById = usePrayerRequestTitles()
   const tagsByVerse = useWordTags(book, chapter, translation)
@@ -448,6 +450,7 @@ export function ReadingView() {
             journalExcerpts={excerptsByVerse[sidePanel.verse.verse_id] ?? []}
             reflections={reflectionsByVerse[sidePanel.verse.verse_id] ?? []}
             crossReferences={crossReferencesByVerse[sidePanel.verse.verse_id] ?? []}
+            commentary={commentaryByVerse[sidePanel.verse.verse_id] ?? []}
             requestTitleById={requestTitleById}
             onEditNote={updateNote}
             onDeleteNote={deleteNote}

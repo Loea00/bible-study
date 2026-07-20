@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import type { Entry, EntryType, TskCrossReference } from '../../types/db'
+import type { CommentaryEntry, Entry, EntryType, TskCrossReference } from '../../types/db'
 import type { JournalExcerpt } from './useJournalExcerpts'
 import type { ReflectionExcerpt } from './useReflections'
 import { AnchorScripture } from './AnchorScripture'
@@ -13,6 +13,7 @@ interface VersePanelProps {
   journalExcerpts: JournalExcerpt[]
   reflections: ReflectionExcerpt[]
   crossReferences: TskCrossReference[]
+  commentary: CommentaryEntry[]
   requestTitleById: Record<string, string>
   onEditNote: (entryId: string, body: string) => Promise<void>
   onDeleteNote: (entryId: string) => Promise<void>
@@ -23,6 +24,10 @@ const PRAYER_KIND_LABEL: Partial<Record<EntryType, string>> = {
   prayer_update: 'Update',
   word: 'Word',
   concern: 'Concern',
+}
+
+const COMMENTARY_SOURCE_LABEL: Record<string, string> = {
+  MHCC: "Matthew Henry's Concise Commentary",
 }
 
 interface NoteItemProps {
@@ -129,6 +134,7 @@ export function VersePanel({
   journalExcerpts,
   reflections,
   crossReferences,
+  commentary,
   requestTitleById,
   onEditNote,
   onDeleteNote,
@@ -266,10 +272,30 @@ export function VersePanel({
         </div>
       )}
 
+      {commentary.length > 0 && (
+        <div className="verse-panel-section">
+          <h3>Commentary</h3>
+          <div className="verse-panel-excerpts">
+            {commentary.map((c) => (
+              <div key={c.id} className="verse-panel-excerpt">
+                <div className="verse-panel-excerpt-header">
+                  <span className="verse-panel-excerpt-title">{COMMENTARY_SOURCE_LABEL[c.source] ?? c.source}</span>
+                  {c.verse_start !== c.verse_end && (
+                    <span className="verse-panel-excerpt-date">{formatReferenceRange(c.verse_start, c.verse_end)}</span>
+                  )}
+                </div>
+                <p className="verse-panel-excerpt-text">{c.body}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {notes.length === 0 &&
         journalExcerpts.length === 0 &&
         reflections.length === 0 &&
-        crossReferences.length === 0 && <p className="placeholder">Nothing connected to this verse yet.</p>}
+        crossReferences.length === 0 &&
+        commentary.length === 0 && <p className="placeholder">Nothing connected to this verse yet.</p>}
     </div>
   )
 }

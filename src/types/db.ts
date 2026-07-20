@@ -168,6 +168,18 @@ export type TskCrossReference = {
   to_verse_end: string
 }
 
+// Public-domain commentaries (spec §102). `source` distinguishes which
+// commentary a row belongs to (starting with 'MHCC' — Matthew Henry's
+// Concise — more planned). verse_start/verse_end cover a range since
+// commentators often comment on several consecutive verses at once.
+export type CommentaryEntry = {
+  id: string
+  source: string
+  verse_start: string
+  verse_end: string
+  body: string
+}
+
 export type Database = {
   public: {
     Tables: {
@@ -263,6 +275,12 @@ export type Database = {
         Row: TskCrossReference
         Insert: TskCrossReference
         Update: Partial<TskCrossReference>
+        Relationships: []
+      }
+      commentary_entries: {
+        Row: CommentaryEntry
+        Insert: CommentaryEntry
+        Update: Partial<CommentaryEntry>
         Relationships: []
       }
     }
