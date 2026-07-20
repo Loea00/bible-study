@@ -695,9 +695,9 @@ column so JFB/MHC can reuse it later without a new migration), `useCommentary.ts
 "Commentary" section in `VersePanel.tsx` alongside Cross-references. See "Seeding commentary data"
 above for the real desync bug found and fixed while building the extraction script — worth reading
 if resuming commentary work, since the same empty-slot-padding issue could recur in JFB/MHC's own
-zCom data. **Migration 0011 needs to be applied manually** before commentary data shows for real;
-verified live via TEMP-VERIFY mock data in the meantime (Psalm 23:1 rendering correctly alongside
-its cross-references).
+zCom data. Migration applied and CSV imported by Aaron same day; confirmed via REST and live in
+the browser — Psalm 23:1 shows its real Matthew Henry commentary (correctly starting "Chapter 23
+Confidence in God's grace and care...") alongside its cross-references. **Fully live.**
 
 Still ahead: calendar, reading plans, "Today, I..." templates. One known unresolved bug from a
 previous session ("cannot highlight after committing a +Add note/reflection") is still open — see
