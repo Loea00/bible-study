@@ -617,13 +617,22 @@ concordance's `verses_for_strongs()`. Results link into the reading view via
 (searching "shepherd" correctly returns every occurrence in canonical order, Genesis 46:32 through
 1 Peter 5:4, stemmed matches like "shepherds"/"shepherd's" included) — **fully live.**
 
-**Exact-phrase search added same day**, at Aaron's request. `type: 'websearch'` (→ Postgres's
-`websearch_to_tsquery`) instead of `type: 'plain'` — a one-line change, since Postgres's own
-search-engine-syntax parser already does exactly this: `"quoted text"` is an exact phrase, bare
-words AND together, a leading `-` excludes a word, `OR` works too. No custom phrase-parsing code
-needed. Verified live: unquoted `green pastures` matched both Psalm 23:2 (the exact phrase) and
-Job 39:8 (has both words, not adjacent); quoting it narrowed to just Psalm 23:2; `love -brotherly`
-correctly excluded matches.
+**Exact-phrase search added same day**, at Aaron's request. First attempt used
+`type: 'websearch'` (→ Postgres's `websearch_to_tsquery`), which does handle `"quoted text"` as a
+phrase in general — verified with `"green pastures"` narrowing correctly to Psalm 23:2. But Aaron
+caught a real failure: `"was the word"` returned generic "word"-containing verses instead of the
+literal phrase (missed John 1:1 entirely, the most obvious hit). Root cause: Postgres's `english`
+text-search config treats extremely common words — "was", "the", "is", "a" — as **stopwords** and
+strips them from both the indexed text and the query. A quoted phrase built mostly out of
+stopwords degrades to almost nothing, silently losing the phrase requirement. Since Bible text is
+full of exactly these words ("the LORD", "I am", "was the Word"), this wasn't an edge case.
+
+**Fixed** by giving quoted phrases their own path in `useScriptureSearch.ts`: when the whole query
+is a single `"quoted phrase"`, it now runs as a literal case-insensitive substring match (`ilike`)
+against `verses.text` instead of going through `search_vector` at all — genuinely exact, immune to
+stemming/stopword stripping. Unquoted queries still use `websearch_to_tsquery` for stemmed
+recall. Verified live: `"was the word"` now returns exactly the 5 verses containing that literal
+phrase, John 1:1 included; unquoted `shepherd` still stemmed-matches as before.
 
 Still ahead: calendar, reading plans, "Today, I..." templates. One known unresolved bug from a
 previous session ("cannot highlight after committing a +Add note/reflection") is still open — see
