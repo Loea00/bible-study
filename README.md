@@ -711,11 +711,10 @@ reformatted into a small bulleted list instead of discarded, and each of these p
 own paragraph (joined with `\n\n`) instead of one run-on blob. (3) `VersePanel.tsx` gained a
 `CommentaryItem` sub-component — collapsed by default to the entry's first paragraph, "Show more
 ▾" expands the rest, same expand/collapse pattern `AnchorScripture.tsx` already established.
-Verified live via TEMP-VERIFY mock (Genesis 1:1's re-cleaned three-paragraph body, expand/collapse
-both confirmed). **Re-running `transform_mhcc.py` regenerated `data/mhcc_commentary.csv` with new
-IDs for every row — the live `commentary_entries` table needs to be truncated and re-imported from
-the refreshed CSV**, not merged with the old import, since there's no stable natural key to match
-old rows against new ones.
+Verified live via TEMP-VERIFY mock, then re-verified against real data after Aaron truncated and
+re-imported `commentary_entries` — Genesis 1:1 correctly shows three separate paragraphs (intro,
+Chapter Outline as a clean bulleted line, then the actual verse commentary), no duplication,
+expand/collapse both confirmed. **Fully live.**
 
 Still ahead: calendar, reading plans, "Today, I..." templates. One known unresolved bug from a
 previous session ("cannot highlight after committing a +Add note/reflection") is still open — see
