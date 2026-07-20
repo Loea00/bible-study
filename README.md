@@ -716,9 +716,16 @@ re-imported `commentary_entries` — Genesis 1:1 correctly shows three separate 
 Chapter Outline as a clean bulleted line, then the actual verse commentary), no duplication,
 expand/collapse both confirmed. **Fully live.**
 
-Still ahead: calendar, reading plans, "Today, I..." templates. One known unresolved bug from a
-previous session ("cannot highlight after committing a +Add note/reflection") is still open — see
-memory for the reproduction plan.
+**Investigated and could not reproduce**: the previously-open "cannot highlight after committing a
++Add note/reflection" bug. Stubbed `addNote`/`addReflection` to skip the real Supabase write (same
+TEMP-VERIFY pattern used throughout this project) and drove the exact reported sequence — select →
++Add → select more → Note/Reflect → Save → fresh highlight attempt — via both the Note and Reflect
+paths. Both times the app was left in a clean, fully-functional state; the highlight click reached
+the real `createHighlight` call, only blocked by lack of dev-session auth. Likely already fixed as
+a side effect of later work; would need a fresh, more specific repro (exact gesture/device) to
+investigate further.
+
+Still ahead: calendar, reading plans, "Today, I..." templates.
 
 ## TODO — amendment v1.4 (theming), intentionally deferred
 
