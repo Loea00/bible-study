@@ -699,6 +699,24 @@ zCom data. Migration applied and CSV imported by Aaron same day; confirmed via R
 the browser — Psalm 23:1 shows its real Matthew Henry commentary (correctly starting "Chapter 23
 Confidence in God's grace and care...") alongside its cross-references. **Fully live.**
 
+**Follow-up polish, same day, at Aaron's request**: two real gaps in the extracted text and one UI
+gap. (1) "Genesis Genesis is a name taken from..." — the book-title OSIS tag's own text ("Genesis")
+was landing directly in front of the book's intro paragraph, which happens to *also* start with
+the book's name; (2) chapter-intro/outline text (a book's intro paragraph, a "Chapter Outline"
+summary) was running straight into the actual verse commentary with no visual separation at all,
+since the original extraction just concatenated everything into one string. Fixed in
+`clean_text()` (`scripts/transform_mhcc.py`): book-title and chapter-number OSIS tags are now
+dropped entirely (redundant — the panel already shows the reference), the outline `<table>` is
+reformatted into a small bulleted list instead of discarded, and each of these pieces becomes its
+own paragraph (joined with `\n\n`) instead of one run-on blob. (3) `VersePanel.tsx` gained a
+`CommentaryItem` sub-component — collapsed by default to the entry's first paragraph, "Show more
+▾" expands the rest, same expand/collapse pattern `AnchorScripture.tsx` already established.
+Verified live via TEMP-VERIFY mock (Genesis 1:1's re-cleaned three-paragraph body, expand/collapse
+both confirmed). **Re-running `transform_mhcc.py` regenerated `data/mhcc_commentary.csv` with new
+IDs for every row — the live `commentary_entries` table needs to be truncated and re-imported from
+the refreshed CSV**, not merged with the old import, since there's no stable natural key to match
+old rows against new ones.
+
 Still ahead: calendar, reading plans, "Today, I..." templates. One known unresolved bug from a
 previous session ("cannot highlight after committing a +Add note/reflection") is still open — see
 memory for the reproduction plan.

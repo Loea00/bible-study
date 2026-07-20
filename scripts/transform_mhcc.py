@@ -53,9 +53,34 @@ NT_BOOKS = [
 ]
 
 HEADER_RE = re.compile(r'^<chapter n="(\d+)"')
-TABLE_RE = re.compile(r"<table\b.*?</table>", re.DOTALL)
 TAG_RE = re.compile(r"<[^>]+>")
 WS_RE = re.compile(r"\s+")
+
+# Structural markup that shows up glued into a chapter's FIRST commentary
+# entry -- MHCC bundles the book's own intro paragraph and a "Chapter
+# Outline" summary table into that same physical block. Stripping tags
+# naively left these run into the actual verse commentary with no
+# separation (e.g. the book-title tag's own text "Genesis" landing
+# directly in front of the intro paragraph's "Genesis is a name taken
+# from..."). These patterns get replaced with an explicit paragraph
+# break instead, and the outline table gets reformatted into a small
+# readable list rather than discarded outright.
+BOOK_TITLE_RE = re.compile(r'<title type="x-ms">.*?</title>', re.DOTALL)
+CHAPTER_TITLE_RE = re.compile(r'<title type="x-s2">[^<]*</title>')
+OUTLINE_RE = re.compile(
+    r'<title type="x-IS">Chapter Outline</title>\s*(<table\b.*?</table>)', re.DOTALL
+)
+OUTLINE_ROW_RE = re.compile(r"<row><cell>(.*?)</cell><cell>(.*?)</cell></row>", re.DOTALL)
+VERSE_LABEL_RE = re.compile(r'<hi type="bold">\s*Verses?\s+[\d,\-]+\s*</hi>')
+PARA_BREAK = "\x00"
+
+
+def _render_outline(match):
+    rows = OUTLINE_ROW_RE.findall(match.group(1))
+    lines = [f"{TAG_RE.sub('', desc).strip()} {TAG_RE.sub('', rng).strip()}" for desc, rng in rows]
+    if not lines:
+        return PARA_BREAK
+    return PARA_BREAK + "Chapter Outline:" + PARA_BREAK + PARA_BREAK.join(f"• {l}" for l in lines) + PARA_BREAK
 
 # Empirically confirmed (same as TSK, same osis2mod-generated slot layout):
 # each testament's verse index opens with this many throwaway slots before
@@ -214,10 +239,16 @@ def walk_testament(zcom, book_order, chapter_counts, testament_label, warnings):
 
 
 def clean_text(raw_text):
-    text = TABLE_RE.sub("", raw_text)
+    """Plain, paragraph-separated text (paragraphs joined with a blank
+    line) -- book intro / chapter outline / the actual verse commentary
+    each become their own paragraph instead of one run-on blob."""
+    text = BOOK_TITLE_RE.sub(PARA_BREAK, raw_text)
+    text = OUTLINE_RE.sub(_render_outline, text)
+    text = CHAPTER_TITLE_RE.sub(PARA_BREAK, text)
+    text = VERSE_LABEL_RE.sub(PARA_BREAK, text)
     text = TAG_RE.sub(" ", text)
-    text = WS_RE.sub(" ", text).strip()
-    return text
+    paragraphs = [WS_RE.sub(" ", p).strip() for p in text.split(PARA_BREAK)]
+    return "\n\n".join(p for p in paragraphs if p)
 
 
 def merge_ranges(verse_content, book_order, chapter_counts):

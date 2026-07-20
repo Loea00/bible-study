@@ -30,6 +30,44 @@ const COMMENTARY_SOURCE_LABEL: Record<string, string> = {
   MHCC: "Matthew Henry's Concise Commentary",
 }
 
+// Commentary entries can run long (a full chapter-outline + several
+// paragraphs) — collapsed by default to the first paragraph, expandable
+// to the rest. Body text has real paragraph breaks (\n\n) from the
+// extraction script, so each renders as its own <p> rather than one wall
+// of text.
+interface CommentaryItemProps {
+  entry: CommentaryEntry
+}
+
+function CommentaryItem({ entry }: CommentaryItemProps) {
+  const [expanded, setExpanded] = useState(false)
+  const paragraphs = entry.body.split('\n\n')
+  const hasMore = paragraphs.length > 1
+
+  return (
+    <div className="verse-panel-excerpt">
+      <div className="verse-panel-excerpt-header">
+        <span className="verse-panel-excerpt-title">{COMMENTARY_SOURCE_LABEL[entry.source] ?? entry.source}</span>
+        {entry.verse_start !== entry.verse_end && (
+          <span className="verse-panel-excerpt-date">{formatReferenceRange(entry.verse_start, entry.verse_end)}</span>
+        )}
+      </div>
+      <p className="verse-panel-excerpt-text">{paragraphs[0]}</p>
+      {expanded &&
+        paragraphs.slice(1).map((p, i) => (
+          <p key={i} className="verse-panel-excerpt-text">
+            {p}
+          </p>
+        ))}
+      {hasMore && (
+        <button type="button" className="anchor-scripture-toggle" onClick={() => setExpanded((v) => !v)}>
+          {expanded ? 'Show less ▲' : 'Show more ▾'}
+        </button>
+      )}
+    </div>
+  )
+}
+
 interface NoteItemProps {
   note: Entry
   onEdit: (entryId: string, body: string) => Promise<void>
@@ -277,15 +315,7 @@ export function VersePanel({
           <h3>Commentary</h3>
           <div className="verse-panel-excerpts">
             {commentary.map((c) => (
-              <div key={c.id} className="verse-panel-excerpt">
-                <div className="verse-panel-excerpt-header">
-                  <span className="verse-panel-excerpt-title">{COMMENTARY_SOURCE_LABEL[c.source] ?? c.source}</span>
-                  {c.verse_start !== c.verse_end && (
-                    <span className="verse-panel-excerpt-date">{formatReferenceRange(c.verse_start, c.verse_end)}</span>
-                  )}
-                </div>
-                <p className="verse-panel-excerpt-text">{c.body}</p>
-              </div>
+              <CommentaryItem key={c.id} entry={c} />
             ))}
           </div>
         </div>
