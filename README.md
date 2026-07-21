@@ -148,6 +148,47 @@ apparently just doesn't comment on that section individually.
 `data/mhcc_commentary.csv` via Table Editor → `commentary_entries`. At 4,047 rows / ~4 MB this is
 small — no chunking should be needed.
 
+## Seeding Nave's Topical Bible
+
+**Nave's Topical Bible**, from the CrossWire SWORD module (confirmed `DistributionLicense=Public
+Domain` in the module's own `mods.d/nave.conf`). Spec §4.3 "topic → verse lists"; also planned as
+Layer 1 of the prayer tracker's AI-grounding design (free, offline topic-matching before ever
+reaching a paid AI call).
+
+```
+python3 scripts/transform_nave.py
+```
+
+This is a **different SWORD binary format** from TSK/MHCC — "zLD" (compressed lexicon/dictionary),
+not "zCom" (verse-keyed commentary). Key-keyed rather than verse-keyed: a `dict.dat` file lists
+every topic (`KEY\r\n` + blocknum + entry-index, already alphabetical), pointing into
+zlib-compressed blocks (`dict.zdt`, indexed by `dict.zdx`). One real format surprise hand-decoded
+along the way: `dict.zdx`'s block index is **8 bytes/entry** (offset + compressed size only), not
+zCom's 12-byte (offset + compressed size + uncompressed size) — decompression failed on the second
+block until this was caught (confirmed via `1424 % 12 != 0` but `1424 % 8 == 0` for this module's
+index file size). Full byte-format details are in `scripts/transform_nave.py`'s docstring.
+
+Much simpler content parsing than TSK, though: scripture references are markup as
+`<ref osisRef="Exod.6.16-Exod.6.20">Ex 6:16-20</ref>` — fully resolved OSIS references, no
+citation-shorthand book/chapter-carry-forward parsing needed the way TSK required. Each topic's
+entry is a set of `<lb/>`-delimited lines, each with a descriptive label ("Marriage of", "Death and
+burial of") — preserved as its own `label` column since it's genuine structure from the source
+(matches how Nave's own printed edition organizes a topic), not just noise.
+
+Produces `data/nave_topics.csv` (`topic,label,verse_start,verse_end`) — **5,322 topics, 77,922
+verse-reference rows.** 26 references to apocryphal books (Prayer of Azariah, Wisdom of Solomon —
+outside our 66-book canon) were correctly skipped, not crashed on, matching the established
+`word_tags` precedent for KJVA's apocryphal content. ~650 topics produced zero verse rows (pure
+cross-reference/alias entries, e.g. "AARON, Death of. See AARON") — not resolved further, accepted
+as v1 scope same as TSK's residual gap.
+
+**To get this live**: run `supabase/migrations/0012_nave_topics.sql` via the SQL Editor (also adds
+`search_nave_topics()`, a small RPC for distinct topic-name search — plain PostgREST `select()` has
+no `DISTINCT`, and a popular topic like FAITH has hundreds of rows, so a naive query would return
+heavily duplicated topic strings), then import `data/nave_topics.csv` via Table Editor →
+`nave_topics`. At 77,922 rows / ~4.4 MB, comparable in row-count to TSK — should be fine in one
+pass, but split with `split -l 100000` first if the importer stalls.
+
 ```
 python3 scripts/transform_word_tags.py
 ```
@@ -725,7 +766,18 @@ the real `createHighlight` call, only blocked by lack of dev-session auth. Likel
 a side effect of later work; would need a fresh, more specific repro (exact gesture/device) to
 investigate further.
 
-Still ahead: calendar, reading plans, "Today, I..." templates.
+**Nave's Topical Bible added** (spec §4.3, moved up ahead of calendar/reading plans at Aaron's
+request, alongside the remaining commentaries — see "Seeding Nave's Topical Bible" above for the
+zLD binary format details and the 8-byte-vs-12-byte block-index surprise). New `/topics` page
+(`src/features/topics/`) — search topic names via a new `search_nave_topics()` RPC (migration
+0012), select one to see its verse references grouped by label, each linking into the reading view
+via the existing scroll-to-verse behavior. New `nave_topics` table, `useNaveTopics.ts` hook.
+Verified live via TEMP-VERIFY mock data (search "faith" → three matching topics → FAITH detail
+view showing two labeled groups with correct ranges and links), reverted cleanly, build clean.
+**Migration 0012 not yet applied to the live DB** — same anon-key-only constraint as everything
+else; needs the SQL Editor run + CSV import before real data shows.
+
+Still ahead: calendar, reading plans, "Today, I..." templates, JFB and Barnes commentaries.
 
 ## TODO — amendment v1.4 (theming), intentionally deferred
 

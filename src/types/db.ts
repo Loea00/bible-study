@@ -180,6 +180,20 @@ export type CommentaryEntry = {
   body: string
 }
 
+// Nave's Topical Bible (spec §4.3 "topic → verse lists") — also Layer 1
+// of the prayer tracker's AI-grounding design. `label` is the
+// descriptive sub-heading a reference sits under within its topic (e.g.
+// AARON → "Marriage of"), nullable since a handful of lines have no
+// label. verse_start/verse_end cover a range, same convention as
+// TskCrossReference/CommentaryEntry.
+export type NaveTopic = {
+  id: string
+  topic: string
+  label: string | null
+  verse_start: string
+  verse_end: string
+}
+
 export type Database = {
   public: {
     Tables: {
@@ -283,12 +297,22 @@ export type Database = {
         Update: Partial<CommentaryEntry>
         Relationships: []
       }
+      nave_topics: {
+        Row: NaveTopic
+        Insert: NaveTopic
+        Update: Partial<NaveTopic>
+        Relationships: []
+      }
     }
     Views: Record<string, never>
     Functions: {
       verses_for_strongs: {
         Args: { target_id: string; max_results?: number }
         Returns: { verse_id: string; tag_text: string }[]
+      }
+      search_nave_topics: {
+        Args: { query: string; max_results?: number }
+        Returns: { topic: string }[]
       }
     }
   }
