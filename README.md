@@ -772,10 +772,10 @@ zLD binary format details and the 8-byte-vs-12-byte block-index surprise). New `
 (`src/features/topics/`) — search topic names via a new `search_nave_topics()` RPC (migration
 0012), select one to see its verse references grouped by label, each linking into the reading view
 via the existing scroll-to-verse behavior. New `nave_topics` table, `useNaveTopics.ts` hook.
-Verified live via TEMP-VERIFY mock data (search "faith" → three matching topics → FAITH detail
-view showing two labeled groups with correct ranges and links), reverted cleanly, build clean.
-**Migration 0012 not yet applied to the live DB** — same anon-key-only constraint as everything
-else; needs the SQL Editor run + CSV import before real data shows.
+Migration applied and CSV imported by Aaron same day; confirmed via REST (77,922 rows) and live in
+the browser with real data — searching "faith" returns FAITH/FAITHFULNESS/FIGHT OF FAITH/
+UNFAITHFULNESS, and FAITH's detail view shows all 766 of its real verse references correctly
+grouped by label with working links. **Fully live.**
 
 Still ahead: calendar, reading plans, "Today, I..." templates, JFB and Barnes commentaries.
 
