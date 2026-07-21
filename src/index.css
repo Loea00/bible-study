@@ -721,6 +721,36 @@ button.highlight-swatch {
   text-decoration: none;
 }
 
+.book-intros {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.book-intro-item {
+  background: var(--code-bg, rgba(128, 128, 128, 0.08));
+  border-radius: 6px;
+  padding: 12px 14px;
+}
+
+.book-intro-title {
+  display: block;
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-h);
+  margin-bottom: 6px;
+}
+
+.book-intro-text {
+  font-family: var(--serif);
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--text-h);
+  margin: 0 0 6px;
+}
+
 .verse-panel-refs {
   display: flex;
   flex-wrap: wrap;

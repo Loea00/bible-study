@@ -194,6 +194,18 @@ export type NaveTopic = {
   verse_end: string
 }
 
+// Book-level introduction essays (Pentateuch/book overviews, authorship
+// essays) that some commentary sources glue onto verse 1's own entry in
+// their raw SWORD data — pulled out here so they render once above
+// chapter 1 instead of bloating a single verse's commentary. One row per
+// (source, book).
+export type BookIntroduction = {
+  id: string
+  source: string
+  book: string
+  body: string
+}
+
 export type Database = {
   public: {
     Tables: {
@@ -301,6 +313,12 @@ export type Database = {
         Row: NaveTopic
         Insert: NaveTopic
         Update: Partial<NaveTopic>
+        Relationships: []
+      }
+      book_introductions: {
+        Row: BookIntroduction
+        Insert: BookIntroduction
+        Update: Partial<BookIntroduction>
         Relationships: []
       }
     }

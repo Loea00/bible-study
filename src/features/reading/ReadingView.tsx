@@ -6,6 +6,8 @@ import { useHighlights } from './useHighlights'
 import { useJournalExcerpts } from './useJournalExcerpts'
 import { useCrossReferences } from './useCrossReferences'
 import { useCommentary } from './useCommentary'
+import { useBookIntroductions } from './useBookIntroductions'
+import { BookIntroductions } from './BookIntroductions'
 import { useReadingSession } from './useReadingSession'
 import { useWordTags } from './useWordTags'
 import { PassagePicker } from './PassagePicker'
@@ -74,6 +76,7 @@ export function ReadingView() {
   const { excerptsByVerse } = useJournalExcerpts(book, chapter)
   const { crossReferencesByVerse } = useCrossReferences(book, chapter)
   const { commentaryByVerse } = useCommentary(book, chapter)
+  const { introductions: bookIntroductions } = useBookIntroductions(book)
   const { reflectionsByVerse, addReflection } = useReflections(book, chapter)
   const requestTitleById = usePrayerRequestTitles()
   const tagsByVerse = useWordTags(book, chapter, translation)
@@ -369,6 +372,7 @@ export function ReadingView() {
         )}
 
         <div className="passage">
+          {chapter === 1 && <BookIntroductions introductions={bookIntroductions} />}
           <h1>
             {bookName} {chapter}
           </h1>

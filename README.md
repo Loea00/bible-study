@@ -184,6 +184,31 @@ full scholarly commentary, not a concise digest).
 Editor. At 16,882 rows / ~11 MB, smaller row-count than TSK's 362K-row import that worked fine in
 one pass — should be straightforward.
 
+**Book introductions split out of JFB's verse-1 entries** (a real UX problem noticed after JFB
+went live: Genesis 1:1's commentary ran to 80KB, because JFB's raw verse-1 entry for most books
+opens with a full scholarly introduction essay glued directly onto it — median entry elsewhere is
+~400 characters). `transform_jfb.py` now splits these out via `split_book_intro()`, using the
+module's own `<div type="x-milestone" subType="x-preverse" sID="pvN"/> ... eID="pvN"` milestone
+pair as the boundary (tried title-tag-based detection first — workable for most books but
+genuinely inconsistent, e.g. Jude has no title tag at all before its real verse-1 commentary
+starts). A book/chapter-level heading nested inside that span ("CHAPTER 1", "PSALM 1") is kept with
+the real commentary rather than swept into the intro, matching how verse-range section titles are
+already preserved elsewhere. Produces `data/jfb_book_introductions.csv` (`source,book,body`) — **63
+book introductions** (3 of 66 books genuinely have none: 3 John and 2 Chronicles reference an
+earlier book's intro instead, Lamentations' entry is just a chapter heading with no real intro
+prose). New `book_introductions` table (migration 0013, `source`/`book`/`body`, unique on
+`source,book`) — reused as-is for MHCC/Barnes in a later pass. New `useBookIntroductions.ts` hook +
+`BookIntroductions.tsx` component, shown once above chapter 1 in the reading pane (collapsed by
+default, expandable, same treatment as `CommentaryItem`) — not per-verse. Verified live via
+TEMP-VERIFY mock on Matthew 1, confirmed absent on other chapters.
+
+**To get this live**: run `supabase/migrations/0013_book_introductions.sql`, then **re-import**
+`data/jfb_commentary.csv` (replaces the already-live JFB rows — delete `source = 'JFB'` from
+`commentary_entries` first, then re-import cleanly) and import the new
+`data/jfb_book_introductions.csv` into `book_introductions`. Per the JFB
+partial-duplicate-import lesson: verify `source=eq.JFB` REST count is still exactly 16,882 after
+re-import, and spot-check across the canon, not just Genesis.
+
 ## Seeding Barnes' Notes
 
 **Barnes' Notes on the New Testament**, third and final of the three planned commentaries, from the
@@ -874,6 +899,24 @@ at exactly 16,882 rows with zero duplicates at every spot-checked verse (Genesis
 Revelation), and confirmed in-browser that Psalm 23:1 shows both MHCC and JFB exactly once each.
 **Fully live.**
 
+**JFB book introductions split out of verse 1** (Aaron flagged Genesis 1:1's JFB entry as
+"obscenely long" — turned out to be 80KB, a whole Pentateuch-authorship essay glued onto verse 1's
+own commentary; confirmed systemic across 63 of 66 books, not just Genesis, via the discovery that
+JFB's raw verse-1 entries are wrapped start-to-finish in the module's own `x-preverse` milestone
+tags — see "Seeding commentary data" above for the two false starts before landing on that
+approach). New `book_introductions` table (migration 0013), new `useBookIntroductions.ts` +
+`BookIntroductions.tsx`, shown once above chapter 1. Verified live via TEMP-VERIFY mock on Matthew
+1 (renders correctly, absent on other chapters as expected), reverted cleanly. Build clean.
+Migration 0013 applied, `commentary_entries`'s old `source='JFB'` rows deleted and replaced with
+the regenerated CSV, and `data/jfb_book_introductions.csv` imported — re-verified against real
+live data: `source=eq.JFB` REST count still exactly 16,882, `book_introductions` exactly 63 rows,
+and spot-checks (Genesis, Matthew, Psalms, Job, Jude, 3 John, Revelation) all match the local
+extraction exactly — Genesis 1:1's live commentary entry is now 1,283 characters with the 79,269-
+character Pentateuch essay cleanly split into its own `book_introductions` row. **Fully live.**
+Scoped down from an original three-commentary ask (MHCC and Barnes have the same glued-intro issue,
+much milder) to just JFB for this session — MHCC/Barnes follow-up deferred to a future session,
+noted in memory.
+
 **Barnes' Notes added** (third and final of the three planned commentaries, NT-only — see "Seeding
 Barnes' Notes" above for the `BlockType=CHAPTER`/`ThML` structural surprises and the
 content-label-based verse-range parsing this required, a real departure from MHCC/JFB's
@@ -888,7 +931,8 @@ Several chapters (Mark 1, 1 Corinthians 13, Hebrews 11, James 1) show no entry c
 confirmed this matches the local CSV exactly, i.e. Barnes' own choice not to comment on those
 opening verses individually, not an import gap. **Fully live.**
 
-Still ahead: calendar, reading plans, "Today, I..." templates. All three planned commentaries
+Still ahead: calendar, reading plans, "Today, I..." templates, MHCC/Barnes book-introduction
+follow-up (same glued-intro issue as JFB, milder — deferred). All three planned commentaries
 (Matthew Henry, JFB, Barnes) now built.
 
 ## TODO — amendment v1.4 (theming), intentionally deferred
