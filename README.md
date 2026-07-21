@@ -816,9 +816,14 @@ grouped by label with working links. **Fully live.**
 **JFB commentary added** (second of three, see "Seeding commentary data" above for the zCom4
 binary-format surprise). `VersePanel.tsx`'s `COMMENTARY_SOURCE_LABEL` map extended with JFB —
 `commentary_entries` already supported multiple sources with zero schema changes, by design.
-Verified live via TEMP-VERIFY mock showing both MHCC and JFB together on Psalm 23:1 — both render
-with correct distinct labels and independent expand/collapse. **Not yet imported to the live DB**
-— needs `data/jfb_commentary.csv` imported via Table Editor (no new migration to run).
+Verified live via TEMP-VERIFY mock, then re-verified against real data — Aaron's first import
+duplicated rows for Genesis through Ruth (partial re-upload, ~2,992 extra rows: 19,874 live vs.
+16,882 in the CSV), caught via a `source=eq.JFB` REST count check plus spot-checks across the
+canon showing 2 rows at several early-OT verses but 1 everywhere from Psalms onward. Fixed with
+`delete from commentary_entries where source = 'JFB';` + a clean single re-import — re-verified
+at exactly 16,882 rows with zero duplicates at every spot-checked verse (Genesis through
+Revelation), and confirmed in-browser that Psalm 23:1 shows both MHCC and JFB exactly once each.
+**Fully live.**
 
 Still ahead: calendar, reading plans, "Today, I..." templates, Barnes commentary (NT-only,
 last of the three planned).
