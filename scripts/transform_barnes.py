@@ -38,7 +38,31 @@ approach:
     title/chapter-header junk that precedes it). Entries with no such
     label in their leading zone are front matter (the module opens with a
     book-wide "ORIGINAL PREFACE TO THE NOTES ON THE GOSPELS" and a longer
-    "INTRODUCTION" before Matthew 1:1 even starts) and are dropped.
+    "INTRODUCTION" before Matthew 1:1 even starts).
+
+**Front matter is captured, not dropped.** It was originally discarded
+outright (no "Verse N" label to key it to any specific verse), but that's
+real content loss, not just a misplacement like MHCC/JFB's glued-to-
+verse-1 problem -- Barnes' front matter isn't attached to any verse slot
+at all, it's a run of unlabeled entries right at the very start of
+Matthew's first block, before any labeled content begins.
+`extract_front_matter()` walks entries in order and collects every
+unlabeled one until the first labeled (real verse) entry is hit --
+correct because front matter always precedes real content within a
+block, never interleaves with it. Written to
+`data/barnes_book_introductions.csv` as a single MAT row (Barnes' whole
+NT front matter, structurally attached to Matthew since it's the first
+book) for the shared `book_introductions` table (migration 0013).
+
+One real content nuance found while checking this: the "Preface" and
+"Introduction" entries aren't PURE essay prose -- each one's tail also
+bundles in lettered footnote-style annotations for the verses that
+follow ("(c) 'son of Abraham' Gen 22:18", "Verse 2. (d) 'begat Isaac'
+Gen 21:2-5"), with no "Verse N." label of their own to key them to a
+specific verse. Left bundled into the front matter as-is rather than
+attempting to further decompose by footnote letter -> verse (a
+meaningfully bigger, more speculative sub-task than "stop dropping this
+content," which is what was actually asked for).
 
 This sidesteps cursor-walking entirely: no LEADING_SLOTS to guess, no
 seek-guard, no empty-slot-inside-a-chapter ambiguity (confirmed some
@@ -56,6 +80,7 @@ everywhere else.
 
 Usage: python3 scripts/transform_barnes.py
 Produces data/barnes_commentary.csv (source,verse_start,verse_end,body)
+and data/barnes_book_introductions.csv (source,book,body)
 """
 
 import csv
@@ -191,6 +216,26 @@ def extract_verse_range_and_body(cleaned_text):
     return v1, v2, body
 
 
+def extract_front_matter(zcom, block_map):
+    """Collects the unlabeled entries at the very start of the module
+    (Preface, Introduction) into one combined intro, stopping at the
+    first labeled (real verse) entry -- front matter always precedes
+    real content within a block, never interleaves with it."""
+    parts = []
+    for i in range(zcom.count()):
+        blocknum, raw = zcom.entry(i)
+        if raw is None:
+            continue
+        if block_map.get(blocknum) is None:
+            continue
+        cleaned = clean_text(raw.decode("utf-8", errors="replace"))
+        if extract_verse_range_and_body(cleaned) is not None:
+            break
+        if cleaned:
+            parts.append(cleaned)
+    return "\n\n".join(parts)
+
+
 def extract_entries(zcom, block_map, warnings):
     total_blocks = zcom.block_count()
     expected_blocks = max(block_map) + 1 if block_map else 0
@@ -229,6 +274,9 @@ def main():
     block_map = build_block_chapter_map(NT_BOOKS, chapter_counts)
     print(f"Built block map for {len(block_map)} chapters")
 
+    front_matter = extract_front_matter(nt, block_map)
+    print(f"Extracted {len(front_matter)} characters of front matter")
+
     warnings = []
     rows = extract_entries(nt, block_map, warnings)
     print(f"Extracted {len(rows)} commentary entries")
@@ -246,6 +294,13 @@ def main():
         for book, chapter, v1, v2, body in rows:
             writer.writerow(["BARNES", f"{book}.{chapter}.{v1}", f"{book}.{chapter}.{v2}", body])
     print("Wrote data/barnes_commentary.csv")
+
+    with open("data/barnes_book_introductions.csv", "w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerow(["source", "book", "body"])
+        if front_matter:
+            writer.writerow(["BARNES", "MAT", front_matter])
+    print("Wrote data/barnes_book_introductions.csv")
 
 
 if __name__ == "__main__":

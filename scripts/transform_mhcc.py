@@ -22,8 +22,29 @@ then a post-processing pass merges consecutive same-book-chapter verses
 sharing an identical content_key back into the single logical entry they
 actually are.
 
+**Book introductions are split out, not left glued to verse 1** -- same
+motivation as the JFB fix (see transform_jfb.py's docstring), much
+milder here (MHCC's book bios top out around 4KB, not JFB's 80KB
+Pentateuch essay, since MHCC is a concise digest). MHCC's raw verse-1
+entry wraps its ENTIRE pre-verse content (book bio AND the separate
+per-chapter "Chapter Outline" table) in one `<div type="x-milestone"
+subType="x-preverse" sID="pvN"/> ... eID="pvN"` pair -- the same
+milestone JFB used -- but unlike JFB, that milestone is too WIDE a
+boundary here: it would also swallow the Chapter Outline table, which is
+chapter-specific, not book-level, and already has its own established
+handling (OUTLINE_RE, turned into a bulleted paragraph that stays part of
+the real verse-1 commentary). The reliable, correctly-scoped boundary
+instead is the book title's OWN paired `<div sID="X"
+type="introduction"/> ... <div eID="X" type="introduction"/>` span,
+which sits nested inside the wider milestone but ends right before
+"Chapter 1" / "Chapter Outline" begins. `split_book_intro()` uses this
+narrower pair. Extracted intros go to `data/mhcc_book_introductions.csv`
+(source,book,body) for the `book_introductions` table (migration 0013,
+shared with JFB).
+
 Usage: python3 scripts/transform_mhcc.py
-Produces data/mhcc_commentary.csv (source,verse_start,verse_end,body)
+Produces data/mhcc_commentary.csv (source,verse_start,verse_end,body) and
+data/mhcc_book_introductions.csv (source,book,body)
 """
 
 import csv
@@ -253,6 +274,50 @@ def clean_text(raw_text):
     return "\n\n".join(p for p in paragraphs if p)
 
 
+INTRO_PAIR_RE = re.compile(
+    r'<div sID="([^"]+)" type="introduction"/>(.*?)<div eID="\1" type="introduction"/>', re.DOTALL
+)
+
+
+def split_book_intro(raw_text):
+    """Splits a book-intro-glued verse-1 entry into (intro_raw,
+    remainder_raw), using the book title's own paired introduction div --
+    NOT the wider x-preverse milestone JFB used, since that would also
+    swallow the chapter-specific "Chapter Outline" table here (see module
+    docstring). Returns (None, raw_text) unchanged if no book title is
+    present, or the title isn't followed by a matching introduction pair
+    (left unsplit rather than guessing wrong and losing content)."""
+    title_match = BOOK_TITLE_RE.search(raw_text)
+    if not title_match:
+        return None, raw_text
+    pair_match = INTRO_PAIR_RE.search(raw_text, title_match.end())
+    if not pair_match:
+        return None, raw_text
+    cutoff = pair_match.end()
+    return raw_text[:cutoff], raw_text[cutoff:]
+
+
+def extract_book_intros(verse_content, book_order, warnings):
+    """Pulls the book-intro bio out of each book's (book, 1, 1) entry
+    (where the walk placed it) and replaces that entry's text with just
+    the real verse-1 commentary (chapter heading, Chapter Outline, and
+    actual comment) that follows it."""
+    intros = {}
+    for book in book_order:
+        entry = verse_content.get((book, 1, 1))
+        if entry is None:
+            continue
+        key, raw = entry
+        intro_raw, remainder_raw = split_book_intro(raw)
+        if intro_raw is None:
+            if '<title type="x-ms">' in raw:
+                warnings.append(f"{book}: found a book title but couldn't find its introduction pair -- left unsplit")
+            continue
+        intros[book] = clean_text(intro_raw)
+        verse_content[(book, 1, 1)] = (key, remainder_raw)
+    return intros
+
+
 def merge_ranges(verse_content, book_order, chapter_counts):
     """Groups consecutive same-book-chapter verses sharing an identical
     content_key into one (verse_start, verse_end, body) row."""
@@ -297,6 +362,10 @@ def main():
     print(f"OT: {len(ot_content)} verse entries with content")
     print(f"NT: {len(nt_content)} verse entries with content")
 
+    ot_intros = extract_book_intros(ot_content, OT_BOOKS, warnings)
+    nt_intros = extract_book_intros(nt_content, NT_BOOKS, warnings)
+    print(f"Split out {len(ot_intros)} OT + {len(nt_intros)} NT book introductions")
+
     ot_rows = merge_ranges(ot_content, OT_BOOKS, chapter_counts)
     nt_rows = merge_ranges(nt_content, NT_BOOKS, chapter_counts)
     print(f"Merged into {len(ot_rows)} OT + {len(nt_rows)} NT commentary entries")
@@ -314,6 +383,15 @@ def main():
         for book, chapter, v1, v2, raw_text in ot_rows + nt_rows:
             writer.writerow(["MHCC", f"{book}.{chapter}.{v1}", f"{book}.{chapter}.{v2}", clean_text(raw_text)])
     print("Wrote data/mhcc_commentary.csv")
+
+    with open("data/mhcc_book_introductions.csv", "w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerow(["source", "book", "body"])
+        for book in OT_BOOKS + NT_BOOKS:
+            intro = ot_intros.get(book) or nt_intros.get(book)
+            if intro:
+                writer.writerow(["MHCC", book, intro])
+    print("Wrote data/mhcc_book_introductions.csv")
 
 
 if __name__ == "__main__":

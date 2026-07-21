@@ -2,7 +2,9 @@ import { useState } from 'react'
 import type { BookIntroduction } from '../../types/db'
 
 const COMMENTARY_SOURCE_LABEL: Record<string, string> = {
+  MHCC: "Matthew Henry's Concise Commentary",
   JFB: "Jamieson-Fausset-Brown Commentary",
+  BARNES: "Barnes' Notes",
 }
 
 // Shown once above chapter 1, not per-verse -- these are book-level

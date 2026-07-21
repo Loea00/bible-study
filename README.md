@@ -148,6 +148,26 @@ apparently just doesn't comment on that section individually.
 `data/mhcc_commentary.csv` via Table Editor → `commentary_entries`. At 4,047 rows / ~4 MB this is
 small — no chunking should be needed.
 
+**MHCC book introductions split out of verse 1** (the same fix built for JFB — see below — applied
+here too, much milder: MHCC's book bios top out around 4KB, not JFB's 80KB Pentateuch essay, since
+MHCC is a concise digest). MHCC wraps its ENTIRE pre-verse content — book bio AND the separate,
+chapter-specific "Chapter Outline" table — in the same wide `x-preverse` milestone JFB used, so that
+milestone is the WRONG boundary here (it would also swallow the Chapter Outline, which is already
+correctly handled and belongs with the real verse-1 commentary, not the book intro). The correctly-
+scoped boundary instead is the book title's own narrower paired `introduction` div, which ends right
+before "Chapter 1"/"Chapter Outline" begins. Produces `data/mhcc_book_introductions.csv`
+(`source,book,body`) — **60 of 66 books** (the 6 without one: 2 Chronicles' title tag is followed
+by empty content with no real bio text at all; Obadiah, Philemon, 2 John, 3 John, and Jude have no
+book-title tag at all, presumably sharing an adjacent book's bio or simply not warranting their own
+in this concise edition — both cases correctly left unsplit rather than guessing). Row count
+unchanged at 4,047 (max entry length dropped modestly, e.g. Genesis 1:1-2's outline+commentary is
+now 1,685 characters instead of the book bio being glued on top).
+
+**To get this live**: re-import `data/mhcc_commentary.csv` into `commentary_entries` (replaces the
+existing `source='MHCC'` rows — delete them first, then re-import cleanly) and import
+`data/mhcc_book_introductions.csv` into `book_introductions` (migration 0013, already applied for
+JFB).
+
 **Jamieson-Fausset-Brown Commentary (JFB)**, second of the three planned commentaries, from the
 CrossWire SWORD module (confirmed `DistributionLicense=Public Domain` in `mods.d/jfb.conf`).
 
@@ -257,6 +277,22 @@ via Table Editor. At 7,271 rows / ~13 MB, smaller row-count than JFB's — shoul
 in one pass. Per the JFB partial-duplicate-import lesson: after importing, verify the live
 `source=eq.BARNES` count matches 7,271 exactly and spot-check across the full NT range (not just
 Matthew), not just a rough "looks right" glance.
+
+**Barnes' front matter recovered, not dropped.** Unlike MHCC/JFB, Barnes' Preface and Introduction
+were never glued to verse 1 — they're unlabeled entries sitting before any "Verse N." labeled
+content, and the original extraction simply discarded anything without a label, silently losing
+this content rather than misplacing it. `extract_front_matter()` now collects every unlabeled entry
+at the very start of the module until the first labeled entry is hit, combining Barnes' whole NT
+front matter into a single `MAT` row (it's structurally attached to Matthew, the first book) in
+`data/barnes_book_introductions.csv`. One content nuance found along the way: the Preface and
+Introduction entries aren't pure essay prose — each one's tail also bundles in lettered footnote
+annotations for the verses that follow ("(c) 'son of Abraham' Gen 22:18"), with no verse label of
+their own. Left bundled into the front matter as-is (decomposing footnote-letter→verse mapping
+would be a meaningfully bigger, more speculative task than what was asked for here). 38,454
+characters recovered; `data/barnes_commentary.csv`'s own 7,271 rows are unaffected.
+
+**To get this live**: import `data/barnes_book_introductions.csv` into `book_introductions`
+(migration 0013, already applied for JFB/MHCC) — one row, `source='BARNES'`, `book='MAT'`.
 
 ## Seeding Nave's Topical Bible
 
@@ -931,9 +967,27 @@ Several chapters (Mark 1, 1 Corinthians 13, Hebrews 11, James 1) show no entry c
 confirmed this matches the local CSV exactly, i.e. Barnes' own choice not to comment on those
 opening verses individually, not an import gap. **Fully live.**
 
-Still ahead: calendar, reading plans, "Today, I..." templates, MHCC/Barnes book-introduction
-follow-up (same glued-intro issue as JFB, milder — deferred). All three planned commentaries
-(Matthew Henry, JFB, Barnes) now built.
+**MHCC and Barnes book-introduction follow-up completed** (the deferred half of the JFB fix —
+see "Seeding commentary data" and "Seeding Barnes' Notes" above). MHCC needed a narrower boundary
+than JFB's `x-preverse` milestone (that milestone also wraps MHCC's chapter-specific "Chapter
+Outline" table, which needed to stay with the verse commentary, not get pulled into the book
+intro) — the book title's own paired `introduction` div is the correctly-scoped boundary instead.
+Barnes needed a different kind of fix entirely: its front matter wasn't glued to verse 1 like
+MHCC/JFB, it was being silently *dropped* (no "Verse N." label to key it to), so this was "stop
+discarding it" rather than "split it out." `BookIntroductions.tsx`'s `COMMENTARY_SOURCE_LABEL`
+extended with MHCC/BARNES. Verified live via TEMP-VERIFY mock showing MHCC and Barnes book intros
+stacked together above Matthew 1, each with correct labels and independent expand/collapse — build
+clean, no leftover TEMP-VERIFY markers. Row counts for both commentaries' main tables unaffected
+(4,047 MHCC, 7,271 Barnes — unchanged). Imported and re-verified against real live data: MHCC's
+`source=eq.MHCC` REST count is exactly 4,047; `book_introductions` is exactly 124 rows total (63
+JFB + 60 MHCC + 1 Barnes); spot-checks confirm Genesis 1:1-2's MHCC entry correctly kept the Chapter
+Outline (1,685 characters) with the 442-character book bio cleanly split into its own row, and
+Matthew's `book_introductions` now shows all three commentaries' front matter side by side (Barnes
+38,454 chars, JFB 13,919, MHCC 848). **Fully live.**
+
+Still ahead: calendar, reading plans, "Today, I..." templates. All three planned commentaries
+(Matthew Henry, JFB, Barnes) now built, and all three have their book-introduction content
+correctly split out or recovered.
 
 ## TODO — amendment v1.4 (theming), intentionally deferred
 
