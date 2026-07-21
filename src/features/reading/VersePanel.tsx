@@ -29,6 +29,7 @@ const PRAYER_KIND_LABEL: Partial<Record<EntryType, string>> = {
 const COMMENTARY_SOURCE_LABEL: Record<string, string> = {
   MHCC: "Matthew Henry's Concise Commentary",
   JFB: "Jamieson-Fausset-Brown Commentary",
+  BARNES: "Barnes' Notes",
 }
 
 // Commentary entries can run long (a full chapter-outline + several

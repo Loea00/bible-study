@@ -184,6 +184,55 @@ full scholarly commentary, not a concise digest).
 Editor. At 16,882 rows / ~11 MB, smaller row-count than TSK's 362K-row import that worked fine in
 one pass — should be straightforward.
 
+## Seeding Barnes' Notes
+
+**Barnes' Notes on the New Testament**, third and final of the three planned commentaries, from the
+CrossWire SWORD module (confirmed `DistributionLicense=Public Domain` in `mods.d/barnes.conf`).
+NT-only — there is no OT edition.
+
+```
+python3 scripts/transform_barnes.py
+```
+
+Plain `zCom` binary format again (not JFB's `zCom4`) — confirmed via the standard divisibility
+check: `nt.czs` (3,120 bytes) / 12 = 260, matching the NT's known 260 total chapters; `nt.czv`
+(82,460 bytes) / 10 = 8,246, matching the known NT verse-slot count. But `barnes.conf` also
+declares `BlockType=CHAPTER` (not `BOOK` like TSK/MHCC/JFB) and `SourceType=ThML` (not OSIS) — both
+real structural differences that broke the MHCC/JFB "seek a `<chapter n="N">` header, then walk
+n_verses slots" approach entirely: there's no dedicated header slot at all, and — confirmed by
+direct inspection — a new chapter is signalled purely by the verse-index entry's blocknum
+incrementing by one, with exactly one block per NT chapter, assigned sequentially in canonical
+book/chapter order (block 0 = Matthew 1, block 1 = Matthew 2, ... block 259 = Revelation 22) — the
+260-chapter/260-block match above guarantees this holds globally.
+
+Entries also aren't strictly one-per-verse (Matthew 1 has 25 verses but only ~24 real content
+slots — Barnes wrote one combined "Verses 2-16" note while separately commenting on verse 23
+twice). Rather than reconstruct verse numbers from position, every real entry's own text opens with
+an explicit label ("Verse 4.", "Verses 22, 23.", "Ver 23."), sometimes behind redundant title junk
+("Matthew Verses 2-16 ... Verses 2-16. These verses...") or a free-text chapter header folded into
+verse 1's own slot ("MATTHEW Chapter 2 ... Verse 1. ..."). `transform_barnes.py` parses the verse
+range straight from each entry's own content (the last label match in its leading ~250 characters)
+instead of cursor-walking — sidesteps the whole empty-slot/leading-junk alignment problem that
+MHCC/JFB needed a self-correcting walk for, since Barnes' content itself is the source of truth.
+Full byte-format and parsing notes are in the script's docstring.
+
+Content markup is ThML, a third distinct format for this project (`<br />`, `<i>...</i>`,
+`<scripRef version="Barnes" passage="Mt 1:3">Mt 1:3</scripRef>` with short abbreviated passage
+text, not resolved OSIS) — same tag-strip-to-plain-text treatment as everywhere else, `html.unescape`
+included from the start this time.
+
+Produces `data/barnes_commentary.csv` (`source,verse_start,verse_end,body`) — **7,271 entries
+across all 27 NT books, zero parse warnings.** Spot-checked Matthew 1:17, 1:25, 2:1, 28:20, John
+3:16, Romans (front matter only, no verse 1 comment — Barnes' own choice, not a bug), Revelation
+22:21 — all correct. No leftover tags or HTML entities in a full-file scan.
+
+**To get this live**: import into the same `commentary_entries` table — no new migration needed,
+`source='BARNES'` alongside the existing `'MHCC'`/`'JFB'` rows. Import `data/barnes_commentary.csv`
+via Table Editor. At 7,271 rows / ~13 MB, smaller row-count than JFB's — should be straightforward
+in one pass. Per the JFB partial-duplicate-import lesson: after importing, verify the live
+`source=eq.BARNES` count matches 7,271 exactly and spot-check across the full NT range (not just
+Matthew), not just a rough "looks right" glance.
+
 ## Seeding Nave's Topical Bible
 
 **Nave's Topical Bible**, from the CrossWire SWORD module (confirmed `DistributionLicense=Public
@@ -825,8 +874,22 @@ at exactly 16,882 rows with zero duplicates at every spot-checked verse (Genesis
 Revelation), and confirmed in-browser that Psalm 23:1 shows both MHCC and JFB exactly once each.
 **Fully live.**
 
-Still ahead: calendar, reading plans, "Today, I..." templates, Barnes commentary (NT-only,
-last of the three planned).
+**Barnes' Notes added** (third and final of the three planned commentaries, NT-only — see "Seeding
+Barnes' Notes" above for the `BlockType=CHAPTER`/`ThML` structural surprises and the
+content-label-based verse-range parsing this required, a real departure from MHCC/JFB's
+cursor-walk approach). `VersePanel.tsx`'s `COMMENTARY_SOURCE_LABEL` map extended with BARNES —
+same `commentary_entries` table, zero schema changes. Verified live via TEMP-VERIFY mock (Matthew
+1:17) first — renders correctly alongside TSK cross-references, expand/collapse works — then
+re-verified against real data after Aaron imported `data/barnes_commentary.csv`: `source=eq.BARNES`
+REST count is exactly 7,271 (matching the CSV precisely, no partial-import repeat of the JFB
+incident), and spot-checks across Matthew, Mark, Luke, John, Acts, Romans, 1 Corinthians,
+Galatians, Ephesians, Hebrews, James, 1 Peter, 1 John, and Revelation all confirm correct content.
+Several chapters (Mark 1, 1 Corinthians 13, Hebrews 11, James 1) show no entry covering verse 1 —
+confirmed this matches the local CSV exactly, i.e. Barnes' own choice not to comment on those
+opening verses individually, not an import gap. **Fully live.**
+
+Still ahead: calendar, reading plans, "Today, I..." templates. All three planned commentaries
+(Matthew Henry, JFB, Barnes) now built.
 
 ## TODO — amendment v1.4 (theming), intentionally deferred
 
