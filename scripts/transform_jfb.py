@@ -1,29 +1,47 @@
 """
-Extract Matthew Henry's Concise Commentary (MHCC) from the CrossWire SWORD
-module (DistributionLicense=Public Domain, confirmed via the module's own
-mods.d/mhcc.conf: "Public Domain--Copy Freely").
+Extract Jamieson-Fausset-Brown Bible Commentary (JFB) from the CrossWire
+SWORD module (DistributionLicense=Public Domain, confirmed via the
+module's own mods.d/jfb.conf).
 
-Same zCom binary format as TSK (see transform_tsk.py's docstring for the
-byte layout) -- verse-keyed, book-level zlib-compressed blocks, decoded by
-hand since no off-the-shelf reader exists for it.
+Binary format is "zCom4", NOT plain "zCom" like TSK/MHCC -- a real
+surprise caught by dividing the .bzv (verse index) file sizes by the
+expected zCom entry size (10 bytes) and getting a non-integer result
+(e.g. nt.bzv = 98952 bytes, 98952 / 10 = 9895.2). Confirmed zCom4 uses
+12-byte verse-index entries (blocknum:u32, start:u32, length:u32 -- a
+full 4-byte length instead of zCom's 2-byte length) by checking that
+289380 / 12 = 24115 and 98952 / 12 = 8246, both exactly matching the
+already-known OT/NT total slot counts from TSK/MHCC. The .bzs block
+index (offset/csize/usize triples) is unchanged from plain zCom.
 
-Structurally different from TSK, though: each chapter opens with exactly
-ONE non-verse `<chapter n="N" .../>` marker slot (not TSK's variable-count
-`<scripRef passage=...>` outline anchors), and -- the important part --
-Matthew Henry frequently comments on several consecutive verses in one
-breath ("Verses 1-2", "Verses 3-5", ...). The zCom format has no native
-concept of a verse *range* -- it's still a verse-indexed structure -- so
-every verse covered by one commentary chunk gets its own index slot, and
-all of them point at the exact same (block, offset, length) in the
-underlying data. Confirmed by direct inspection: Genesis 1's slots 4-5
-(verses 1-2) share one identical byte range, slots 6-8 (verses 3-5) share
-another, etc. So the walk records each verse's (content_key, text) pair,
-then a post-processing pass merges consecutive same-book-chapter verses
-sharing an identical content_key back into the single logical entry they
-actually are.
+Content structure also differs from MHCC, which needed its own
+special-casing here:
+  - Section headers are `<title type="x-s3"><reference osisRef="...">Ge
+    1:3-5</reference>. The First Day.</title>` -- a scripture-range plus
+    a short descriptive title, NOT MHCC's "Chapter Outline" summary
+    table (grepped 200 real entries for `<table`, found zero -- JFB
+    apparently never uses that pattern, so that handling is dropped
+    here rather than carried over unused).
+  - Individual comments are `<hi type="bold">2. the earth was without
+    form and void--</hi>` (verse number + quoted key phrase) or, for a
+    second phrase within the same verse, just `<hi type="bold">the
+    Spirit of God moved--</hi>` (no verse number). Unlike MHCC's
+    "Verses N-M" label (pure noise, since we already track the verse
+    range separately), these bold labels are genuinely useful inline
+    content -- the quoted phrase tells you what part of the verse the
+    following prose addresses -- so they're kept (just tag-stripped),
+    not discarded.
+  - `<div ... type="x-p"/>` start/end markers reliably delimit real
+    paragraph boundaries in the source (confirmed by direct inspection:
+    each bold-labeled sub-comment sits inside its own x-p pair), used
+    directly as paragraph breaks instead of hand-rolled heuristics.
 
-Usage: python3 scripts/transform_mhcc.py
-Produces data/mhcc_commentary.csv (source,verse_start,verse_end,body)
+Still shares the same book-title-glued-onto-verse-1 issue and the same
+empty-slot-before-header walk hazard MHCC had -- both handled by the
+identical, format-agnostic fixes from transform_mhcc.py (see that
+script's docstring for the full empty-slot bug writeup).
+
+Usage: python3 scripts/transform_jfb.py
+Produces data/jfb_commentary.csv (source,verse_start,verse_end,body)
 """
 
 import csv
@@ -37,7 +55,7 @@ import urllib.request
 import zipfile
 import zlib
 
-MODULE_URL = "https://crosswire.org/ftpmirror/pub/sword/packages/rawzip/MHCC.zip"
+MODULE_URL = "https://crosswire.org/ftpmirror/pub/sword/packages/rawzip/JFB.zip"
 SUPABASE_URL = os.environ.get("VITE_SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("VITE_SUPABASE_ANON_KEY")
 
@@ -57,35 +75,11 @@ HEADER_RE = re.compile(r'^<chapter n="(\d+)"')
 TAG_RE = re.compile(r"<[^>]+>")
 WS_RE = re.compile(r"\s+")
 
-# Structural markup that shows up glued into a chapter's FIRST commentary
-# entry -- MHCC bundles the book's own intro paragraph and a "Chapter
-# Outline" summary table into that same physical block. Stripping tags
-# naively left these run into the actual verse commentary with no
-# separation (e.g. the book-title tag's own text "Genesis" landing
-# directly in front of the intro paragraph's "Genesis is a name taken
-# from..."). These patterns get replaced with an explicit paragraph
-# break instead, and the outline table gets reformatted into a small
-# readable list rather than discarded outright.
 BOOK_TITLE_RE = re.compile(r'<title type="x-ms">.*?</title>', re.DOTALL)
-CHAPTER_TITLE_RE = re.compile(r'<title type="x-s2">[^<]*</title>')
-OUTLINE_RE = re.compile(
-    r'<title type="x-IS">Chapter Outline</title>\s*(<table\b.*?</table>)', re.DOTALL
-)
-OUTLINE_ROW_RE = re.compile(r"<row><cell>(.*?)</cell><cell>(.*?)</cell></row>", re.DOTALL)
-VERSE_LABEL_RE = re.compile(r'<hi type="bold">\s*Verses?\s+[\d,\-]+\s*</hi>')
+SECTION_TITLE_RE = re.compile(r'<title type="x-s3">(.*?)</title>', re.DOTALL)
+PARA_DIV_RE = re.compile(r'<div [^>]*type="x-p"/>')
 PARA_BREAK = "\x00"
 
-
-def _render_outline(match):
-    rows = OUTLINE_ROW_RE.findall(match.group(1))
-    lines = [f"{TAG_RE.sub('', desc).strip()} {TAG_RE.sub('', rng).strip()}" for desc, rng in rows]
-    if not lines:
-        return PARA_BREAK
-    return PARA_BREAK + "Chapter Outline:" + PARA_BREAK + PARA_BREAK.join(f"• {l}" for l in lines) + PARA_BREAK
-
-# Empirically confirmed (same as TSK, same osis2mod-generated slot layout):
-# each testament's verse index opens with this many throwaway slots before
-# the first book's own first chapter-marker slot begins.
 LEADING_SLOTS = 3
 
 
@@ -114,25 +108,27 @@ def fetch_chapter_counts():
 
 
 def download_module():
-    if os.path.exists("data/MHCC.zip"):
-        with open("data/MHCC.zip", "rb") as f:
+    if os.path.exists("data/JFB.zip"):
+        with open("data/JFB.zip", "rb") as f:
             return f.read()
     os.makedirs("data", exist_ok=True)
     print(f"Downloading {MODULE_URL} ...")
     with urllib.request.urlopen(MODULE_URL) as resp:
         raw = resp.read()
-    with open("data/MHCC.zip", "wb") as f:
+    with open("data/JFB.zip", "wb") as f:
         f.write(raw)
     return raw
 
 
-class ZCom:
-    """Reads one testament's worth of a zCom module (bzs/bzz/bzv trio)."""
+class ZCom4:
+    """Reads one testament's worth of a zCom4 module (bzs/bzz/bzv trio) --
+    same block index as plain zCom, but 12-byte verse-index entries
+    (blocknum, start, length -- all u32) instead of zCom's 10 bytes."""
 
     def __init__(self, zf, prefix):
-        self.bzs = zf.read(f"modules/comments/zcom/mhcc/{prefix}.bzs")
-        self.bzz = zf.read(f"modules/comments/zcom/mhcc/{prefix}.bzz")
-        self.bzv = zf.read(f"modules/comments/zcom/mhcc/{prefix}.bzv")
+        self.bzs = zf.read(f"modules/comments/zcom/jfb/{prefix}.bzs")
+        self.bzz = zf.read(f"modules/comments/zcom/jfb/{prefix}.bzz")
+        self.bzv = zf.read(f"modules/comments/zcom/jfb/{prefix}.bzv")
         self._block_cache = {}
 
     def block(self, blocknum):
@@ -142,36 +138,19 @@ class ZCom:
         return self._block_cache[blocknum]
 
     def entry(self, i):
-        """(content_key, raw_bytes) for one verse-index slot, or (None, None) if empty.
-        content_key identifies the underlying (block, offset, length) span --
-        two verses sharing one commentary chunk share the same key."""
-        blocknum, start, size = struct.unpack_from("<IIH", self.bzv, i * 10)
-        if size == 0:
+        blocknum, start, length = struct.unpack_from("<III", self.bzv, i * 12)
+        if length == 0:
             return None, None
-        return (blocknum, start, size), self.block(blocknum)[start:start + size]
+        return (blocknum, start, length), self.block(blocknum)[start:start + length]
 
     def count(self):
-        return len(self.bzv) // 10
+        return len(self.bzv) // 12
 
 
 def walk_testament(zcom, book_order, chapter_counts, testament_label, warnings):
-    """Each chapter's real verse content is preceded by its own
-    `<chapter n="N">` marker slot -- but there can also be a run of
-    completely EMPTY (None) index slots wedged in before that marker
-    (confirmed by direct inspection: Job 38-42 each had exactly 17 empty
-    slots ahead of their own header, unrelated to any chapter's real verse
-    count). The original version of this walk counted every non-header
-    slot as a verse, including that empty junk, which ate into a chapter's
-    verse budget before its real content even started -- the chapter's
-    walk then ran out of budget partway through its ACTUAL verses, leaving
-    the remainder to be misread as the START of the next chapter. Silent,
-    compounding, and exactly the kind of bug that produced Psalm 23:1
-    showing Psalm 22's commentary.
-
-    Fixed by making each chapter SEEK its own header explicitly (skipping
-    empty slots without counting them) before reading exactly n_verses
-    real verse slots -- self-correcting at every chapter boundary instead
-    of trusting cumulative cursor arithmetic."""
+    """Identical self-correcting seek-the-header walk to transform_mhcc.py
+    -- see that script's docstring for why cumulative cursor arithmetic
+    alone isn't safe."""
     verse_content = {}
     cursor = LEADING_SLOTS
     total = zcom.count()
@@ -182,7 +161,6 @@ def walk_testament(zcom, book_order, chapter_counts, testament_label, warnings):
             warnings.append(f"No chapter data for {book} in verses table -- skipped")
             continue
         for chapter in chapters:
-            # Seek this chapter's own header, skipping empty/junk slots.
             found = False
             seek_guard = 0
             while cursor < total:
@@ -224,7 +202,7 @@ def walk_testament(zcom, book_order, chapter_counts, testament_label, warnings):
                     continue
                 text = raw.decode("utf-8", errors="replace")
                 if HEADER_RE.match(text):
-                    continue  # a further mid-chapter marker -- not a verse, don't advance
+                    continue
                 verse_content[(book, chapter, verse)] = (key, text)
                 verse += 1
             if cursor >= total:
@@ -240,13 +218,16 @@ def walk_testament(zcom, book_order, chapter_counts, testament_label, warnings):
 
 
 def clean_text(raw_text):
-    """Plain, paragraph-separated text (paragraphs joined with a blank
-    line) -- book intro / chapter outline / the actual verse commentary
-    each become their own paragraph instead of one run-on blob."""
+    """Paragraph-separated plain text. Book-level intro titles become
+    their own paragraph break (same fix as MHCC's "Genesis Genesis"
+    duplication); section titles ("Ge 1:3-5. The First Day.") keep their
+    text as a paragraph; the source's own `x-p` div markers are used
+    directly as paragraph boundaries rather than guessed. Bold key-phrase
+    labels ("2. the earth was...--") are genuinely useful content, so
+    they're kept -- just tag-stripped like everything else."""
     text = BOOK_TITLE_RE.sub(PARA_BREAK, raw_text)
-    text = OUTLINE_RE.sub(_render_outline, text)
-    text = CHAPTER_TITLE_RE.sub(PARA_BREAK, text)
-    text = VERSE_LABEL_RE.sub(PARA_BREAK, text)
+    text = SECTION_TITLE_RE.sub(lambda m: PARA_BREAK + TAG_RE.sub("", m.group(1)) + PARA_BREAK, text)
+    text = PARA_DIV_RE.sub(PARA_BREAK, text)
     text = TAG_RE.sub(" ", text)
     text = html.unescape(text)
     paragraphs = [WS_RE.sub(" ", p).strip() for p in text.split(PARA_BREAK)]
@@ -254,8 +235,6 @@ def clean_text(raw_text):
 
 
 def merge_ranges(verse_content, book_order, chapter_counts):
-    """Groups consecutive same-book-chapter verses sharing an identical
-    content_key into one (verse_start, verse_end, body) row."""
     rows = []
     for book in book_order:
         chapters = sorted(c for (b, c) in chapter_counts if b == book)
@@ -268,7 +247,7 @@ def merge_ranges(verse_content, book_order, chapter_counts):
                 entry = verse_content.get((book, chapter, verse))
                 key, text = entry if entry else (None, None)
                 if key is not None and key == run_key:
-                    continue  # still inside the current run
+                    continue
                 if run_start is not None:
                     rows.append((book, chapter, run_start, verse - 1, run_text))
                 run_start = verse if key is not None else None
@@ -287,8 +266,8 @@ def main():
     raw_zip = download_module()
     zf = zipfile.ZipFile(io.BytesIO(raw_zip))
 
-    ot = ZCom(zf, "ot")
-    nt = ZCom(zf, "nt")
+    ot = ZCom4(zf, "ot")
+    nt = ZCom4(zf, "nt")
 
     warnings = []
     ot_content = walk_testament(ot, OT_BOOKS, chapter_counts, "OT", warnings)
@@ -308,12 +287,12 @@ def main():
         print(f"  ... and {len(warnings) - 30} more")
 
     os.makedirs("data", exist_ok=True)
-    with open("data/mhcc_commentary.csv", "w", newline="", encoding="utf-8") as f:
+    with open("data/jfb_commentary.csv", "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
         writer.writerow(["source", "verse_start", "verse_end", "body"])
         for book, chapter, v1, v2, raw_text in ot_rows + nt_rows:
-            writer.writerow(["MHCC", f"{book}.{chapter}.{v1}", f"{book}.{chapter}.{v2}", clean_text(raw_text)])
-    print("Wrote data/mhcc_commentary.csv")
+            writer.writerow(["JFB", f"{book}.{chapter}.{v1}", f"{book}.{chapter}.{v2}", clean_text(raw_text)])
+    print("Wrote data/jfb_commentary.csv")
 
 
 if __name__ == "__main__":

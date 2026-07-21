@@ -148,6 +148,42 @@ apparently just doesn't comment on that section individually.
 `data/mhcc_commentary.csv` via Table Editor → `commentary_entries`. At 4,047 rows / ~4 MB this is
 small — no chunking should be needed.
 
+**Jamieson-Fausset-Brown Commentary (JFB)**, second of the three planned commentaries, from the
+CrossWire SWORD module (confirmed `DistributionLicense=Public Domain` in `mods.d/jfb.conf`).
+
+```
+python3 scripts/transform_jfb.py
+```
+
+**A real format surprise**: JFB's `ModDrv` is `zCom4`, not plain `zCom` like TSK/MHCC — a
+different binary layout, not just a naming quirk. Its verse-index files (`.bzv`) use **12-byte
+entries** (`blocknum:u32, start:u32, length:u32`) instead of zCom's 10-byte entries
+(`blocknum:u32, start:u32, length:u16`). Caught by noticing `nt.bzv`'s file size (98,952 bytes)
+doesn't divide evenly by 10 but does by 12, and that `289,380 / 12 = 24,115` and
+`98,952 / 12 = 8,246` exactly match the already-known OT/NT total slot counts. Full byte-format
+notes are in `scripts/transform_jfb.py`'s docstring. The same self-correcting "seek each chapter's
+header" walk from MHCC (see above) carried over unchanged and worked cleanly on the first real
+run — no desync bug this time.
+
+Content structure differs from MHCC too: no "Chapter Outline" table (confirmed absent by grepping
+200 real entries for `<table`), but section headers
+(`Ge 1:3-5. The First Day.`) and **per-verse key-phrase labels**
+(`2. the earth was without form and void--`) that are genuinely useful inline content, kept rather
+than stripped like MHCC's redundant "Verses N-M" labels were. Also caught and fixed a real text
+bug while spot-checking (`&amp;c.` showing up instead of `&c.` — unescaped HTML entities leaking
+through raw tag-stripping) and applied the same fix retroactively to `transform_mhcc.py`, since it
+had 7 of the same leftover entities.
+
+Produces `data/jfb_commentary.csv` (`source,verse_start,verse_end,body`) — **16,882 entries (11,886
+OT + 4,996 NT) across all 66 books.** Spot-checked Genesis 1:1, Genesis 1:3, Psalm 23:1, John 3:16,
+Revelation 22:21 — all correct, all richer/more granular than MHCC's concise treatment (JFB is a
+full scholarly commentary, not a concise digest).
+
+**To get this live**: import into the same `commentary_entries` table — no new migration needed,
+`source='JFB'` alongside the existing `'MHCC'` rows. Import `data/jfb_commentary.csv` via Table
+Editor. At 16,882 rows / ~11 MB, smaller row-count than TSK's 362K-row import that worked fine in
+one pass — should be straightforward.
+
 ## Seeding Nave's Topical Bible
 
 **Nave's Topical Bible**, from the CrossWire SWORD module (confirmed `DistributionLicense=Public
@@ -777,7 +813,15 @@ the browser with real data — searching "faith" returns FAITH/FAITHFULNESS/FIGH
 UNFAITHFULNESS, and FAITH's detail view shows all 766 of its real verse references correctly
 grouped by label with working links. **Fully live.**
 
-Still ahead: calendar, reading plans, "Today, I..." templates, JFB and Barnes commentaries.
+**JFB commentary added** (second of three, see "Seeding commentary data" above for the zCom4
+binary-format surprise). `VersePanel.tsx`'s `COMMENTARY_SOURCE_LABEL` map extended with JFB —
+`commentary_entries` already supported multiple sources with zero schema changes, by design.
+Verified live via TEMP-VERIFY mock showing both MHCC and JFB together on Psalm 23:1 — both render
+with correct distinct labels and independent expand/collapse. **Not yet imported to the live DB**
+— needs `data/jfb_commentary.csv` imported via Table Editor (no new migration to run).
+
+Still ahead: calendar, reading plans, "Today, I..." templates, Barnes commentary (NT-only,
+last of the three planned).
 
 ## TODO — amendment v1.4 (theming), intentionally deferred
 
