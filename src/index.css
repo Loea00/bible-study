@@ -133,7 +133,8 @@ main {
 .reading-log,
 .prayer-page,
 .scripture-search,
-.topics-page {
+.topics-page,
+.calendar-page {
   max-width: 720px;
   margin: 0 auto;
   padding: 32px 24px;
@@ -2063,4 +2064,321 @@ button.highlight-swatch {
 .prayer-history-entry .entry-body,
 .prayer-history-entry-edit textarea {
   font-size: 15px;
+}
+
+/* Calendar (the "time lens") -- four zoom levels sharing a small visual
+   vocabulary of day markers, so Month/Week/Year all read as one system. */
+
+.calendar-view-switcher {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+  font-family: var(--sans);
+}
+
+.calendar-view-switcher button {
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.calendar-view-switcher button[aria-current='true'] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.calendar-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 16px;
+  font-family: var(--sans);
+}
+
+.calendar-nav h2 {
+  font-family: var(--serif);
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--text-h);
+  margin: 0;
+  min-width: 180px;
+  text-align: center;
+}
+
+.calendar-nav button {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font-size: 16px;
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+}
+
+.calendar-month-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.calendar-month-grid-header {
+  margin-bottom: 4px;
+}
+
+.calendar-weekday-label {
+  font-family: var(--sans);
+  font-size: 12px;
+  color: var(--text);
+  opacity: 0.55;
+  text-align: center;
+}
+
+.calendar-day-cell {
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.calendar-day-cell:disabled {
+  cursor: default;
+}
+
+.calendar-day-number {
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--text-h);
+}
+
+.calendar-day-cell--outside .calendar-day-number {
+  opacity: 0.35;
+}
+
+.calendar-day-cell--future {
+  opacity: 0.4;
+}
+
+.calendar-day-cell--today {
+  border-color: var(--accent);
+  border-width: 2px;
+}
+
+.calendar-day-markers {
+  display: flex;
+  gap: 3px;
+  align-items: center;
+}
+
+.calendar-dot-session,
+.calendar-dot-entry {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.calendar-dot-session {
+  background: #3fa34d;
+}
+
+.calendar-dot-entry {
+  background: var(--accent);
+}
+
+.calendar-dot-answered {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+  border: 1.5px solid #d4a017;
+  background: transparent;
+}
+
+.calendar-day-heading {
+  font-family: var(--serif);
+  font-size: 26px;
+  font-weight: 500;
+  color: var(--text-h);
+  margin: 0 0 24px;
+}
+
+.calendar-scrapbook-section {
+  margin-bottom: 28px;
+}
+
+.calendar-scrapbook-section h3 {
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text);
+  opacity: 0.6;
+  margin: 0 0 10px;
+}
+
+.calendar-session-block {
+  font-family: var(--serif);
+  font-size: 16px;
+  color: var(--text-h);
+  margin-bottom: 6px;
+}
+
+.calendar-answered-badge {
+  display: block;
+  font-family: var(--serif);
+  font-size: 16px;
+  color: var(--text-h);
+  text-decoration: none;
+  margin-bottom: 6px;
+}
+
+.calendar-answered-badge:hover {
+  color: var(--accent);
+}
+
+.calendar-on-this-day {
+  background: var(--code-bg, rgba(128, 128, 128, 0.08));
+  border-radius: 8px;
+  padding: 18px 20px;
+  margin-bottom: 24px;
+}
+
+.calendar-on-this-day h3 {
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text);
+  opacity: 0.6;
+  margin: 0 0 10px;
+}
+
+.calendar-on-this-day-year {
+  display: block;
+  font-family: var(--serif);
+  font-size: 17px;
+  line-height: 1.5;
+  color: var(--text-h);
+  text-decoration: none;
+  margin-bottom: 6px;
+}
+
+.calendar-on-this-day-year:hover {
+  color: var(--accent);
+}
+
+.calendar-week-summary {
+  font-family: var(--serif);
+  font-size: 18px;
+  line-height: 1.5;
+  color: var(--text-h);
+  text-align: center;
+  margin: 0 0 24px;
+}
+
+.calendar-week-strip {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+}
+
+.calendar-week-day-cell {
+  aspect-ratio: auto;
+  height: 90px;
+  gap: 6px;
+}
+
+.calendar-week-day-cell .calendar-weekday-label {
+  font-size: 11px;
+}
+
+.calendar-year-heatmap {
+  display: flex;
+  gap: 3px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  justify-content: center;
+}
+
+.calendar-heatmap-week {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.calendar-heatmap-cell {
+  width: 11px;
+  height: 11px;
+  border-radius: 2px;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  background: var(--border);
+}
+
+.calendar-heatmap-cell--outside {
+  visibility: hidden;
+  cursor: default;
+}
+
+.calendar-heatmap-cell--1 {
+  background: color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.calendar-heatmap-cell--2 {
+  background: color-mix(in srgb, var(--accent) 65%, transparent);
+}
+
+.calendar-heatmap-cell--3 {
+  background: var(--accent);
+}
+
+.calendar-heatmap-cell--today {
+  outline: 1.5px solid var(--text-h);
+  outline-offset: 1px;
+}
+
+.calendar-year-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 20px;
+  margin-top: 32px;
+  max-width: 640px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.calendar-year-stats > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.calendar-year-stat-label {
+  font-family: var(--sans);
+  font-size: 12px;
+  color: var(--text);
+  opacity: 0.6;
+}
+
+.calendar-year-stat-value {
+  font-family: var(--serif);
+  font-size: 20px;
+  color: var(--text-h);
 }

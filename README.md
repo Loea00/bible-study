@@ -989,6 +989,50 @@ Still ahead: calendar, reading plans, "Today, I..." templates. All three planned
 (Matthew Henry, JFB, Barnes) now built, and all three have their book-introduction content
 correctly split out or recovered.
 
+**Calendar built** (spec §5.5, the "Time lens" — see design brainstorm summary in the plan file
+and project memory for the full context behind this). Rather than ship the spec's bare month grid
+as-is, Aaron asked to brainstorm first, worried it would land as an afterthought — landed on four
+zoom levels (Day/Week/Month/Year) each asking a genuinely different question, plus "On This Day"
+promoted from a spec footnote to the actual headline of the page. New route `/calendar`
+(`src/features/calendar/`), zero new tables — every view is a read query over already-existing
+`reading_sessions`/`entries`/`prayer_requests`, matching the spec's own design intent ("the
+calendar stores almost nothing of its own"). `?view=day|week|month|year&date=YYYY-MM-DD` in the
+URL, same pattern `ReadingView.tsx` already uses for `?book=&chapter=`.
+
+- **Month**: grid with three markers per day — green (a reading session), purple (a
+  note/journal/reflection/prayer-write), and a distinct ring for "a prayer was marked answered"
+  (presence, not count, at this zoom — three same-shaped dots at cell size are hard to tell apart).
+  Tapping a past day opens Day view; future days are non-interactive (no "hollow = planned" dot
+  this pass — that needs Reading Plans data, which doesn't exist yet).
+- **Week**: 7-cell strip, same marker language, plus an auto-composed summary sentence ("This week
+  you read Romans 8:12 and wrote 3 times, and a prayer was answered") — plain template-string
+  composition (`summaryText.ts`), not an AI call.
+- **Day**: a read-only "scrapbook page" for one date — reuses `.journal-card`/`EntryBody`/
+  `AnchorScripture` exactly as `JournalEntryCard.tsx` already does, so resurfaced old writing
+  renders in the same reading-quality serif typography as everywhere else in the app, not a plain
+  list. No edit/delete here — that stays on Journal/Prayer.
+- **Year**: a GitHub-style contribution heatmap (opacity steps on the existing `--accent` token,
+  not a new color scale) plus a retrospective stat block (chapters covered, most-revisited passage,
+  prayers answered, first/last activity) — computed client-side from the same fetched rows, no
+  extra queries. No AI-generated narrative this pass.
+- **On This Day**: shown only when viewing today (any zoom level) — runs `useCalendarDay`'s query
+  shape once per prior year (parallel, capped at a 10-year lookback), composes a sentence per
+  non-empty year, each linking through to that historical Day view.
+
+Two real gotchas caught during a from-scratch build+verify pass: (1) a naive sentence template
+produced "you a prayer was answered" when only the prayer-answered clause was present — fixed by
+treating the prayer clause as its own subject rather than assuming every clause shares an implied
+"you"; (2) `localDateKey()` in `useReadingLog.ts` needed to be exported (was previously
+file-private) so Calendar's hooks could reuse it rather than duplicating local-day-key formatting.
+
+Verified live via TEMP-VERIFY mock data at every chunk (Month's 3-simultaneous-markers case, Day's
+empty-state, On This Day across 3 fabricated prior years with click-through, Week's summary
+composition, Year's full-year stats with some empty months) — all confirmed correct, build clean,
+no leftover TEMP-VERIFY markers. **Not yet tested against real live data** (no authenticated write
+path in this environment, same known limitation as every other feature built this way) — will read
+correctly against real data the first time Aaron opens `/calendar` with actual reading/journal/
+prayer history, since every hook is a plain read query against tables already live and populated.
+
 ## TODO — amendment v1.4 (theming), intentionally deferred
 
 Reviewed 2026-07-15, holding until after Strong's data sourcing (the currently agreed next
