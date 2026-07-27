@@ -1033,6 +1033,24 @@ path in this environment, same known limitation as every other feature built thi
 correctly against real data the first time Aaron opens `/calendar` with actual reading/journal/
 prayer history, since every hook is a plain read query against tables already live and populated.
 
+**Reading Log augmented** (`/log`, `src/features/log/`, following up on the original spec §5.4
+build above): date-grouped session list instead of a flat feed, artifact-count indicator badges
+(e.g. "2 artifacts", "prayed for 2") visible on every row even before expanding it, and delete
+actions at both the individual-session and whole-day level. `useReadingLog.ts`'s
+`loadSessionEntries`/`loadSessionPrayedMarks` (previously lazy, fetched only when a row was
+expanded) were replaced with one eager fetch on load — needed since indicator badges have to be
+visible on collapsed rows, not just after tapping in. New `deleteSession(id)` and
+`deleteSessionsForDay(ids)` — window.confirm-gated, matching the app's existing no-modal delete
+convention elsewhere (`JournalEntryCard.tsx`, etc.). Both operations delete only the
+`reading_sessions` row(s) — margin notes, journal entries, and reflections written during that
+session are **not** deleted, just unlinked (`entries.session_id` → `null` via the existing
+`on delete set null` foreign key) — the confirm dialogs say this explicitly so deleting a log line
+never reads as "delete my notes." Verified live via TEMP-VERIFY mock data: date grouping, indicator
+badges, expand-to-detail, single-session delete, and whole-day delete all confirmed working
+(delete verification required patching `window.confirm` via the browser's JS console first, since
+headless/automated browser contexts auto-dismiss native `confirm()` dialogs) — build clean, no
+leftover TEMP-VERIFY markers.
+
 ## TODO — amendment v1.4 (theming), intentionally deferred
 
 Reviewed 2026-07-15, holding until after Strong's data sourcing (the currently agreed next

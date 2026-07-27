@@ -1082,6 +1082,52 @@ button.highlight-swatch {
   margin-top: 2px;
 }
 
+.log-date-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.log-date-group {
+  margin-bottom: 8px;
+}
+
+.log-date-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.log-date-header h3 {
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text);
+  opacity: 0.65;
+  margin: 0;
+}
+
+.log-date-header-delete {
+  border: none;
+  background: none;
+  color: var(--text);
+  opacity: 0.5;
+  font-family: var(--sans);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.log-date-header-delete:hover {
+  opacity: 1;
+  color: #c0392b;
+}
+
 .log-sessions {
   display: flex;
   flex-direction: column;
@@ -1106,10 +1152,40 @@ button.highlight-swatch {
   font: inherit;
 }
 
+.log-session-main {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
 .log-session-passage {
   font-family: var(--serif);
   font-size: 17px;
   color: var(--text-h);
+}
+
+.log-session-indicators {
+  display: flex;
+  gap: 8px;
+}
+
+.log-session-indicator {
+  font-family: var(--sans);
+  font-size: 11px;
+  color: var(--accent);
+  background: var(--code-bg, rgba(128, 128, 128, 0.08));
+  border-radius: 10px;
+  padding: 2px 8px;
+  white-space: nowrap;
+}
+
+.log-session-controls {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-shrink: 0;
 }
 
 .log-session-meta {
@@ -1117,6 +1193,20 @@ button.highlight-swatch {
   color: var(--text);
   opacity: 0.6;
   white-space: nowrap;
+}
+
+.log-session-delete {
+  font-family: var(--sans);
+  font-size: 12px;
+  color: var(--text);
+  opacity: 0.4;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.log-session-delete:hover {
+  opacity: 1;
+  color: #c0392b;
 }
 
 .log-session-entries {

@@ -43,6 +43,33 @@ export function useReadingLog() {
       .order('started_at', { ascending: false })
     setSessions(data ?? [])
 
+    // Fetched eagerly (not per-session on expand) so every row can show an
+    // artifact-count indicator up front, not just after tapping into it.
+    const [entriesRes, prayedRes] = await Promise.all([
+      supabase.from('entries').select('*').not('session_id', 'is', null).order('created_at', { ascending: true }),
+      supabase.from('prayed_marks').select('request_id, session_id').not('session_id', 'is', null),
+    ])
+
+    const entryMap: Record<string, Entry[]> = {}
+    for (const entry of entriesRes.data ?? []) {
+      if (!entry.session_id) continue
+      ;(entryMap[entry.session_id] ??= []).push(entry)
+    }
+    setEntriesBySession(entryMap)
+
+    // Distinct requests, not raw mark count — "prayed for 2 requests" (spec
+    // §B3) counts what was prayed for, not how many taps happened.
+    const requestsBySession: Record<string, Set<string>> = {}
+    for (const mark of prayedRes.data ?? []) {
+      if (!mark.session_id) continue
+      ;(requestsBySession[mark.session_id] ??= new Set()).add(mark.request_id)
+    }
+    const prayedCounts: Record<string, number> = {}
+    for (const [sessionId, requestIds] of Object.entries(requestsBySession)) {
+      prayedCounts[sessionId] = requestIds.size
+    }
+    setPrayedCountBySession(prayedCounts)
+
     const now = new Date()
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
     const { count } = await supabase
@@ -58,23 +85,21 @@ export function useReadingLog() {
     refetch()
   }, [refetch])
 
-  async function loadSessionEntries(sessionId: string) {
-    if (entriesBySession[sessionId]) return
-    const { data } = await supabase
-      .from('entries')
-      .select('*')
-      .eq('session_id', sessionId)
-      .order('created_at', { ascending: true })
-    setEntriesBySession((prev) => ({ ...prev, [sessionId]: data ?? [] }))
+  // Only removes the log line item (the reading_sessions row) -- notes,
+  // journal entries, and reflections written during it are NOT deleted,
+  // just unlinked (entries.session_id -> set null via the FK), same as
+  // deleting a whole day below.
+  async function deleteSession(sessionId: string) {
+    const { error } = await supabase.from('reading_sessions').delete().eq('id', sessionId)
+    if (error) throw new Error(error.message)
+    setSessions((prev) => prev.filter((s) => s.id !== sessionId))
   }
 
-  // Distinct requests, not raw mark count — "prayed for 2 requests" (spec
-  // §B3) counts what was prayed for, not how many taps happened.
-  async function loadSessionPrayedMarks(sessionId: string) {
-    if (prayedCountBySession[sessionId] !== undefined) return
-    const { data } = await supabase.from('prayed_marks').select('request_id').eq('session_id', sessionId)
-    const distinctRequests = new Set((data ?? []).map((m) => m.request_id))
-    setPrayedCountBySession((prev) => ({ ...prev, [sessionId]: distinctRequests.size }))
+  async function deleteSessionsForDay(sessionIds: string[]) {
+    const { error } = await supabase.from('reading_sessions').delete().in('id', sessionIds)
+    if (error) throw new Error(error.message)
+    const idSet = new Set(sessionIds)
+    setSessions((prev) => prev.filter((s) => !idSet.has(s.id)))
   }
 
   return {
@@ -83,8 +108,8 @@ export function useReadingLog() {
     notesThisMonth,
     streak: computeStreak(sessions),
     entriesBySession,
-    loadSessionEntries,
     prayedCountBySession,
-    loadSessionPrayedMarks,
+    deleteSession,
+    deleteSessionsForDay,
   }
 }
