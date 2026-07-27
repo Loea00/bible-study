@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { localDateKey, useReadingLog } from './useReadingLog'
-import { BOOK_BY_CODE } from '../reading/books'
-import type { ReadingSession } from '../../types/db'
+import { BOOK_BY_CODE, formatReference } from '../reading/books'
+import { parseVerseTags } from '../journal/verseTagParser'
+import type { Entry, ReadingSession } from '../../types/db'
 
 function formatPassage(id: string): string {
   const [book, chapter] = id.split('.')
@@ -35,6 +36,35 @@ const ENTRY_TYPE_LABEL: Record<string, string> = {
   prayer_update: 'Update',
   word: 'Word',
   concern: 'Concern',
+}
+
+// What an entry links to should reflect what it's actually ABOUT, not
+// the reading session it happened to be stamped with (session_id is
+// time-based -- "written within 30 min of this reading" -- and can
+// diverge from the entry's own content, e.g. a journal entry written
+// right after reading Genesis 1 that actually cites 1 Cor 6:19). Anchor
+// (margin notes, reflections) wins first since it's an explicit,
+// deliberate link; an inline @verse tag in the body is the fallback for
+// plain journal/prayer entries; only entries with neither fall back to
+// the generic journal-entry link.
+function resolveEntryLink(entry: Entry): { to: string; label: string } {
+  const anchorParts = entry.anchor_start ? entry.anchor_start.split('.') : null
+  const citedTag = !anchorParts ? parseVerseTags(entry.body)[0] : undefined
+  const citedVerseId = citedTag?.verseIds[0] ?? null
+  const targetParts = anchorParts ?? (citedVerseId ? citedVerseId.split('.') : null)
+
+  if (!targetParts) {
+    return { to: `/journal?entry=${entry.id}`, label: entry.title ?? 'Untitled entry' }
+  }
+
+  const [book, chapter, verse] = targetParts
+  const to = `/?book=${book}&chapter=${chapter}${verse ? `&verse=${verse}` : ''}`
+
+  if (entry.entry_type === 'margin_note') {
+    return { to, label: entry.body.length > 60 ? `${entry.body.slice(0, 60)}…` : entry.body }
+  }
+  const referenceLabel = formatReference(anchorParts ? entry.anchor_start! : citedVerseId!)
+  return { to, label: entry.title ?? referenceLabel }
 }
 
 function groupByDate(sessions: ReadingSession[]): [string, ReadingSession[]][] {
@@ -201,25 +231,15 @@ export function ReadingLog() {
                           </p>
                         )}
                         {entriesBySession[session.id]?.map((entry) => {
-                          const isNote = entry.entry_type === 'margin_note'
-                          const anchorParts = isNote && entry.anchor_start ? entry.anchor_start.split('.') : null
+                          const { to, label } = resolveEntryLink(entry)
                           return (
                             <div key={entry.id} className="log-session-entry">
                               <span className="log-session-entry-type">
                                 {ENTRY_TYPE_LABEL[entry.entry_type] ?? entry.entry_type}
                               </span>
-                              {isNote ? (
-                                <Link
-                                  to={anchorParts ? `/?book=${anchorParts[0]}&chapter=${anchorParts[1]}` : '/'}
-                                  className="log-session-entry-link"
-                                >
-                                  {entry.body.length > 60 ? `${entry.body.slice(0, 60)}…` : entry.body} →
-                                </Link>
-                              ) : (
-                                <Link to={`/journal?entry=${entry.id}`} className="log-session-entry-link">
-                                  {entry.title ?? 'Untitled entry'} →
-                                </Link>
-                              )}
+                              <Link to={to} className="log-session-entry-link">
+                                {label} →
+                              </Link>
                             </div>
                           )
                         })}

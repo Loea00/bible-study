@@ -1051,6 +1051,28 @@ badges, expand-to-detail, single-session delete, and whole-day delete all confir
 headless/automated browser contexts auto-dismiss native `confirm()` dialogs) — build clean, no
 leftover TEMP-VERIFY markers.
 
+**Reading Log fix: entries now link to what they actually cite, not the session's passage.**
+Aaron flagged a genuinely confusing case: a journal entry he wrote about 1 Corinthians 6:19 was
+showing up in the Log filed under a Genesis 1:1 reading session. Root cause, not a bug exactly but
+a real design gap: `reading_sessions.id` is stamped onto a new entry purely by *time proximity* —
+`getActiveSessionId()` just checks "is there a still-active session (last reading activity <30 min
+ago)?" — with zero regard for what the entry's own content is about. Read Genesis 1, then write a
+journal entry citing a completely different verse within that 30-minute window, and the entry gets
+attributed to the Genesis session anyway. That's arguably correct as a *session* concept (session =
+what you were reading right before you wrote something) but was actively misleading as a *link
+target* — the old code linked every non-note entry to `/journal?entry=id`, so this particular
+symptom (linking to the wrong passage) needed one more layer: margin notes and reflections already
+carry an explicit `anchor_start`, and plain journal-type entries can carry an inline `@verse` tag in
+their body (parsed via the existing `parseVerseTags`) — either one is a far more reliable "what is
+this actually about" signal than the session it happened to land in.
+
+Fixed in `ReadingLog.tsx` with a new `resolveEntryLink()`: prefer `entry.anchor_start` (deliberate,
+explicit) first, fall back to the entry's first inline `@verse` tag, and only fall back to the
+generic `/journal?entry=id` link if neither exists. Verified live with a session tagged Genesis
+1:1 containing a journal entry citing `@1Cor 6:19` — the entry now correctly links to
+`/?book=1CO&chapter=6&verse=19` instead of Genesis, while the session header above it still
+(correctly) says "Genesis 1," since that's genuinely when it was written, just not what it's about.
+
 ## TODO — amendment v1.4 (theming), intentionally deferred
 
 Reviewed 2026-07-15, holding until after Strong's data sourcing (the currently agreed next
