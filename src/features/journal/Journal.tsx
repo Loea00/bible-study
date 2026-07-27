@@ -16,7 +16,7 @@ export function Journal() {
   const targetRef = useRef<HTMLDivElement>(null)
   const [query, setQuery] = useState('')
   const [activeTag, setActiveTag] = useState<string | null>(null)
-  const [activeType, setActiveType] = useState<'all' | 'journal' | 'reflection' | 'prayer'>('all')
+  const [activeType, setActiveType] = useState<'all' | 'journal' | 'reflection' | 'prayer'>('journal')
 
   useEffect(() => {
     if (targetEntryId && targetRef.current) {
@@ -52,7 +52,7 @@ export function Journal() {
       {entries.length > 0 && (
         <div className="journal-search">
           <div className="journal-type-filters">
-            {(['all', 'journal', 'reflection', 'prayer'] as const).map((type) => (
+            {(['journal', 'reflection', 'prayer', 'all'] as const).map((type) => (
               <button
                 key={type}
                 type="button"
