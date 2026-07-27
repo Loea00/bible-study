@@ -24,6 +24,7 @@ const PRAYER_KIND_LABEL: Partial<Record<EntryType, string>> = {
   prayer_update: 'Update',
   word: 'Word',
   concern: 'Concern',
+  vision: 'Vision',
 }
 
 const COMMENTARY_SOURCE_LABEL: Record<string, string> = {

@@ -9,6 +9,7 @@ const PRAYER_ENTRY_LABEL: Partial<Record<Entry['entry_type'], string>> = {
   prayer_update: 'Update',
   word: 'Word',
   concern: 'Concern',
+  vision: 'Vision',
 }
 
 // Read-only "diary page" rendering of one entry -- reuses the same

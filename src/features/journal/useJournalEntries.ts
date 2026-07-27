@@ -20,7 +20,7 @@ export function useJournalEntries() {
     const { data } = await supabase
       .from('entries')
       .select('*')
-      .in('entry_type', ['journal', 'reflection', 'prayer_update', 'word', 'concern'])
+      .in('entry_type', ['journal', 'reflection', 'prayer_update', 'word', 'concern', 'vision'])
       .order('created_at', { ascending: false })
     setEntries(data ?? [])
     setLoading(false)

@@ -2129,6 +2129,11 @@ button.highlight-swatch {
   border-color: var(--highlight-blue);
 }
 
+.prayer-history-kind-vision {
+  color: var(--highlight-green);
+  border-color: var(--highlight-green);
+}
+
 .prayer-history-entry-date {
   font-family: var(--sans);
   font-size: 12px;

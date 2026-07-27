@@ -4,7 +4,7 @@ import { extractExcerpt } from '../journal/excerpt'
 import { parseVerseTags } from '../journal/verseTagParser'
 import type { EntryType } from '../../types/db'
 
-const PRAYER_TYPES: EntryType[] = ['prayer_update', 'word', 'concern']
+const PRAYER_TYPES: EntryType[] = ['prayer_update', 'word', 'concern', 'vision']
 
 export interface JournalExcerpt {
   entryId: string

@@ -273,7 +273,7 @@ export function PrayerRequestCard({
       )}
 
       <button type="button" className="anchor-scripture-toggle" onClick={() => setHistoryOpen((o) => !o)}>
-        {historyOpen ? '▲ Hide history' : '▾ Show history'}
+        {historyOpen ? '▲ Hide journey' : '▾ Show journey'}
       </button>
       {historyOpen && <PrayerRequestHistory requestId={request.id} />}
 

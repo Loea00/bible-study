@@ -1073,6 +1073,35 @@ generic `/journal?entry=id` link if neither exists. Verified live with a session
 `/?book=1CO&chapter=6&verse=19` instead of Genesis, while the session header above it still
 (correctly) says "Genesis 1," since that's genuinely when it was written, just not what it's about.
 
+**Journal filter chips reordered, default changed to Journal.** Small UX request: the "All /
+Journal / Reflection / Prayer" chip row on `/journal` now reads "Journal / Reflection / Prayer /
+All" (All moved to the end), and the page now defaults to the Journal filter on load instead of
+All. One-line change in `Journal.tsx` (`activeType` initial state + the chip-order array).
+
+**Prayer request history renamed to "journey"; new "Vision" classification added.** Aaron flagged
+that "Show history" undersold what's actually in that section (updates, sensed words, concerns —
+and now vision), and asked for a new classification specifically for pouring out what he senses
+God doing/promising for a request — distinct from a progress "Update" or a sensed "Word." Renamed
+the toggle in `PrayerRequestCard.tsx` to "Show journey" / "Hide journey" (matches
+`PrayerRequestHistory.tsx`'s own existing internal framing — its top comment already called this
+"a request's lifecycle... history/narrative"). Added `'vision'` as a new `entries.entry_type` value
+via migration `0014_prayer_vision_entry_type.sql` (same drop/recreate-check-constraint pattern
+`0008_prayer_core.sql` used to add the original three prayer types), reusing the same `entries`
+table — no new table needed, consistent with how prayer_update/word/concern already work.
+
+Extending `entry_type` touched every place those three types were enumerated, not just
+`PrayerRequestHistory.tsx`'s dropdown/label map — `usePrayerEntries.ts`'s `PrayerEntryType`,
+`Journal.tsx`'s `PRAYER_TYPES` filter array, `useJournalExcerpts.ts`'s equivalent (verse-panel
+prayer excerpts), `VersePanel.tsx`'s label map, `ReadingLog.tsx`'s label map, and
+`JournalEntryCard.tsx`'s/`DayScrapbook.tsx`'s prayer-badge label maps (Calendar's Day view and the
+Journal timeline both surface these entries too) — six additional call sites found by grepping for
+the existing three-type literal array/label pattern, all updated to include `vision`. New CSS
+`.prayer-history-kind-vision` (green, matching the existing per-kind color convention: word=purple,
+concern=blue). Verified live: the classification dropdown includes "Vision," a mock vision-type
+entry renders with the correct "VISION" badge/color/title/body, and the toggle button now reads
+"Show journey"/"Hide journey" — build clean, no leftover TEMP-VERIFY markers. Migration 0014 run by
+Aaron — the check constraint now accepts `'vision'`. **Fully live.**
+
 ## TODO — amendment v1.4 (theming), intentionally deferred
 
 Reviewed 2026-07-15, holding until after Strong's data sourcing (the currently agreed next

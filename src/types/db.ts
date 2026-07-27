@@ -15,6 +15,7 @@ export type EntryType =
   | 'prayer_update'
   | 'word'
   | 'concern'
+  | 'vision'
 export type RefKind = 'anchor' | 'inline'
 export type HighlightColor = 'yellow' | 'green' | 'blue' | 'pink' | 'purple'
 

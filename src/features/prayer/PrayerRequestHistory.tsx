@@ -7,12 +7,14 @@ const KIND_LABEL: Record<PrayerEntryType, string> = {
   prayer_update: 'Update',
   word: 'Word',
   concern: 'Concern',
+  vision: 'Vision',
 }
 
 const KIND_OPTIONS: { value: PrayerEntryType; label: string }[] = [
   { value: 'prayer_update', label: 'Update' },
   { value: 'word', label: 'Word' },
   { value: 'concern', label: 'Concern' },
+  { value: 'vision', label: 'Vision' },
 ]
 
 interface PrayerHistoryEntryProps {
@@ -126,7 +128,7 @@ interface PrayerRequestHistoryProps {
   requestId: string
 }
 
-// Rendered only while the card's "Show history" toggle is open — the
+// Rendered only while the card's "Show journey" toggle is open — the
 // hook's fetch-on-mount doubles as lazy loading, same effect as
 // AnchorScripture's explicit lazy-fetch-on-first-expand.
 export function PrayerRequestHistory({ requestId }: PrayerRequestHistoryProps) {
@@ -174,7 +176,7 @@ export function PrayerRequestHistory({ requestId }: PrayerRequestHistoryProps) {
           value={body}
           onChange={(e) => setBody(e.target.value)}
           rows={3}
-          placeholder="What are you noticing, sensing, or working through?"
+          placeholder="What are you noticing, sensing, hoping for, or working through?"
         />
         <button type="button" onClick={handleSave} disabled={saving || !body.trim()}>
           {saving ? 'Saving…' : 'Add to history'}

@@ -36,6 +36,7 @@ const ENTRY_TYPE_LABEL: Record<string, string> = {
   prayer_update: 'Update',
   word: 'Word',
   concern: 'Concern',
+  vision: 'Vision',
 }
 
 // What an entry links to should reflect what it's actually ABOUT, not

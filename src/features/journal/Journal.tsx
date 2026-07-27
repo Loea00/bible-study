@@ -6,7 +6,7 @@ import { JournalEntryCard } from './JournalEntryCard'
 import { usePrayerRequestTitles } from '../prayer/usePrayerRequestTitles'
 import type { EntryType } from '../../types/db'
 
-const PRAYER_TYPES: EntryType[] = ['prayer_update', 'word', 'concern']
+const PRAYER_TYPES: EntryType[] = ['prayer_update', 'word', 'concern', 'vision']
 
 export function Journal() {
   const { entries, loading, createEntry, updateEntry, deleteEntry } = useJournalEntries()

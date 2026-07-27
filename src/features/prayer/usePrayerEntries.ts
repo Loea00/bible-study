@@ -4,7 +4,7 @@ import type { Entry, EntryType } from '../../types/db'
 import { parseVerseTags } from '../journal/verseTagParser'
 import { getActiveSessionId } from '../reading/useReadingSession'
 
-export type PrayerEntryType = Extract<EntryType, 'prayer_update' | 'word' | 'concern'>
+export type PrayerEntryType = Extract<EntryType, 'prayer_update' | 'word' | 'concern' | 'vision'>
 
 // Writing attached to a request's lifecycle (spec-amendment-v1-2 §B2/§B3) —
 // progress notes, sensed words, fears, insights. Chronological oldest-first

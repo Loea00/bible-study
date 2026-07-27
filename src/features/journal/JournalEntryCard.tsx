@@ -19,6 +19,7 @@ const PRAYER_ENTRY_LABEL: Partial<Record<Entry['entry_type'], string>> = {
   prayer_update: 'Update',
   word: 'Word',
   concern: 'Concern',
+  vision: 'Vision',
 }
 
 // A reflection's anchor can span multiple, non-consecutive verses (like a
