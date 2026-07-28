@@ -1177,11 +1177,22 @@ artifacts, whenever the currently-cached session was the one just deleted. Fixed
 `clearActiveSessionIfAmong(sessionIds)` to `useReadingSession.ts`, which drops the cached pointer if
 it matches one of the ids just deleted; called from both `useReadingLog.ts`'s `deleteSession`/
 `deleteSessionsForDay` and `useCalendarDay.ts`'s `deleteSession` right after the delete succeeds.
-Immediate unblock for Aaron's already-stuck session: visiting the Reading view once refreshes the
-cached pointer via `useReadingSession`'s existing stale-session fallback (it already detects an
-update failure and creates a fresh session) — no manual localStorage-clearing needed. Build clean;
-not independently browser-verified since the fix is a localStorage side effect on a delete
-button already covered by this session's own live click-through testing.
+Build clean; not independently browser-verified since the fix is a localStorage side effect on a
+delete button already covered by this session's own live click-through testing.
+
+**Follow-up fix: the stale-session fallback itself never actually triggered.** The above fix only
+covers *future* deletions made through the app's own delete buttons — Aaron hit the same
+`entries_session_id_fkey` error again immediately after, because his already-cached session id
+predated that fix. The expected recovery path was "visit the Reading view once, its stale-session
+detection creates a fresh session" — but that detection was broken: `useReadingSession.ts`'s
+`touch()` did `supabase.from('reading_sessions').update({...}).eq('id', sessionId)` and treated
+`!error` as "the session still exists." **A Postgres UPDATE matching zero rows is not an error** —
+`error` stays `null` even when the row is long gone, so `touch()` was silently re-caching the same
+dead session id on every visit instead of ever falling through to create a fresh one. Fixed by
+chaining `.select().maybeSingle()` onto the update and checking the returned row is non-null, which
+correctly distinguishes "updated a real row" from "matched nothing." This is the actual self-healing
+mechanism now — a stuck session resolves itself the next time the reading view is visited, no manual
+localStorage clearing needed, no dependency on which delete button caused it.
 
 ## TODO — amendment v1.4 (theming), intentionally deferred
 

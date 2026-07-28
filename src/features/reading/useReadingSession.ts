@@ -71,11 +71,17 @@ export function useReadingSession(book: string, chapter: number) {
       let sessionId = sessionIdRef.current ?? loadStoredSession()?.id ?? null
 
       if (sessionId) {
-        const { error } = await supabase
+        // A Postgres UPDATE matching zero rows is NOT an error (error stays
+        // null even when the session was deleted) — `.select().maybeSingle()`
+        // is required to actually detect "that row doesn't exist anymore"
+        // via a null result, rather than silently re-caching a dead id.
+        const { data: updated, error } = await supabase
           .from('reading_sessions')
           .update({ passage_end: passage, last_position: passage, ended_at: now })
           .eq('id', sessionId)
-        if (!error) {
+          .select()
+          .maybeSingle()
+        if (!error && updated) {
           sessionIdRef.current = sessionId
           saveStoredSession({ id: sessionId, lastActivityAt: Date.now() })
           return
