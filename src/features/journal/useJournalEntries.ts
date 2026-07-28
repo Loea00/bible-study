@@ -10,17 +10,17 @@ export function useJournalEntries() {
 
   const refetch = useCallback(async () => {
     setLoading(true)
-    // Reflections and prayer-attached writing (updates/words/concerns)
-    // appear in the same timeline as journal entries, per spec §5.3 ("in
-    // the journal timeline as a filterable type") and §B2 ("prayer-attached
-    // writing... lives in the existing unified store"). Both are authored
-    // via separate write paths (useReflections.addReflection,
-    // usePrayerEntries.addEntry — different anchor/request semantics), so
-    // createEntry below stays journal-only.
+    // Prayer-attached writing (updates/words/concerns/visions) intentionally
+    // does NOT appear here — Aaron decided Journal should stay a purely
+    // personal-writing space, with prayer history living only on its own
+    // request's "journey" (see usePrayerEntries.ts). Kept as a display-layer
+    // decision (this fetch filter) rather than removing the underlying
+    // feature, since it was explicitly framed as something that might
+    // change again later — reversible by re-adding these entry_types here.
     const { data } = await supabase
       .from('entries')
       .select('*')
-      .in('entry_type', ['journal', 'reflection', 'prayer_update', 'word', 'concern', 'vision'])
+      .in('entry_type', ['journal', 'reflection'])
       .order('created_at', { ascending: false })
     setEntries(data ?? [])
     setLoading(false)

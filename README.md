@@ -1102,6 +1102,24 @@ entry renders with the correct "VISION" badge/color/title/body, and the toggle b
 "Show journey"/"Hide journey" — build clean, no leftover TEMP-VERIFY markers. Migration 0014 run by
 Aaron — the check constraint now accepts `'vision'`. **Fully live.**
 
+**Prayer artifacts hidden from Journal.** After sitting with the "Vision" addition, Aaron decided
+prayer-attached writing (update/word/concern/vision) shouldn't appear in Journal at all — but
+explicitly framed it as something that might change again later, so this was built as a reversible
+display-layer decision, not a removal. `useJournalEntries.ts`'s fetch now filters to
+`entry_type in ('journal', 'reflection')` only (was also including the four prayer types) — the
+exclusion happens at the query itself, not by trusting a UI filter, so prayer entries never enter
+Journal's local state at all, not even under "All." `Journal.tsx`'s filter chip row drops back to
+Journal/Reflection/All (Prayer chip removed), and the now-always-empty `requestTitle` prop/
+`usePrayerRequestTitles()` call were removed from Journal's render path (that hook is still used
+elsewhere — the verse side panel's prayer excerpts are untouched, since Aaron's ask was specifically
+about the Journal view, not prayer writing everywhere in the app). Prayer's own page (each
+request's "journey"), the verse side panel, and Calendar's Day view all still show these entries —
+only Journal changed. Verified live with a simulated mixed-type dataset (journal + reflection +
+prayer_update) run through the same `.in()`-style filter Supabase applies, confirming the prayer
+row never reaches the component even under the "All" filter — build clean, no leftover
+TEMP-VERIFY markers. To bring it back later: just add the four prayer entry_types back to the
+`.in()` filter and re-add the "Prayer" option to the chip array — no schema change either way.
+
 ## TODO — amendment v1.4 (theming), intentionally deferred
 
 Reviewed 2026-07-15, holding until after Strong's data sourcing (the currently agreed next
