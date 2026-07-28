@@ -42,5 +42,30 @@ export function useCalendarDay(date: Date) {
     refetch()
   }, [refetch])
 
-  return { ...data, loading }
+  async function deleteSession(sessionId: string) {
+    const { error } = await supabase.from('reading_sessions').delete().eq('id', sessionId)
+    if (error) throw new Error(error.message)
+    setData((prev) => ({ ...prev, sessions: prev.sessions.filter((s) => s.id !== sessionId) }))
+  }
+
+  async function deleteEntry(entryId: string) {
+    const { error } = await supabase.from('entries').delete().eq('id', entryId)
+    if (error) throw new Error(error.message)
+    setData((prev) => ({ ...prev, entries: prev.entries.filter((e) => e.id !== entryId) }))
+  }
+
+  // "Removing" an answered prayer from the day just un-answers it (clears
+  // answered_at/answered_note) rather than deleting the prayer request
+  // itself -- the request keeps existing, it just stops showing up on this
+  // day. A real delete of the whole request stays on the Prayer page.
+  async function unmarkAnswered(requestId: string) {
+    const { error } = await supabase
+      .from('prayer_requests')
+      .update({ status: 'active', answered_at: null, answered_note: null })
+      .eq('id', requestId)
+    if (error) throw new Error(error.message)
+    setData((prev) => ({ ...prev, answeredPrayers: prev.answeredPrayers.filter((r) => r.id !== requestId) }))
+  }
+
+  return { ...data, loading, deleteSession, deleteEntry, unmarkAnswered }
 }

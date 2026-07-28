@@ -2330,20 +2330,43 @@ button.highlight-swatch {
   font-family: var(--serif);
   font-size: 16px;
   color: var(--text-h);
-  margin-bottom: 6px;
 }
 
 .calendar-answered-badge {
-  display: block;
   font-family: var(--serif);
   font-size: 16px;
   color: var(--text-h);
   text-decoration: none;
-  margin-bottom: 6px;
 }
 
 .calendar-answered-badge:hover {
   color: var(--accent);
+}
+
+.calendar-line-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.calendar-line-delete {
+  border: none;
+  background: none;
+  color: var(--text);
+  opacity: 0.5;
+  font-family: var(--sans);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.calendar-line-delete:hover {
+  opacity: 1;
+  color: #c0392b;
 }
 
 .calendar-on-this-day {

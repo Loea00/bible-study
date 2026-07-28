@@ -1007,10 +1007,11 @@ URL, same pattern `ReadingView.tsx` already uses for `?book=&chapter=`.
 - **Week**: 7-cell strip, same marker language, plus an auto-composed summary sentence ("This week
   you read Romans 8:12 and wrote 3 times, and a prayer was answered") — plain template-string
   composition (`summaryText.ts`), not an AI call.
-- **Day**: a read-only "scrapbook page" for one date — reuses `.journal-card`/`EntryBody`/
+- **Day**: a "scrapbook page" for one date — reuses `.journal-card`/`EntryBody`/
   `AnchorScripture` exactly as `JournalEntryCard.tsx` already does, so resurfaced old writing
   renders in the same reading-quality serif typography as everywhere else in the app, not a plain
-  list. No edit/delete here — that stays on Journal/Prayer.
+  list. Editing still stays on Journal/Prayer, but every line item (reading session, note/
+  reflection/prayer entry, answered prayer) has its own Delete/Remove button — see below.
 - **Year**: a GitHub-style contribution heatmap (opacity steps on the existing `--accent` token,
   not a new color scale) plus a retrospective stat block (chapters covered, most-revisited passage,
   prayers answered, first/last activity) — computed client-side from the same fetched rows, no
@@ -1119,6 +1120,26 @@ prayer_update) run through the same `.in()`-style filter Supabase applies, confi
 row never reaches the component even under the "All" filter — build clean, no leftover
 TEMP-VERIFY markers. To bring it back later: just add the four prayer entry_types back to the
 `.in()` filter and re-add the "Prayer" option to the chip array — no schema change either way.
+
+**Calendar Day view: delete/remove buttons on every line item.** Aaron asked for a way to clean up
+a day's page directly from Calendar rather than only from Journal/Prayer/Log. `useCalendarDay.ts`
+gained three mutators alongside its existing fetch: `deleteSession` (hard delete from
+`reading_sessions`, same semantics/confirm-copy as `ReadingLog.tsx`'s existing session delete —
+notes/entries written during it are kept, just unlinked), `deleteEntry` (hard delete from `entries`,
+works for any entry_type shown in Day view — journal, reflection, margin note, or any prayer type),
+and `unmarkAnswered` (does **not** delete the prayer request — clears its `status`/`answered_at`/
+`answered_note` back to `active`, so the request keeps existing and just stops showing up as
+"answered" on this day; a real permanent delete of a request stays a Prayer-page-only action). Each
+mutator updates local state directly so the row disappears immediately without a refetch.
+`DayScrapbook.tsx` renders a Delete button next to each reading session and note/reflection/prayer
+entry, and a Remove button next to each answered-prayer badge; session deletes get the same
+`window.confirm` guard `ReadingLog.tsx` uses (destructive to the row), entries and unmark-answered
+don't (matches `JournalEntryCard.tsx`'s own no-confirm delete, and un-answering is easily reversible
+by re-marking it answered from Prayer). New CSS: `.calendar-line-item` (flex row layout) and
+`.calendar-line-delete` (same faded-until-hover treatment as `.journal-card-delete`/
+`.log-session-delete`). Verified live: mocked a day with one of each line-item type, clicked all
+three buttons, confirmed the page correctly falls through to the "No entries on this day yet." empty
+state — build clean, no leftover TEMP-VERIFY markers.
 
 ## TODO — amendment v1.4 (theming), intentionally deferred
 
