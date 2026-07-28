@@ -16,11 +16,13 @@ export function NavBar() {
         <NavLink to="/journal">Journal</NavLink>
         <NavLink to="/prayer">Prayer</NavLink>
         <NavLink to="/calendar">Calendar</NavLink>
-        <NavLink to="/log">Log</NavLink>
       </div>
-      <button type="button" onClick={() => void signOut()}>
-        Sign out
-      </button>
+      <div className="navbar-right">
+        <NavLink to="/log">Log</NavLink>
+        <button type="button" onClick={() => void signOut()}>
+          Sign out
+        </button>
+      </div>
     </nav>
   )
 }

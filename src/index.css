@@ -113,6 +113,23 @@ body {
   font-weight: 600;
 }
 
+.navbar-right {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.navbar-right a {
+  color: var(--text);
+  text-decoration: none;
+  font-size: 15px;
+}
+
+.navbar-right a.active {
+  color: var(--text-h);
+  font-weight: 600;
+}
+
 .navbar button {
   border: none;
   background: none;
