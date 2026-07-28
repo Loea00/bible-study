@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import type { Entry } from '../../types/db'
-import { getActiveSessionId } from './useReadingSession'
+import { getVerifiedActiveSessionId } from './useReadingSession'
 import type { SelectionSpan } from './selection'
 
 export function useMarginNotes(book: string, chapter: number) {
@@ -80,7 +80,7 @@ export function useMarginNotes(book: string, chapter: number) {
         anchor_start: anchorStart,
         anchor_end: anchorEnd,
         tags: [],
-        session_id: getActiveSessionId(),
+        session_id: await getVerifiedActiveSessionId(),
       })
       .select()
       .single()

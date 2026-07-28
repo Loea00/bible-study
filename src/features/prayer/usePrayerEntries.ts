@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import type { Entry, EntryType } from '../../types/db'
 import { parseVerseTags } from '../journal/verseTagParser'
-import { getActiveSessionId } from '../reading/useReadingSession'
+import { getVerifiedActiveSessionId } from '../reading/useReadingSession'
 
 export type PrayerEntryType = Extract<EntryType, 'prayer_update' | 'word' | 'concern' | 'vision'>
 
@@ -47,7 +47,7 @@ export function usePrayerEntries(requestId: string) {
         anchor_start: null,
         anchor_end: null,
         tags: [],
-        session_id: getActiveSessionId(),
+        session_id: await getVerifiedActiveSessionId(),
         request_id: requestId,
       })
       .select()

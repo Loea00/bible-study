@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
-import { getActiveSessionId } from './useReadingSession'
+import { getVerifiedActiveSessionId } from './useReadingSession'
 import { parseVerseTags } from '../journal/verseTagParser'
 import type { SelectionSpan } from './selection'
 
@@ -92,7 +92,7 @@ export function useReflections(book: string, chapter: number) {
         anchor_start: anchorStart,
         anchor_end: anchorEnd,
         tags: [],
-        session_id: getActiveSessionId(),
+        session_id: await getVerifiedActiveSessionId(),
       })
       .select()
       .single()

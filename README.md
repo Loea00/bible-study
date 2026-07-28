@@ -1194,6 +1194,21 @@ correctly distinguishes "updated a real row" from "matched nothing." This is the
 mechanism now — a stuck session resolves itself the next time the reading view is visited, no manual
 localStorage clearing needed, no dependency on which delete button caused it.
 
+**Third pass: made the fix unconditional instead of depending on a reading-view revisit.** Aaron
+hit `entries_session_id_fkey` a third time even after the above two fixes landed — the prior
+approach still required *something* (a delete-path fix, or a reading-view revisit) to happen before
+the next write, which left a window where a stale cached session id could still be used. Replaced
+that entirely: `useReadingSession.ts` now exports `getVerifiedActiveSessionId()`, an async version
+of `getActiveSessionId()` that checks the cached id actually still exists in `reading_sessions`
+(one `select().eq('id', ...).maybeSingle()` call) before handing it back, clearing the cache and
+returning `null` if not. Every entry/mark-creation call site that stamps `session_id` —
+`useJournalEntries.ts`, `useMarginNotes.ts`, `useReflections.ts`, `usePrayerEntries.ts`,
+`usePrayedMarks.ts`, and `useHighlightArtifacts.ts` — switched from `getActiveSessionId()` to
+`await getVerifiedActiveSessionId()`. This validates at the moment of the actual write, so it can't
+go stale regardless of which delete path caused it, whether the reading view was ever revisited, or
+any front-end caching/deploy timing — the plain `getActiveSessionId()` (cache-only, synchronous)
+stays available for read/display paths that don't insert into `entries`.
+
 ## TODO — amendment v1.4 (theming), intentionally deferred
 
 Reviewed 2026-07-15, holding until after Strong's data sourcing (the currently agreed next

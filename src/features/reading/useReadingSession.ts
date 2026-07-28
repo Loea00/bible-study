@@ -31,8 +31,29 @@ function saveStoredSession(session: StoredSession) {
 
 // For linking writing to "the reading session it was created during"
 // (spec 4.2) — returns null if no session is active or it's gone stale.
+// Cache-only, no DB round trip — safe for display/read paths, but NOT safe
+// for anything that inserts session_id into `entries`, since the cached id
+// can point at a row that was deleted elsewhere (see
+// getVerifiedActiveSessionId below).
 export function getActiveSessionId(): string | null {
   return loadStoredSession()?.id ?? null
+}
+
+// The write-safe version: every entry/mark-creation call site that stamps
+// session_id should use this instead of getActiveSessionId(). Confirms the
+// cached id still exists in `reading_sessions` before handing it back, and
+// self-heals the cache (clears it) if not — this is what actually prevents
+// entries_session_id_fkey, independent of which delete path caused the
+// staleness or whether the reading view happened to be revisited since.
+export async function getVerifiedActiveSessionId(): Promise<string | null> {
+  const id = getActiveSessionId()
+  if (!id) return null
+  const { data } = await supabase.from('reading_sessions').select('id').eq('id', id).maybeSingle()
+  if (!data) {
+    localStorage.removeItem(STORAGE_KEY)
+    return null
+  }
+  return id
 }
 
 // Deleting a reading_sessions row (Reading Log or Calendar Day view) must

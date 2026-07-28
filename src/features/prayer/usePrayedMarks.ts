@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import type { PrayedMark } from '../../types/db'
-import { getActiveSessionId } from '../reading/useReadingSession'
+import { getVerifiedActiveSessionId } from '../reading/useReadingSession'
 
 // One-tap gesture, deliberately writing-free (spec-amendment-v1-2 §B4) —
 // timestamp only, no note. Fetched unscoped (like useAllHighlights) and
@@ -32,7 +32,7 @@ export function usePrayedMarks() {
 
     const { data, error } = await supabase
       .from('prayed_marks')
-      .insert({ request_id: requestId, user_id: userId, session_id: getActiveSessionId() })
+      .insert({ request_id: requestId, user_id: userId, session_id: await getVerifiedActiveSessionId() })
       .select()
       .single()
     if (error) throw new Error(error.message)

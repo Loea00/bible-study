@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import type { Entry } from '../../types/db'
 import { parseVerseTags } from '../journal/verseTagParser'
-import { getActiveSessionId } from '../reading/useReadingSession'
+import { getVerifiedActiveSessionId } from '../reading/useReadingSession'
 
 // Free-form writing attached to one specific highlight -- distinct from a
 // Reflection, which anchors to arbitrary passage spans with no highlight
@@ -45,7 +45,7 @@ export function useHighlightArtifacts(highlightId: string) {
         anchor_start: null,
         anchor_end: null,
         tags: [],
-        session_id: getActiveSessionId(),
+        session_id: await getVerifiedActiveSessionId(),
         request_id: null,
         highlight_id: highlightId,
       })

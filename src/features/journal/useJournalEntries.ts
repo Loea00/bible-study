@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import type { Entry } from '../../types/db'
 import { parseVerseTags } from './verseTagParser'
-import { getActiveSessionId } from '../reading/useReadingSession'
+import { getVerifiedActiveSessionId } from '../reading/useReadingSession'
 
 export function useJournalEntries() {
   const [entries, setEntries] = useState<Entry[]>([])
@@ -47,7 +47,7 @@ export function useJournalEntries() {
         anchor_start: null,
         anchor_end: null,
         tags,
-        session_id: getActiveSessionId(),
+        session_id: await getVerifiedActiveSessionId(),
       })
       .select()
       .single()
