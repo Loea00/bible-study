@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { Entry } from '../../types/db'
+import type { Entry, Highlight } from '../../types/db'
 import { useHighlightArtifacts } from './useHighlightArtifacts'
 import { EntryBody } from '../journal/EntryBody'
 
@@ -99,14 +99,14 @@ function HighlightArtifactEntry({ entry, onEdit, onDelete }: HighlightArtifactEn
 }
 
 interface HighlightArtifactsProps {
-  highlightId: string
+  highlight: Highlight
 }
 
 // Rendered only while a highlight's "Show artifacts" toggle is open — the
 // hook's fetch-on-mount doubles as lazy loading, same effect as
 // PrayerRequestHistory's toggle-gated fetch.
-export function HighlightArtifacts({ highlightId }: HighlightArtifactsProps) {
-  const { entries, loading, addEntry, updateEntry, deleteEntry } = useHighlightArtifacts(highlightId)
+export function HighlightArtifacts({ highlight }: HighlightArtifactsProps) {
+  const { entries, loading, addEntry, updateEntry, deleteEntry } = useHighlightArtifacts(highlight)
 
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')

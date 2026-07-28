@@ -65,7 +65,7 @@ function HighlightListItem({ highlight, textByKey, onRemove }: HighlightListItem
           {removing ? 'Removing…' : 'Remove'}
         </button>
       </div>
-      {artifactsOpen && <HighlightArtifacts highlightId={highlight.id} />}
+      {artifactsOpen && <HighlightArtifacts highlight={highlight} />}
       {error && <p className="error">{error}</p>}
     </div>
   )

@@ -16,7 +16,6 @@ export type EntryType =
   | 'word'
   | 'concern'
   | 'vision'
-  | 'highlight_artifact'
 export type RefKind = 'anchor' | 'inline'
 export type HighlightColor = 'yellow' | 'green' | 'blue' | 'pink' | 'purple'
 
@@ -37,8 +36,11 @@ export type Entry = {
   // Prayer-attached writing (spec-amendment-v1-2 §B2) — null for every
   // other entry_type.
   request_id: string | null
-  // Highlight-attached writing (entry_type: 'highlight_artifact') — null
-  // for every other entry_type.
+  // Set when a margin_note was composed against a specific highlight
+  // (either the reading pane's highlight "Note" action, or the Highlights
+  // page's artifact composer) — null for every other entry. Unlike
+  // request_id, this doesn't gate entry_type: a highlight-tagged note is
+  // still a plain margin_note, anchored the same way as any other.
   highlight_id: string | null
 }
 

@@ -1,14 +1,18 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
-import type { Entry } from '../../types/db'
+import type { Entry, Highlight } from '../../types/db'
 import { parseVerseTags } from '../journal/verseTagParser'
 import { getVerifiedActiveSessionId } from '../reading/useReadingSession'
 
-// Free-form writing attached to one specific highlight -- distinct from a
-// Reflection, which anchors to arbitrary passage spans with no highlight
-// involved. Chronological oldest-first, same as usePrayerEntries.ts's
+// Writing composed against a specific highlight, from the Highlights page.
+// This is a margin_note anchored to the highlight's own spans (same anchor
+// shape openNoteFromHighlight's reading-pane flow writes) with highlight_id
+// set for cross-reference -- unified this way (rather than a distinct
+// entry_type with no anchor) so a note shows up in BOTH the Highlights page
+// and the verse panel for that passage, regardless of which surface it was
+// written on. Chronological oldest-first, same as usePrayerEntries.ts's
 // "journey" ordering.
-export function useHighlightArtifacts(highlightId: string) {
+export function useHighlightArtifacts(highlight: Highlight) {
   const [entries, setEntries] = useState<Entry[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -17,11 +21,11 @@ export function useHighlightArtifacts(highlightId: string) {
     const { data } = await supabase
       .from('entries')
       .select('*')
-      .eq('highlight_id', highlightId)
+      .eq('highlight_id', highlight.id)
       .order('created_at', { ascending: true })
     setEntries(data ?? [])
     setLoading(false)
-  }, [highlightId])
+  }, [highlight.id])
 
   useEffect(() => {
     refetch()
@@ -33,25 +37,43 @@ export function useHighlightArtifacts(highlightId: string) {
     if (!userId) throw new Error('Not signed in')
     if (!body.trim()) throw new Error('Write something first')
 
+    const anchorStart = highlight.spans[0].verse_id
+    const anchorEnd = highlight.spans[highlight.spans.length - 1].verse_id
+
     const { data: entry, error } = await supabase
       .from('entries')
       .insert({
         user_id: userId,
-        entry_type: 'highlight_artifact',
+        entry_type: 'margin_note',
         title: title.trim() || null,
         body,
         template_id: null,
         template_responses: null,
-        anchor_start: null,
-        anchor_end: null,
+        anchor_start: anchorStart,
+        anchor_end: anchorEnd,
         tags: [],
         session_id: await getVerifiedActiveSessionId(),
         request_id: null,
-        highlight_id: highlightId,
+        highlight_id: highlight.id,
       })
       .select()
       .single()
     if (error) throw new Error(error.message)
+
+    const { error: anchorError } = await supabase.from('verse_references').insert(
+      highlight.spans.map((s) => ({
+        entry_id: entry.id,
+        user_id: userId,
+        verse_start: s.verse_id,
+        verse_end: s.verse_id,
+        position: null,
+        ref_kind: 'anchor' as const,
+        start_offset: s.start_offset,
+        end_offset: s.end_offset,
+        translation: highlight.translation,
+      })),
+    )
+    if (anchorError) throw new Error(anchorError.message)
 
     const verseTags = parseVerseTags(body)
     if (verseTags.length > 0) {

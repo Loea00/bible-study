@@ -1209,6 +1209,32 @@ go stale regardless of which delete path caused it, whether the reading view was
 any front-end caching/deploy timing — the plain `getActiveSessionId()` (cache-only, synchronous)
 stays available for read/display paths that don't insert into `entries`.
 
+**Fix: unified highlight-attached writing with margin notes so it shows up on both surfaces.**
+Aaron found that a note written via a highlight's "Note" action in the reading pane didn't appear
+on the Highlights page, and a "highlight artifact" composed on the Highlights page didn't appear in
+the reading pane — because these were two disconnected concepts. A highlight-originated margin note
+(`openNoteFromHighlight` in `ReadingView.tsx`) anchored to the highlight's spans but never recorded
+which highlight it came from; a highlight artifact (`entry_type: 'highlight_artifact'`) recorded
+`highlight_id` but had no anchor at all, so it could never surface in `useMarginNotes.ts`'s
+per-verse query. Fixed by unifying them into one thing: a `margin_note` anchored to the highlight's
+spans, with `highlight_id` set. `useMarginNotes.ts`'s `addNote()` gained an optional
+`highlightId` parameter (stamped onto the insert); `ReadingView.tsx` tracks a new `noteHighlightId`
+state, set in `openNoteFromHighlight` and cleared everywhere else a note can originate from (plain
+selection, +Add pending group), passed through to `addNote` on save. `useHighlightArtifacts.ts`
+now takes the full `Highlight` (not just its id) so `addEntry` can compute `anchor_start`/
+`anchor_end` from `highlight.spans[0]`/`spans[last]` and insert the matching `ref_kind: 'anchor'`
+`verse_references` rows — the exact shape `useMarginNotes.ts`/`useReflections.ts` already write —
+and now inserts as `entry_type: 'margin_note'` instead of the retired `'highlight_artifact'`.
+`highlight_id` no longer implies a special entry_type; it's just cross-reference metadata now
+present on some margin_notes. Migration `0016_unify_highlight_notes.sql` backfills any existing
+`highlight_artifact` rows (anchor fields + `verse_references` derived from their highlight's
+`spans` jsonb) before retyping them to `margin_note` and dropping `'highlight_artifact'` from the
+`entries_entry_type_check` constraint. Verified live: mocked a highlight with two spans
+(Gen 1:2 and Gen 1:5) and confirmed the artifact composer's anchor computation correctly resolved
+to that exact range before touching the database — the actual DB write is unverifiable in this
+environment same as always, but the logic is identical to `useMarginNotes.ts`'s already-proven
+anchor-writing code. **Migration 0016 needs to be run by Aaron** before this is fully live.
+
 ## TODO — amendment v1.4 (theming), intentionally deferred
 
 Reviewed 2026-07-15, holding until after Strong's data sourcing (the currently agreed next

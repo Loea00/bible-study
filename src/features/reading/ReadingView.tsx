@@ -61,6 +61,11 @@ export function ReadingView() {
   } | null>(null)
   const [pendingGroup, setPendingGroup] = useState<SelectionSpan[]>([])
   const [noteSpans, setNoteSpans] = useState<SelectionSpan[] | null>(null)
+  // Set only when the note-in-progress originated from a highlight's "Note"
+  // action (openNoteFromHighlight) — carried through to addNote so the
+  // resulting entry is tagged with highlight_id, which is what makes it
+  // show up on the Highlights page too, not just in this chapter's panel.
+  const [noteHighlightId, setNoteHighlightId] = useState<string | null>(null)
   const [editingHighlightId, setEditingHighlightId] = useState<string | null>(null)
 
   const { verses, loading, error } = useVerses(book, chapter, translation)
@@ -191,6 +196,7 @@ export function ReadingView() {
     const spans = getHighlightSpans(highlightId)
     if (spans.length === 0) return
     setNoteSpans(spans)
+    setNoteHighlightId(highlightId)
     setSidePanel(null)
   }
 
@@ -230,6 +236,7 @@ export function ReadingView() {
   function openNoteFromSelection() {
     if (!activeSelection) return
     setNoteSpans([...pendingGroup, ...activeSelection.spans])
+    setNoteHighlightId(null)
   }
 
   // Spec §5.3: "select passage → Reflect" — anchors automatically to
@@ -246,6 +253,7 @@ export function ReadingView() {
   function openNoteFromPending() {
     if (pendingGroup.length === 0) return
     setNoteSpans(pendingGroup)
+    setNoteHighlightId(null)
   }
 
   function openReflectionFromPending() {
@@ -255,8 +263,9 @@ export function ReadingView() {
 
   async function handleSaveNote(body: string) {
     if (!noteSpans) return
-    await addNote(noteSpans, body, translation)
+    await addNote(noteSpans, body, translation, noteHighlightId)
     setNoteSpans(null)
+    setNoteHighlightId(null)
     clearPendingGroup()
     closeSelection()
   }
@@ -344,6 +353,7 @@ export function ReadingView() {
           onSave={handleSaveNote}
           onClose={() => {
             setNoteSpans(null)
+            setNoteHighlightId(null)
             closeSelection()
           }}
         />
