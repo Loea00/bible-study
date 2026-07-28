@@ -1162,8 +1162,26 @@ copied from the `.prayer-history*` rules, kept as separate class names rather th
 since prayer's kind-badge coloring doesn't apply here). Verified live with a mocked highlight:
 opened the toggle, composed an artifact, confirmed it rendered in the list with Edit/Delete, deleted
 it, confirmed it fell back to "Nothing written yet." — build clean, no leftover TEMP-VERIFY markers.
-**Migration 0015 needs to be run by Aaron** before this is live (adds the column + extends the
-entry_type check constraint) — not yet run as of this writing.
+Migration 0015 run by Aaron. **Fully live.**
+
+**Fix: stale reading-session pointer breaking entry creation after a session delete.** Aaron hit
+`insert or update on table "entries" violates foreign key constraint "entries_session_id_fkey"`
+while composing a highlight artifact. Root cause: `getActiveSessionId()` (`useReadingSession.ts`)
+reads a session id cached in `localStorage`, refreshed only when the reading view is visited — but
+the Calendar Day view's and Reading Log's session-delete buttons (both added this session) deleted
+the `reading_sessions` row without touching that cached pointer. Any later write that stamps
+`session_id: getActiveSessionId()` (journal entries, reflections, margin notes, prayer entries, and
+now highlight artifacts all do this) then tried to insert a row referencing a session that no
+longer existed, and the FK rejected it — this could happen to any entry type, not just highlight
+artifacts, whenever the currently-cached session was the one just deleted. Fixed by adding
+`clearActiveSessionIfAmong(sessionIds)` to `useReadingSession.ts`, which drops the cached pointer if
+it matches one of the ids just deleted; called from both `useReadingLog.ts`'s `deleteSession`/
+`deleteSessionsForDay` and `useCalendarDay.ts`'s `deleteSession` right after the delete succeeds.
+Immediate unblock for Aaron's already-stuck session: visiting the Reading view once refreshes the
+cached pointer via `useReadingSession`'s existing stale-session fallback (it already detects an
+update failure and creates a fresh session) — no manual localStorage-clearing needed. Build clean;
+not independently browser-verified since the fix is a localStorage side effect on a delete
+button already covered by this session's own live click-through testing.
 
 ## TODO — amendment v1.4 (theming), intentionally deferred
 

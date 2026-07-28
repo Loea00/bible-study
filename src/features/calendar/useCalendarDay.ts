@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import type { Entry, PrayerRequest, ReadingSession } from '../../types/db'
 import { addDays, localDateKey, startOfDay } from './dateUtils'
+import { clearActiveSessionIfAmong } from '../reading/useReadingSession'
 
 export interface CalendarDayData {
   sessions: ReadingSession[]
@@ -45,6 +46,7 @@ export function useCalendarDay(date: Date) {
   async function deleteSession(sessionId: string) {
     const { error } = await supabase.from('reading_sessions').delete().eq('id', sessionId)
     if (error) throw new Error(error.message)
+    clearActiveSessionIfAmong([sessionId])
     setData((prev) => ({ ...prev, sessions: prev.sessions.filter((s) => s.id !== sessionId) }))
   }
 

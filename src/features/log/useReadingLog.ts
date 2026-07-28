@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import type { Entry, ReadingSession } from '../../types/db'
+import { clearActiveSessionIfAmong } from '../reading/useReadingSession'
 
 export function localDateKey(d: Date): string {
   const y = d.getFullYear()
@@ -92,12 +93,14 @@ export function useReadingLog() {
   async function deleteSession(sessionId: string) {
     const { error } = await supabase.from('reading_sessions').delete().eq('id', sessionId)
     if (error) throw new Error(error.message)
+    clearActiveSessionIfAmong([sessionId])
     setSessions((prev) => prev.filter((s) => s.id !== sessionId))
   }
 
   async function deleteSessionsForDay(sessionIds: string[]) {
     const { error } = await supabase.from('reading_sessions').delete().in('id', sessionIds)
     if (error) throw new Error(error.message)
+    clearActiveSessionIfAmong(sessionIds)
     const idSet = new Set(sessionIds)
     setSessions((prev) => prev.filter((s) => !idSet.has(s.id)))
   }

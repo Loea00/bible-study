@@ -35,6 +35,20 @@ export function getActiveSessionId(): string | null {
   return loadStoredSession()?.id ?? null
 }
 
+// Deleting a reading_sessions row (Reading Log or Calendar Day view) must
+// drop the cached pointer too if it points at the row just deleted —
+// otherwise the next note/journal/reflection/prayer/highlight-artifact
+// write stamps itself with a session_id that no longer exists and the
+// insert fails on entries_session_id_fkey. Without this, the stale pointer
+// would otherwise only clear itself after the 30-minute gap or a fresh
+// visit to the reading view.
+export function clearActiveSessionIfAmong(sessionIds: string[]) {
+  const stored = loadStoredSession()
+  if (stored && sessionIds.includes(stored.id)) {
+    localStorage.removeItem(STORAGE_KEY)
+  }
+}
+
 // No verse-level scroll tracking exists yet, so "position" is the chapter's
 // first verse — a reasonable stand-in until reading-log/resume UI needs
 // finer precision.
