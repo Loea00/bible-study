@@ -130,6 +130,15 @@ export function HighlightArtifacts({ highlightId }: HighlightArtifactsProps) {
 
   return (
     <div className="highlight-artifacts">
+      {loading && <p className="placeholder">Loading…</p>}
+      {!loading && entries.length === 0 && <p className="placeholder">Nothing written yet.</p>}
+
+      <div className="highlight-artifacts-list">
+        {entries.map((entry) => (
+          <HighlightArtifactEntry key={entry.id} entry={entry} onEdit={updateEntry} onDelete={deleteEntry} />
+        ))}
+      </div>
+
       <div className="highlight-artifacts-composer">
         <input
           className="journal-title-input"
@@ -148,15 +157,6 @@ export function HighlightArtifacts({ highlightId }: HighlightArtifactsProps) {
           {saving ? 'Saving…' : 'Add artifact'}
         </button>
         {error && <p className="error">{error}</p>}
-      </div>
-
-      {loading && <p className="placeholder">Loading…</p>}
-      {!loading && entries.length === 0 && <p className="placeholder">Nothing written yet.</p>}
-
-      <div className="highlight-artifacts-list">
-        {entries.map((entry) => (
-          <HighlightArtifactEntry key={entry.id} entry={entry} onEdit={updateEntry} onDelete={deleteEntry} />
-        ))}
       </div>
     </div>
   )
