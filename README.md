@@ -1141,6 +1141,30 @@ by re-marking it answered from Prayer). New CSS: `.calendar-line-item` (flex row
 three buttons, confirmed the page correctly falls through to the "No entries on this day yet." empty
 state — build clean, no leftover TEMP-VERIFY markers.
 
+**Highlights: composable artifacts per highlight.** Aaron asked for a way to write freeform pieces
+against a specific highlight, with an expandable space on the Highlights page showing what's
+already been written for it. New entry_type `'highlight_artifact'` plus a new `entries.highlight_id`
+column (migration `0015_highlight_artifacts.sql`, `references highlights(id) on delete cascade` —
+deleting a highlight cleans up its artifacts too) — same entries-store-reuse pattern as prayer's
+`request_id`, but deliberately its own FK/entry_type rather than reusing `'reflection'`: a Reflection
+anchors to arbitrary passage spans with no highlight involved, and matching "the reflection that
+happens to cover the same verses as this highlight" would have been fragile (offset equality) where
+an explicit FK is exact. `useHighlightArtifacts.ts` (new hook, `src/features/highlights/`) mirrors
+`usePrayerEntries.ts` minus the kind/classification dropdown — plain title+body writing, inline
+`@verse` tags still parsed into `verse_references` rows same as everywhere else. `HighlightArtifacts.tsx`
+(new component) is the composer + list, structurally identical to `PrayerRequestHistory.tsx`.
+`HighlightsPage.tsx`'s `HighlightListItem` gained a "▾ Show artifacts"/"▲ Hide artifacts" toggle
+(same `.anchor-scripture-toggle` styling used elsewhere) that reveals both the composer and the
+existing-artifacts list together — one toggle satisfies both "compose" and "view what's already
+written," same UX PrayerRequestCard already established for prayer history. New CSS:
+`.highlight-list-item-actions`, `.highlight-artifacts*`, `.highlight-artifact-entry*` (structurally
+copied from the `.prayer-history*` rules, kept as separate class names rather than sharing them
+since prayer's kind-badge coloring doesn't apply here). Verified live with a mocked highlight:
+opened the toggle, composed an artifact, confirmed it rendered in the list with Edit/Delete, deleted
+it, confirmed it fell back to "Nothing written yet." — build clean, no leftover TEMP-VERIFY markers.
+**Migration 0015 needs to be run by Aaron** before this is live (adds the column + extends the
+entry_type check constraint) — not yet run as of this writing.
+
 ## TODO — amendment v1.4 (theming), intentionally deferred
 
 Reviewed 2026-07-15, holding until after Strong's data sourcing (the currently agreed next

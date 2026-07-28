@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAllHighlights } from './useAllHighlights'
+import { HighlightArtifacts } from './HighlightArtifacts'
 import { parseVerseId, formatReference } from '../reading/books'
 import type { Highlight } from '../../types/db'
 
@@ -13,6 +14,7 @@ interface HighlightListItemProps {
 function HighlightListItem({ highlight, textByKey, onRemove }: HighlightListItemProps) {
   const [removing, setRemoving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [artifactsOpen, setArtifactsOpen] = useState(false)
   const translation = highlight.translation ?? 'KJV'
   const first = highlight.spans[0]
 
@@ -55,9 +57,15 @@ function HighlightListItem({ highlight, textByKey, onRemove }: HighlightListItem
         })}
       </div>
 
-      <button type="button" className="verse-panel-note-delete" disabled={removing} onClick={handleRemove}>
-        {removing ? 'Removing…' : 'Remove'}
-      </button>
+      <div className="highlight-list-item-actions">
+        <button type="button" className="anchor-scripture-toggle" onClick={() => setArtifactsOpen((o) => !o)}>
+          {artifactsOpen ? '▲ Hide artifacts' : '▾ Show artifacts'}
+        </button>
+        <button type="button" className="verse-panel-note-delete" disabled={removing} onClick={handleRemove}>
+          {removing ? 'Removing…' : 'Remove'}
+        </button>
+      </div>
+      {artifactsOpen && <HighlightArtifacts highlightId={highlight.id} />}
       {error && <p className="error">{error}</p>}
     </div>
   )

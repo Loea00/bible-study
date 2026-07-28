@@ -16,6 +16,7 @@ export type EntryType =
   | 'word'
   | 'concern'
   | 'vision'
+  | 'highlight_artifact'
 export type RefKind = 'anchor' | 'inline'
 export type HighlightColor = 'yellow' | 'green' | 'blue' | 'pink' | 'purple'
 
@@ -36,6 +37,9 @@ export type Entry = {
   // Prayer-attached writing (spec-amendment-v1-2 §B2) — null for every
   // other entry_type.
   request_id: string | null
+  // Highlight-attached writing (entry_type: 'highlight_artifact') — null
+  // for every other entry_type.
+  highlight_id: string | null
 }
 
 export type VerseReference = {
@@ -212,11 +216,12 @@ export type Database = {
     Tables: {
       entries: {
         Row: Entry
-        Insert: Omit<Entry, 'id' | 'created_at' | 'updated_at' | 'request_id'> & {
+        Insert: Omit<Entry, 'id' | 'created_at' | 'updated_at' | 'request_id' | 'highlight_id'> & {
           id?: string
           created_at?: string
           updated_at?: string
           request_id?: string | null
+          highlight_id?: string | null
         }
         Update: Partial<Entry>
         Relationships: []
