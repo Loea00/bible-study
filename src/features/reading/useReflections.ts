@@ -71,7 +71,13 @@ export function useReflections(book: string, chapter: number) {
     refetch()
   }, [refetch])
 
-  async function addReflection(spans: SelectionSpan[], title: string, body: string, translation: string) {
+  async function addReflection(
+    spans: SelectionSpan[],
+    title: string,
+    body: string,
+    translation: string,
+    highlightId: string | null = null,
+  ) {
     const { data: userData } = await supabase.auth.getUser()
     const userId = userData.user?.id
     if (!userId) throw new Error('Not signed in')
@@ -93,6 +99,8 @@ export function useReflections(book: string, chapter: number) {
         anchor_end: anchorEnd,
         tags: [],
         session_id: await getVerifiedActiveSessionId(),
+        request_id: null,
+        highlight_id: highlightId,
       })
       .select()
       .single()

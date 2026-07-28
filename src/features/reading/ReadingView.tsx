@@ -34,7 +34,7 @@ const TRANSLATIONS = ['KJV', 'ASV']
 type SidePanelState =
   | { mode: 'verse'; verse: Verse }
   | { mode: 'highlight'; highlightId: string }
-  | { mode: 'reflection'; spans: SelectionSpan[] }
+  | { mode: 'reflection'; spans: SelectionSpan[]; highlightId?: string | null }
   | null
 
 function formatSpansLabel(spans: SelectionSpan[]): string {
@@ -203,7 +203,7 @@ export function ReadingView() {
   function openReflectionFromHighlight(highlightId: string) {
     const spans = getHighlightSpans(highlightId)
     if (spans.length === 0) return
-    setSidePanel({ mode: 'reflection', spans })
+    setSidePanel({ mode: 'reflection', spans, highlightId })
   }
 
   async function handleRemoveHighlightGroup(highlightId: string) {
@@ -272,7 +272,7 @@ export function ReadingView() {
 
   async function handleSaveReflection(title: string, body: string) {
     if (sidePanel?.mode !== 'reflection') return
-    await addReflection(sidePanel.spans, title, body, translation)
+    await addReflection(sidePanel.spans, title, body, translation, sidePanel.highlightId ?? null)
     setSidePanel(null)
     clearPendingGroup()
   }

@@ -1233,7 +1233,25 @@ present on some margin_notes. Migration `0016_unify_highlight_notes.sql` backfil
 (Gen 1:2 and Gen 1:5) and confirmed the artifact composer's anchor computation correctly resolved
 to that exact range before touching the database — the actual DB write is unverifiable in this
 environment same as always, but the logic is identical to `useMarginNotes.ts`'s already-proven
-anchor-writing code. **Migration 0016 needs to be run by Aaron** before this is fully live.
+anchor-writing code. Migration 0016 run by Aaron. **Fully live.**
+
+**Extended the same unification to Reflections.** Aaron wanted Reflections to show up in all three
+places at once — reading pane, Journal (already worked, untouched), and now the Highlights page in
+association with the highlight they came from. No schema change needed this time — `highlight_id`
+already exists on `entries` generically (not gated to a specific entry_type), so this was purely a
+data-flow change: `useReflections.ts`'s `addReflection()` gained the same optional `highlightId`
+parameter `useMarginNotes.ts`'s `addNote()` already has, stamped onto the insert.
+`ReadingView.tsx`'s `SidePanelState`'s `'reflection'` mode gained an optional `highlightId` field;
+`openReflectionFromHighlight()` (wired to `HighlightGroupPanel`'s existing Reflect action) sets it,
+`openReflectionFromSelection()`/`openReflectionFromPending()` leave it unset, and
+`handleSaveReflection()` reads it off `sidePanel` and passes it through. Since
+`useHighlightArtifacts.ts`'s fetch already queries by `highlight_id` with no `entry_type` filter, a
+highlight-tagged reflection shows up in the Highlights page's artifact list automatically — no
+change needed there beyond `HighlightArtifacts.tsx` gaining a "Reflection" badge and an
+`AnchorScripture` toggle for `entry_type === 'reflection'` rows, matching how `JournalEntryCard.tsx`
+already distinguishes reflections from plain notes. Verified live: mocked a highlight-tagged
+reflection entry and confirmed it renders in the Highlights page's artifact list with the
+"Reflection" badge and expandable scripture quote — build clean, no leftover TEMP-VERIFY markers.
 
 ## TODO — amendment v1.4 (theming), intentionally deferred
 

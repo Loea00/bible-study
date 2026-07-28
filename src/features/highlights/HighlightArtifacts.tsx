@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { Entry, Highlight } from '../../types/db'
 import { useHighlightArtifacts } from './useHighlightArtifacts'
 import { EntryBody } from '../journal/EntryBody'
+import { AnchorScripture } from '../reading/AnchorScripture'
 
 interface HighlightArtifactEntryProps {
   entry: Entry
@@ -81,6 +82,7 @@ function HighlightArtifactEntry({ entry, onEdit, onDelete }: HighlightArtifactEn
   return (
     <div className="highlight-artifact-entry">
       <div className="highlight-artifact-entry-header">
+        {entry.entry_type === 'reflection' && <span className="journal-card-badge">Reflection</span>}
         <span className="highlight-artifact-entry-date">{date}</span>
         <div className="highlight-artifact-entry-actions">
           <button type="button" className="verse-panel-note-edit-btn" onClick={startEdit}>
@@ -92,6 +94,7 @@ function HighlightArtifactEntry({ entry, onEdit, onDelete }: HighlightArtifactEn
         </div>
       </div>
       {entry.title && <p className="highlight-artifact-entry-title">{entry.title}</p>}
+      {entry.entry_type === 'reflection' && <AnchorScripture entryId={entry.id} />}
       <EntryBody text={entry.body} />
       {error && <p className="error">{error}</p>}
     </div>
