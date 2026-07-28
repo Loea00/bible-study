@@ -157,6 +157,15 @@ export function PrayerRequestHistory({ requestId }: PrayerRequestHistoryProps) {
 
   return (
     <div className="prayer-history">
+      {loading && <p className="placeholder">Loading…</p>}
+      {!loading && entries.length === 0 && <p className="placeholder">Nothing recorded yet.</p>}
+
+      <div className="prayer-history-list">
+        {entries.map((entry) => (
+          <PrayerHistoryEntry key={entry.id} entry={entry} onEdit={updateEntry} onDelete={deleteEntry} />
+        ))}
+      </div>
+
       <div className="prayer-history-composer">
         <select className="prayer-list-select" value={kind} onChange={(e) => setKind(e.target.value as PrayerEntryType)}>
           {KIND_OPTIONS.map((o) => (
@@ -182,15 +191,6 @@ export function PrayerRequestHistory({ requestId }: PrayerRequestHistoryProps) {
           {saving ? 'Saving…' : 'Add to history'}
         </button>
         {error && <p className="error">{error}</p>}
-      </div>
-
-      {loading && <p className="placeholder">Loading…</p>}
-      {!loading && entries.length === 0 && <p className="placeholder">Nothing recorded yet.</p>}
-
-      <div className="prayer-history-list">
-        {entries.map((entry) => (
-          <PrayerHistoryEntry key={entry.id} entry={entry} onEdit={updateEntry} onDelete={deleteEntry} />
-        ))}
       </div>
     </div>
   )
