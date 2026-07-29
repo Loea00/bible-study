@@ -1357,6 +1357,16 @@ entry, clicked "Edit in Notebook," confirmed the reading view opened with Notebo
 title/body fields correctly pre-populated from the existing entry — build clean, no leftover
 TEMP-VERIFY markers.
 
+**Fix: "Edit in Notebook" didn't navigate for plain journal entries with an inline @verse tag.**
+`notebookHref()` only checked `entry.anchor_start`, which is exclusive to reflections and
+highlight-tagged notes — a plain journal entry never has one, even when its body mentions a passage
+via `@Book chapter:verse`. Fixed by falling back to `parseVerseTags(entry.body)[0]` (the same parser
+`EntryBody.tsx`/`useJournalExcerpts.ts` already use for inline tags) when there's no anchor, so the
+link now lands on whichever passage the entry actually references either way. Verified live: a
+mocked journal entry with `@Exo 3:14` in its body produced `/?book=EXO&chapter=3&notebook=<id>`,
+and clicking through actually landed on Exodus 3 — confirming the reported bug (reading pane staying
+put) is fixed.
+
 ## TODO — amendment v1.4 (theming), intentionally deferred
 
 Reviewed 2026-07-15, holding until after Strong's data sourcing (the currently agreed next
