@@ -234,15 +234,24 @@ main {
   top: 0;
 }
 
+/* flex-basis: 0 (not auto) is load-bearing here -- with "auto" the
+   passage's full content height (often several times the viewport) was
+   used as the flex-shrink basis, so the dock's 40% got squeezed down to a
+   sliver instead of the fixed share below. Basis 0 + grow:1 makes this
+   pane's share purely "whatever's left after the dock," independent of
+   how tall the actual scripture content is. */
 .reading-view.notebook-mode .reading-pane {
-  flex: 1 1 auto;
+  flex: 1 1 0;
   min-height: 0;
   overflow-y: auto;
 }
 
 /* Same collapse-to-nothing-when-empty pattern as .reading-side-panel,
    just on the cross axis (height, not width) since this dock sits below
-   the passage instead of beside it. */
+   the passage instead of beside it. flex-shrink: 0 keeps it at a fixed
+   40% regardless of the passage's content height (see note above) --
+   with shrink enabled it competed with the passage's huge content-based
+   basis and lost, collapsing to almost nothing. */
 .reading-reference-dock {
   flex: 0 0 0;
   overflow: hidden;
@@ -250,7 +259,7 @@ main {
 }
 
 .reading-reference-dock.open {
-  flex: 0 1 40%;
+  flex: 0 0 40%;
   border-top: 1px solid var(--border);
   padding: 24px;
   overflow-y: auto;

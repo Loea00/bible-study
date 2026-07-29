@@ -1315,6 +1315,20 @@ intact afterward, confirmed Close flushes and clears the draft, confirmed the re
 below the text with Notebook still visible on the right, and confirmed the mobile bottom-sheet
 fallback. Zero console errors throughout. Build clean.
 
+**Fix: reference dock collapsed to a sliver instead of ~40% height.** Aaron reported the reference
+dock was "really short" when opened alongside Notebook. Root cause: `.reading-reference-dock.open`
+used `flex: 0 1 40%` and `.reading-pane` used `flex: 1 1 auto` — `flex-basis: auto` on the pane
+meant its *full scripture content height* (often several times the viewport) was what the flex
+algorithm used as its shrink basis, not its rendered/constrained size. Since both siblings had
+`flex-shrink: 1`, the overflow (content height + 40% − 100vh) got distributed proportionally to
+those shrink bases — and with the pane's basis in the thousands of pixels against the dock's few
+hundred, nearly the entire shrink amount landed on the dock instead of the pane, squeezing it to
+almost nothing regardless of chapter length. Fixed by giving the pane `flex: 1 1 0` (basis zero, so
+it only ever claims "whatever's left") and the dock `flex: 0 0 40%` (shrink disabled entirely, so
+it can't be squeezed by the pane's content size at all). Verified live by forcing `.open` via
+devtools and measuring: dock landed at exactly 288px (40% of a 720px viewport) with the pane taking
+the remaining 432px, independent of how tall the actual passage content was.
+
 ## TODO — amendment v1.4 (theming), intentionally deferred
 
 Reviewed 2026-07-15, holding until after Strong's data sourcing (the currently agreed next
