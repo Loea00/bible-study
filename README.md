@@ -1329,6 +1329,34 @@ it can't be squeezed by the pane's content size at all). Verified live by forcin
 devtools and measuring: dock landed at exactly 288px (40% of a 720px viewport) with the pane taking
 the remaining 432px, independent of how tall the actual passage content was.
 
+**"Edit in Notebook": send any written entry back to the reading view.** Aaron initially asked for
+three things bundled together (user-defined Journal categories, recategorizing entries, and sending
+any artifact back to Notebook); after an `AskUserQuestion` round scoping the categories work, he
+dropped that entirely and asked only for this one. Any entry — Journal, Reflection, a prayer
+history entry, a highlight-tagged note, or a Calendar Day view entry — now has an "Edit in Notebook"
+link that navigates to the reading view and loads that entry straight into Notebook mode for
+continued editing, autosaving in place.
+
+`useNotebookEntry.ts` gained `loadEntry(entry)` (populates title/body/tags from an existing row of
+*any* entry_type) and `loadEntryById(id)` (fetches then loads — used on arrival). Deliberately
+generalized to any entry_type rather than journal-only: `save()`'s update path only ever touches
+title/body/tags/updated_at, never entry_type/anchor_start/anchor_end/request_id/highlight_id, so
+re-editing a reflection or a prayer entry here can't accidentally reclassify it or strip its anchor —
+worth remembering if `save()` is ever touched again. New shared `notebookLink.ts` exports
+`notebookHref(entry)`: entries with an `anchor_start` (reflections, highlight-tagged notes) link to
+`/?book=X&chapter=Y&notebook=<id>` so you land on the actual passage; anchor-less entries (plain
+journal writing, prayer entries) link to just `/?notebook=<id>`.
+
+`ReadingView.tsx` reads a new `?notebook=<id>` search param (same precedent as the existing `?verse=`
+deep-link handling — left in the URL afterward, not stripped) and calls `loadEntryById` + opens the
+Notebook panel on success. Added the link to `JournalEntryCard.tsx`, `PrayerRequestHistory.tsx`,
+`HighlightArtifacts.tsx`, and `DayScrapbook.tsx` — the four surfaces outside the reading view that
+show a written entry. New shared CSS `.journal-card-notebook-link`, styled to match the existing
+inline Edit/Delete text-buttons on each of those cards. Verified live end-to-end: mocked a Journal
+entry, clicked "Edit in Notebook," confirmed the reading view opened with Notebook active and the
+title/body fields correctly pre-populated from the existing entry — build clean, no leftover
+TEMP-VERIFY markers.
+
 ## TODO — amendment v1.4 (theming), intentionally deferred
 
 Reviewed 2026-07-15, holding until after Strong's data sourcing (the currently agreed next

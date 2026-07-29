@@ -75,6 +75,24 @@ export function ReadingView() {
   // book/chapter search params change.
   const [notebookOpen, setNotebookOpen] = useState(false)
   const notebook = useNotebookEntry()
+  const notebookEntryParam = searchParams.get('notebook')
+
+  // Arriving via a "?notebook=<id>" link from Journal/Prayer/Highlights/
+  // Calendar's "Edit in Notebook" action -- load that entry (of whatever
+  // entry_type) into the Notebook and open it. Left in the URL afterward
+  // rather than stripped, same precedent as the ?verse= deep-link param
+  // below.
+  useEffect(() => {
+    if (!notebookEntryParam) return
+    let cancelled = false
+    notebook.loadEntryById(notebookEntryParam).then((ok) => {
+      if (!cancelled && ok) setNotebookOpen(true)
+    })
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [notebookEntryParam])
 
   const { verses, loading, error } = useVerses(book, chapter, translation)
   const { notesByVerse, addNote, updateNote, deleteNote } = useMarginNotes(book, chapter)

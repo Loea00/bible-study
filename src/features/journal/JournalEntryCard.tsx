@@ -4,6 +4,7 @@ import type { Entry } from '../../types/db'
 import { EntryBody } from './EntryBody'
 import { AnchorScripture } from '../reading/AnchorScripture'
 import { parseVerseId, formatReference } from '../reading/books'
+import { notebookHref } from '../reading/notebookLink'
 
 interface JournalEntryCardProps {
   entry: Entry
@@ -152,6 +153,9 @@ export function JournalEntryCard({ entry, onEdit, onDelete, requestTitle }: Jour
           )}
         </div>
         <div className="journal-card-actions">
+          <Link to={notebookHref(entry)} className="journal-card-notebook-link">
+            Edit in Notebook
+          </Link>
           <button type="button" className="journal-card-edit" onClick={startEdit}>
             Edit
           </button>

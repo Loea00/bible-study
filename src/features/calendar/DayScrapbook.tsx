@@ -5,6 +5,7 @@ import { useCalendarDay } from './useCalendarDay'
 import { EntryBody } from '../journal/EntryBody'
 import { AnchorScripture } from '../reading/AnchorScripture'
 import { formatReferenceRange, parseVerseId } from '../reading/books'
+import { notebookHref } from '../reading/notebookLink'
 
 const PRAYER_ENTRY_LABEL: Partial<Record<Entry['entry_type'], string>> = {
   prayer_update: 'Update',
@@ -55,6 +56,9 @@ function DayEntryCard({ entry, onDelete }: { entry: Entry; onDelete: (entryId: s
             )}
         </div>
         <div className="journal-card-actions">
+          <Link to={notebookHref(entry)} className="journal-card-notebook-link">
+            Edit in Notebook
+          </Link>
           <button type="button" className="journal-card-delete" onClick={handleDelete} disabled={deleting}>
             {deleting ? 'Deleting…' : 'Delete'}
           </button>

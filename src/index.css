@@ -1106,7 +1106,8 @@ button.highlight-swatch {
 }
 
 .journal-card-edit,
-.journal-card-delete {
+.journal-card-delete,
+.journal-card-notebook-link {
   border: none;
   background: none;
   color: var(--text);
@@ -1116,9 +1117,11 @@ button.highlight-swatch {
   cursor: pointer;
   padding: 0;
   white-space: nowrap;
+  text-decoration: none;
 }
 
-.journal-card-edit:hover {
+.journal-card-edit:hover,
+.journal-card-notebook-link:hover {
   opacity: 1;
   color: var(--accent);
 }

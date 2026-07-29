@@ -1,8 +1,10 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import type { Entry, Highlight } from '../../types/db'
 import { useHighlightArtifacts } from './useHighlightArtifacts'
 import { EntryBody } from '../journal/EntryBody'
 import { AnchorScripture } from '../reading/AnchorScripture'
+import { notebookHref } from '../reading/notebookLink'
 
 interface HighlightArtifactEntryProps {
   entry: Entry
@@ -85,6 +87,9 @@ function HighlightArtifactEntry({ entry, onEdit, onDelete }: HighlightArtifactEn
         {entry.entry_type === 'reflection' && <span className="journal-card-badge">Reflection</span>}
         <span className="highlight-artifact-entry-date">{date}</span>
         <div className="highlight-artifact-entry-actions">
+          <Link to={notebookHref(entry)} className="journal-card-notebook-link">
+            Edit in Notebook
+          </Link>
           <button type="button" className="verse-panel-note-edit-btn" onClick={startEdit}>
             Edit
           </button>

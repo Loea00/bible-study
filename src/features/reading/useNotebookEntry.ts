@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { parseVerseTags } from '../journal/verseTagParser'
 import { getVerifiedActiveSessionId } from './useReadingSession'
+import type { Entry } from '../../types/db'
 
 const AUTOSAVE_DELAY_MS = 800
 
@@ -127,5 +128,36 @@ export function useNotebookEntry() {
     reset()
   }
 
-  return { title, setTitle, body, setBody, tagsInput, setTagsInput, status, error, close }
+  // Loads an existing entry (of ANY entry_type -- journal, reflection,
+  // margin_note, a prayer entry, a highlight-tagged note) into the
+  // Notebook for continued editing. Subsequent autosaves update this same
+  // row's title/body/tags in place; entry_type, anchors, request_id, and
+  // highlight_id are all left untouched by save(), so re-editing a
+  // reflection or prayer entry here can't accidentally turn it into
+  // something else.
+  function loadEntry(entry: Entry) {
+    setEntryId(entry.id)
+    setTitle(entry.title ?? '')
+    setBody(entry.body)
+    setTagsInput(entry.tags.join(', '))
+    setStatus('idle')
+    setError(null)
+  }
+
+  // Fetches by id and loads it -- used when arriving at the reading view
+  // via a "?notebook=<id>" link from Journal/Prayer/Highlights/Calendar.
+  // Returns whether the load succeeded, so the caller only opens the
+  // Notebook panel on success.
+  async function loadEntryById(id: string): Promise<boolean> {
+    const { data, error: fetchError } = await supabase.from('entries').select('*').eq('id', id).maybeSingle()
+    if (fetchError || !data) {
+      setError(fetchError?.message ?? 'Could not find that entry.')
+      setStatus('error')
+      return false
+    }
+    loadEntry(data)
+    return true
+  }
+
+  return { title, setTitle, body, setBody, tagsInput, setTagsInput, status, error, close, loadEntryById }
 }

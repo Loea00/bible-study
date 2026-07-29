@@ -1,7 +1,9 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import type { Entry } from '../../types/db'
 import { usePrayerEntries, type PrayerEntryType } from './usePrayerEntries'
 import { EntryBody } from '../journal/EntryBody'
+import { notebookHref } from '../reading/notebookLink'
 
 const KIND_LABEL: Record<PrayerEntryType, string> = {
   prayer_update: 'Update',
@@ -109,6 +111,9 @@ function PrayerHistoryEntry({ entry, onEdit, onDelete }: PrayerHistoryEntryProps
         </span>
         <span className="prayer-history-entry-date">{date}</span>
         <div className="prayer-history-entry-actions">
+          <Link to={notebookHref(entry)} className="journal-card-notebook-link">
+            Edit in Notebook
+          </Link>
           <button type="button" className="verse-panel-note-edit-btn" onClick={startEdit}>
             Edit
           </button>
