@@ -217,6 +217,178 @@ main {
   }
 }
 
+/* Notebook mode: a persistent right-hand writing frame (spec-amendment
+   ask -- live note-taking during a sermon/conference) that stays open
+   across book/chapter navigation. While it's open, the reading pane splits
+   into scripture (top) and the reference dock -- verse notes, highlight
+   groups, reflection composer -- (bottom), since the right column is now
+   reserved for the Notebook instead of those. */
+
+.reading-left-column {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+}
+
+.reading-view.notebook-mode .reading-pane {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* Same collapse-to-nothing-when-empty pattern as .reading-side-panel,
+   just on the cross axis (height, not width) since this dock sits below
+   the passage instead of beside it. */
+.reading-reference-dock {
+  flex: 0 0 0;
+  overflow: hidden;
+  transition: flex-basis 200ms ease;
+}
+
+.reading-reference-dock.open {
+  flex: 0 1 40%;
+  border-top: 1px solid var(--border);
+  padding: 24px;
+  overflow-y: auto;
+  font-family: var(--sans);
+}
+
+.notebook-panel {
+  width: 380px;
+  flex-shrink: 0;
+  border-left: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  height: 100vh;
+}
+
+.notebook-panel-inner {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 24px;
+  gap: 8px;
+  font-family: var(--sans);
+}
+
+.notebook-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.notebook-panel-header h2 {
+  font-family: var(--serif);
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--text-h);
+  margin: 0;
+  flex: 1;
+}
+
+.notebook-status {
+  font-size: 12px;
+  color: var(--text);
+  opacity: 0.55;
+  white-space: nowrap;
+}
+
+.notebook-close {
+  border: 1px solid var(--border);
+  background: none;
+  color: var(--text);
+  padding: 4px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+}
+
+.notebook-close:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.notebook-hint {
+  font-size: 12px;
+  color: var(--text);
+  opacity: 0.55;
+  margin: 0 0 4px;
+}
+
+.notebook-body-input {
+  flex: 1;
+  resize: none;
+  font-family: var(--serif);
+  font-size: 16px;
+  line-height: 1.6;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text-h);
+}
+
+.notebook-toggle {
+  margin-left: auto;
+  border: 1px solid var(--border);
+  background: none;
+  color: var(--text);
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+}
+
+.notebook-toggle:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.notebook-toggle.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+
+@media (max-width: 720px) {
+  .reading-view.notebook-mode {
+    flex-direction: column;
+  }
+
+  .reading-left-column {
+    height: auto;
+    position: static;
+  }
+
+  .reading-view.notebook-mode .reading-pane {
+    overflow-y: visible;
+  }
+
+  .reading-reference-dock.open {
+    flex-basis: auto;
+    max-height: 50vh;
+  }
+
+  .notebook-panel {
+    position: fixed;
+    inset: auto 0 0 0;
+    width: auto;
+    height: 60vh;
+    border-left: none;
+    border-top: 1px solid var(--border);
+    border-radius: 12px 12px 0 0;
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.15);
+    background: var(--bg);
+    z-index: 15;
+  }
+}
+
 .placeholder {
   color: var(--text);
   opacity: 0.7;

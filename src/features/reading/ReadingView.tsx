@@ -21,6 +21,8 @@ import { SelectionActionBar } from './SelectionActionBar'
 import { PendingGroupBar } from './PendingGroupBar'
 import { NoteComposer } from './NoteComposer'
 import { useReflections } from './useReflections'
+import { useNotebookEntry } from './useNotebookEntry'
+import { NotebookPanel } from './NotebookPanel'
 import { usePrayerRequestTitles } from '../prayer/usePrayerRequestTitles'
 import { getSelectionSpans, getSelectionBoundingRect, clearSelection, type SelectionSpan } from './selection'
 import { BOOK_BY_CODE, formatReference } from './books'
@@ -67,6 +69,12 @@ export function ReadingView() {
   // show up on the Highlights page too, not just in this chapter's panel.
   const [noteHighlightId, setNoteHighlightId] = useState<string | null>(null)
   const [editingHighlightId, setEditingHighlightId] = useState<string | null>(null)
+  // Deliberately called unconditionally (not gated by notebookOpen) so its
+  // draft survives navigating between books/chapters while the Notebook
+  // stays open -- ReadingView itself doesn't unmount for that, only its
+  // book/chapter search params change.
+  const [notebookOpen, setNotebookOpen] = useState(false)
+  const notebook = useNotebookEntry()
 
   const { verses, loading, error } = useVerses(book, chapter, translation)
   const { notesByVerse, addNote, updateNote, deleteNote } = useMarginNotes(book, chapter)
@@ -277,6 +285,15 @@ export function ReadingView() {
     clearPendingGroup()
   }
 
+  async function handleToggleNotebook() {
+    if (notebookOpen) {
+      await notebook.close()
+      setNotebookOpen(false)
+    } else {
+      setNotebookOpen(true)
+    }
+  }
+
   function openVerseView(v: Verse) {
     setSidePanel({ mode: 'verse', verse: v })
   }
@@ -309,8 +326,153 @@ export function ReadingView() {
 
   const openHighlight = sidePanel?.mode === 'highlight' ? getHighlight(sidePanel.highlightId) : undefined
 
+  const readingPaneContent = (
+    <>
+      <div className="reading-controls">
+        <button type="button" className="reference-button" onClick={() => setPickerOpen(true)}>
+          {bookName} {chapter}
+        </button>
+        <select value={translation} onChange={(e) => setTranslation(e.target.value)}>
+          {TRANSLATIONS.map((t) => (
+            <option key={t} value={t}>
+              {t}
+            </option>
+          ))}
+        </select>
+        <button
+          type="button"
+          className={`notebook-toggle${notebookOpen ? ' active' : ''}`}
+          onClick={() => void handleToggleNotebook()}
+        >
+          {notebookOpen ? 'Close Notebook' : 'Notebook'}
+        </button>
+      </div>
+
+      {loading && <p className="placeholder">Loading…</p>}
+      {error && <p className="placeholder">Couldn't load this passage: {error}</p>}
+      {!loading && !error && verses.length === 0 && (
+        <p className="placeholder">
+          No verses found for {bookName} {chapter}. Has the scripture data been imported yet?
+        </p>
+      )}
+
+      <div className="passage">
+        {chapter === 1 && <BookIntroductions introductions={bookIntroductions} />}
+        <h1>
+          {bookName} {chapter}
+        </h1>
+        {verses.map((v) => (
+          <p
+            key={v.verse_id}
+            className={String(v.verse) === targetVerse ? 'verse verse-target' : 'verse'}
+            ref={String(v.verse) === targetVerse ? targetVerseRef : undefined}
+          >
+            <span className="verse-num" onClick={(e) => handleVerseNumberTap(v, e)}>
+              {v.verse}
+            </span>
+            <VerseText
+              verseId={v.verse_id}
+              text={v.text}
+              tags={tagsByVerse[v.verse_id] ?? []}
+              highlights={highlightsByVerse[v.verse_id] ?? []}
+              pending={pendingByVerse[v.verse_id] ?? []}
+              onWordTap={setSelectedWord}
+            />
+            {notesByVerse[v.verse_id]?.length > 0 && (
+              <span
+                className="verse-icon verse-note-icon"
+                title="Has a note"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  openVerseView(v)
+                }}
+              >
+                <NoteIcon />
+              </span>
+            )}
+            {reflectionsByVerse[v.verse_id]?.length > 0 && (
+              <span
+                className="verse-icon verse-reflection-icon"
+                title="Has a reflection"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  openVerseView(v)
+                }}
+              >
+                <ReflectionIcon />
+              </span>
+            )}
+            {excerptsByVerse[v.verse_id]?.length > 0 && (
+              <span
+                className="verse-icon verse-journal-icon"
+                title="Mentioned in journal"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  openVerseView(v)
+                }}
+              >
+                <JournalIcon />
+              </span>
+            )}
+            {highlightGroupsByVerse[v.verse_id]?.map((h) => (
+              <span
+                key={h.id}
+                className={`verse-highlight-dot verse-highlight-dot-${h.color}`}
+                title="Highlighted"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setSidePanel({ mode: 'highlight', highlightId: h.id })
+                }}
+              />
+            ))}
+          </p>
+        ))}
+      </div>
+    </>
+  )
+
+  const referencePanelContent = (
+    <>
+      {sidePanel?.mode === 'verse' && (
+        <VersePanel
+          verseText={sidePanel.verse.text}
+          reference={`${bookName} ${sidePanel.verse.chapter}:${sidePanel.verse.verse}`}
+          notes={notesByVerse[sidePanel.verse.verse_id] ?? []}
+          journalExcerpts={excerptsByVerse[sidePanel.verse.verse_id] ?? []}
+          reflections={reflectionsByVerse[sidePanel.verse.verse_id] ?? []}
+          crossReferences={crossReferencesByVerse[sidePanel.verse.verse_id] ?? []}
+          commentary={commentaryByVerse[sidePanel.verse.verse_id] ?? []}
+          requestTitleById={requestTitleById}
+          onEditNote={updateNote}
+          onDeleteNote={deleteNote}
+          onClose={() => setSidePanel(null)}
+        />
+      )}
+
+      {sidePanel?.mode === 'highlight' && openHighlight && (
+        <HighlightGroupPanel
+          highlight={openHighlight}
+          translation={translation}
+          onExtend={() => startEditHighlight(openHighlight.id)}
+          onNote={() => openNoteFromHighlight(openHighlight.id)}
+          onReflect={() => openReflectionFromHighlight(openHighlight.id)}
+          onRemove={() => handleRemoveHighlightGroup(openHighlight.id)}
+          onClose={() => setSidePanel(null)}
+        />
+      )}
+
+      {sidePanel?.mode === 'reflection' && (
+        <ReflectionComposer
+          passageLabel={formatSpansLabel(sidePanel.spans)}
+          onSave={handleSaveReflection}
+          onClose={() => setSidePanel(null)}
+        />
+      )}
+    </>
+  )
+
   return (
-    <div className="reading-view">
+    <div className={`reading-view${notebookOpen ? ' notebook-mode' : ''}`}>
       {pickerOpen && (
         <PassagePicker
           translation={translation}
@@ -359,139 +521,32 @@ export function ReadingView() {
         />
       )}
 
-      <div className="reading-pane">
-        <div className="reading-controls">
-          <button type="button" className="reference-button" onClick={() => setPickerOpen(true)}>
-            {bookName} {chapter}
-          </button>
-          <select value={translation} onChange={(e) => setTranslation(e.target.value)}>
-            {TRANSLATIONS.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {loading && <p className="placeholder">Loading…</p>}
-        {error && <p className="placeholder">Couldn't load this passage: {error}</p>}
-        {!loading && !error && verses.length === 0 && (
-          <p className="placeholder">
-            No verses found for {bookName} {chapter}. Has the scripture data been imported yet?
-          </p>
-        )}
-
-        <div className="passage">
-          {chapter === 1 && <BookIntroductions introductions={bookIntroductions} />}
-          <h1>
-            {bookName} {chapter}
-          </h1>
-          {verses.map((v) => (
-            <p
-              key={v.verse_id}
-              className={String(v.verse) === targetVerse ? 'verse verse-target' : 'verse'}
-              ref={String(v.verse) === targetVerse ? targetVerseRef : undefined}
-            >
-              <span className="verse-num" onClick={(e) => handleVerseNumberTap(v, e)}>
-                {v.verse}
-              </span>
-              <VerseText
-                verseId={v.verse_id}
-                text={v.text}
-                tags={tagsByVerse[v.verse_id] ?? []}
-                highlights={highlightsByVerse[v.verse_id] ?? []}
-                pending={pendingByVerse[v.verse_id] ?? []}
-                onWordTap={setSelectedWord}
-              />
-              {notesByVerse[v.verse_id]?.length > 0 && (
-                <span
-                  className="verse-icon verse-note-icon"
-                  title="Has a note"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    openVerseView(v)
-                  }}
-                >
-                  <NoteIcon />
-                </span>
-              )}
-              {reflectionsByVerse[v.verse_id]?.length > 0 && (
-                <span
-                  className="verse-icon verse-reflection-icon"
-                  title="Has a reflection"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    openVerseView(v)
-                  }}
-                >
-                  <ReflectionIcon />
-                </span>
-              )}
-              {excerptsByVerse[v.verse_id]?.length > 0 && (
-                <span
-                  className="verse-icon verse-journal-icon"
-                  title="Mentioned in journal"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    openVerseView(v)
-                  }}
-                >
-                  <JournalIcon />
-                </span>
-              )}
-              {highlightGroupsByVerse[v.verse_id]?.map((h) => (
-                <span
-                  key={h.id}
-                  className={`verse-highlight-dot verse-highlight-dot-${h.color}`}
-                  title="Highlighted"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setSidePanel({ mode: 'highlight', highlightId: h.id })
-                  }}
-                />
-              ))}
-            </p>
-          ))}
-        </div>
-      </div>
-
-      <div className={`reading-side-panel${sidePanel ? ' open' : ''}`}>
-        {sidePanel?.mode === 'verse' && (
-          <VersePanel
-            verseText={sidePanel.verse.text}
-            reference={`${bookName} ${sidePanel.verse.chapter}:${sidePanel.verse.verse}`}
-            notes={notesByVerse[sidePanel.verse.verse_id] ?? []}
-            journalExcerpts={excerptsByVerse[sidePanel.verse.verse_id] ?? []}
-            reflections={reflectionsByVerse[sidePanel.verse.verse_id] ?? []}
-            crossReferences={crossReferencesByVerse[sidePanel.verse.verse_id] ?? []}
-            commentary={commentaryByVerse[sidePanel.verse.verse_id] ?? []}
-            requestTitleById={requestTitleById}
-            onEditNote={updateNote}
-            onDeleteNote={deleteNote}
-            onClose={() => setSidePanel(null)}
-          />
-        )}
-
-        {sidePanel?.mode === 'highlight' && openHighlight && (
-          <HighlightGroupPanel
-            highlight={openHighlight}
-            translation={translation}
-            onExtend={() => startEditHighlight(openHighlight.id)}
-            onNote={() => openNoteFromHighlight(openHighlight.id)}
-            onReflect={() => openReflectionFromHighlight(openHighlight.id)}
-            onRemove={() => handleRemoveHighlightGroup(openHighlight.id)}
-            onClose={() => setSidePanel(null)}
-          />
-        )}
-
-        {sidePanel?.mode === 'reflection' && (
-          <ReflectionComposer
-            passageLabel={formatSpansLabel(sidePanel.spans)}
-            onSave={handleSaveReflection}
-            onClose={() => setSidePanel(null)}
-          />
-        )}
-      </div>
+      {notebookOpen ? (
+        <>
+          <div className="reading-left-column">
+            <div className="reading-pane">{readingPaneContent}</div>
+            <div className={`reading-reference-dock${sidePanel ? ' open' : ''}`}>{referencePanelContent}</div>
+          </div>
+          <div className="notebook-panel">
+            <NotebookPanel
+              title={notebook.title}
+              onTitleChange={notebook.setTitle}
+              body={notebook.body}
+              onBodyChange={notebook.setBody}
+              tagsInput={notebook.tagsInput}
+              onTagsChange={notebook.setTagsInput}
+              status={notebook.status}
+              error={notebook.error}
+              onClose={() => void handleToggleNotebook()}
+            />
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="reading-pane">{readingPaneContent}</div>
+          <div className={`reading-side-panel${sidePanel ? ' open' : ''}`}>{referencePanelContent}</div>
+        </>
+      )}
     </div>
   )
 }

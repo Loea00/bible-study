@@ -1253,6 +1253,68 @@ already distinguishes reflections from plain notes. Verified live: mocked a high
 reflection entry and confirmed it renders in the Highlights page's artifact list with the
 "Reflection" badge and expandable scripture quote — build clean, no leftover TEMP-VERIFY markers.
 
+**Backfill: pre-existing highlight-originated reflections predate `highlight_id`.** Aaron's
+existing reflection (composed via a highlight's Reflect action back in commit `83800f0`, long
+before `highlight_id` existed on `entries` at all) didn't show up on the Highlights page after the
+above change shipped — same class of issue as the earlier margin-note migration, just for
+reflections instead. Migration `0017_backfill_reflection_highlight_id.sql` backfills `highlight_id`
+for existing `entry_type = 'reflection'` rows by matching `anchor_start`/`anchor_end` against a
+highlight's first/last span — the only available signal, since these rows were never explicitly
+linked. Skips a match when more than one highlight shares the same anchor range (ambiguous, left
+for manual reconciliation rather than guessing wrong). No code change, pure data migration.
+**Needs to be run by Aaron.**
+
+**Notebook mode: a persistent, autosaving journal frame in the reading pane.** Aaron wanted a way to
+take running notes during a sermon or conference — separate from margin notes/highlights, staying
+open while freely navigating between books and chapters, saving as a plain journal entry with
+`@verse` tag parsing. Landed on this after an `AskUserQuestion` round on three real forks: (1) what
+happens to verse/highlight taps while Notebook is open — Aaron's own answer, better than any of the
+three options offered, was to split the reading pane into scripture (top) and a reference dock
+(bottom) for that content, while Notebook owns the right column exclusively; (2) save model —
+autosave as you type, debounced; (3) persistence scope — Reading page only, since the resulting
+entry is already reachable from Journal/Calendar.
+
+No schema change — Notebook entries are plain `entry_type: 'journal'` rows, identical to what
+`JournalEditor.tsx` already writes. New `useNotebookEntry.ts` (`src/features/reading/`): first
+keystroke creates the entry, every subsequent pause (800ms debounce) updates it in place — same
+insert/update-with-inline-tags shape every other entry-creation hook in this codebase already
+duplicates (`useJournalEntries`, `useReflections`, `usePrayerEntries`, `useHighlightArtifacts`), so
+this follows established convention rather than introducing a new shared abstraction. A `saveRef`
+ref always points at the latest save closure, used both by the debounce timeout and an
+unmount-flush effect, so navigating away from Reading entirely (or closing the Notebook) can't lose
+the last few keystrokes to the debounce window. `close()` flushes immediately then resets the draft
+— reopening always starts fresh, since closing is the explicit "done with this note" signal.
+
+`ReadingView.tsx`: `useNotebookEntry()` is called unconditionally (not gated by whether the panel is
+open), so its draft survives book/chapter navigation for free — the component itself never unmounts
+for that, only its search params change. New `notebookOpen` boolean toggled by a "Notebook" button
+in `.reading-controls`, next to the book/chapter picker and translation select. When open, the
+layout restructures: `.reading-left-column` (new) stacks `.reading-pane` (scripture, scrollable) on
+top of `.reading-reference-dock` (new — the same verse/highlight/reflection content that normally
+renders in `.reading-side-panel`, just relocated below the text and collapsed to zero height when
+nothing's selected, mirroring the existing collapse-to-nothing pattern on the other axis), while a
+new `.notebook-panel` occupies the right column exclusively. When closed, layout is byte-for-byte
+the original two-column behavior — the `sidePanel` JSX itself (`VersePanel`/`HighlightGroupPanel`/
+`ReflectionComposer`) is computed once as `referencePanelContent` and rendered in whichever
+container is active, so there's no duplicated markup between the two layout modes. `NoteComposer`,
+`SelectionActionBar`, `PendingGroupBar`, `LexiconCard`, and `PassagePicker` are untouched floating
+overlays (`.picker-overlay`, `position: fixed`) — confirmed they don't interact with the column
+layout at all, so word-tap lexicon and margin-note composition keep working exactly as before even
+with Notebook open.
+
+Mobile (<720px): three simultaneous regions don't fit a phone screen, so Notebook falls back to the
+same bottom-sheet treatment `.reading-side-panel` already uses (fixed, 60vh, slides up), while the
+reference dock (if something's tapped while Notebook is open) just renders in normal document flow
+below the passage rather than as a fixed-height split pane.
+
+Verified live end-to-end: opened Notebook, typed into it (autosave correctly attempted and surfaced
+"Not signed in" — the same no-real-auth limitation every write path in this dev environment hits,
+not a bug), used the actual in-app passage picker (not a raw URL navigation, which would remount the
+whole app and prove nothing) to go from Genesis 1 to Exodus 3, confirmed the draft text was still
+intact afterward, confirmed Close flushes and clears the draft, confirmed the reference dock opens
+below the text with Notebook still visible on the right, and confirmed the mobile bottom-sheet
+fallback. Zero console errors throughout. Build clean.
+
 ## TODO — amendment v1.4 (theming), intentionally deferred
 
 Reviewed 2026-07-15, holding until after Strong's data sourcing (the currently agreed next
