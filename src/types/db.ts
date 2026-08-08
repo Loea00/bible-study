@@ -42,6 +42,10 @@ export type Entry = {
   // request_id, this doesn't gate entry_type: a highlight-tagged note is
   // still a plain margin_note, anchored the same way as any other.
   highlight_id: string | null
+  // UI-level "glance protection" (see 0018_privacy_pin.sql) — not
+  // encryption, just whether the reading UI should show a placeholder
+  // until the privacy PIN is entered.
+  is_private: boolean
 }
 
 export type VerseReference = {
@@ -152,6 +156,20 @@ export type PrayerRequest = {
   visibility: PrayerVisibility
   grounding: Record<string, unknown> | null
   grounding_generated_at: string | null
+  // UI-level "glance protection" (see 0018_privacy_pin.sql) — deliberately
+  // separate from `visibility`, which is reserved for future social
+  // sharing scope and has nothing to do with this PIN gate.
+  is_private: boolean
+}
+
+// Row is intentionally minimal client-side — the client never reads
+// privacy_pin_hash directly; setting/checking the PIN both happen via the
+// set_privacy_pin/verify_privacy_pin RPCs so the hash never needs to be
+// fetched or compared in the browser.
+export type UserSettings = {
+  user_id: string
+  privacy_pin_hash: string | null
+  updated_at: string
 }
 
 // The one-tap "I prayed for this" — deliberately writing-free (spec
@@ -218,12 +236,13 @@ export type Database = {
     Tables: {
       entries: {
         Row: Entry
-        Insert: Omit<Entry, 'id' | 'created_at' | 'updated_at' | 'request_id' | 'highlight_id'> & {
+        Insert: Omit<Entry, 'id' | 'created_at' | 'updated_at' | 'request_id' | 'highlight_id' | 'is_private'> & {
           id?: string
           created_at?: string
           updated_at?: string
           request_id?: string | null
           highlight_id?: string | null
+          is_private?: boolean
         }
         Update: Partial<Entry>
         Relationships: []
@@ -285,7 +304,15 @@ export type Database = {
         Row: PrayerRequest
         Insert: Omit<
           PrayerRequest,
-          'id' | 'created_at' | 'status' | 'answered_at' | 'answered_note' | 'visibility' | 'grounding' | 'grounding_generated_at'
+          | 'id'
+          | 'created_at'
+          | 'status'
+          | 'answered_at'
+          | 'answered_note'
+          | 'visibility'
+          | 'grounding'
+          | 'grounding_generated_at'
+          | 'is_private'
         > & {
           id?: string
           created_at?: string
@@ -295,6 +322,7 @@ export type Database = {
           visibility?: PrayerVisibility
           grounding?: Record<string, unknown> | null
           grounding_generated_at?: string | null
+          is_private?: boolean
         }
         Update: Partial<PrayerRequest>
         Relationships: []
@@ -329,6 +357,12 @@ export type Database = {
         Update: Partial<BookIntroduction>
         Relationships: []
       }
+      user_settings: {
+        Row: UserSettings
+        Insert: Omit<UserSettings, 'updated_at'> & { updated_at?: string }
+        Update: Partial<UserSettings>
+        Relationships: []
+      }
     }
     Views: Record<string, never>
     Functions: {
@@ -339,6 +373,14 @@ export type Database = {
       search_nave_topics: {
         Args: { query: string; max_results?: number }
         Returns: { topic: string }[]
+      }
+      set_privacy_pin: {
+        Args: { pin: string }
+        Returns: void
+      }
+      verify_privacy_pin: {
+        Args: { pin: string }
+        Returns: boolean
       }
     }
   }

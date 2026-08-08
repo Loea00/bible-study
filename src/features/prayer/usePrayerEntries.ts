@@ -125,5 +125,11 @@ export function usePrayerEntries(requestId: string) {
     setEntries((prev) => prev.filter((e) => e.id !== entryId))
   }
 
-  return { entries, loading, addEntry, updateEntry, deleteEntry }
+  async function setPrivacy(entryId: string, isPrivate: boolean) {
+    const { error } = await supabase.from('entries').update({ is_private: isPrivate }).eq('id', entryId)
+    if (error) throw new Error(error.message)
+    setEntries((prev) => prev.map((e) => (e.id === entryId ? { ...e, is_private: isPrivate } : e)))
+  }
+
+  return { entries, loading, addEntry, updateEntry, deleteEntry, setPrivacy }
 }

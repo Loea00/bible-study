@@ -1107,7 +1107,8 @@ button.highlight-swatch {
 
 .journal-card-edit,
 .journal-card-delete,
-.journal-card-notebook-link {
+.journal-card-notebook-link,
+.journal-card-privacy {
   border: none;
   background: none;
   color: var(--text);
@@ -1121,7 +1122,8 @@ button.highlight-swatch {
 }
 
 .journal-card-edit:hover,
-.journal-card-notebook-link:hover {
+.journal-card-notebook-link:hover,
+.journal-card-privacy:hover {
   opacity: 1;
   color: var(--accent);
 }
@@ -2791,4 +2793,134 @@ button.highlight-swatch {
   font-family: var(--serif);
   font-size: 20px;
   color: var(--text-h);
+}
+
+/* Privacy PIN: "glance protection" placeholder shown in place of a
+   Private entry's real content until the PIN is entered (see
+   0018_privacy_pin.sql and PrivateGate.tsx — this is a UI gate, not
+   encryption). */
+
+.private-gate {
+  padding: 16px;
+  border-radius: 8px;
+  background: var(--code-bg, rgba(128, 128, 128, 0.08));
+  font-family: var(--sans);
+}
+
+.private-gate-label {
+  font-size: 14px;
+  color: var(--text);
+  opacity: 0.7;
+  margin: 4px 0 12px;
+}
+
+.private-gate-form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.private-gate-form input {
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text-h);
+  font: inherit;
+  max-width: 160px;
+}
+
+.private-gate-form button {
+  padding: 6px 14px;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: var(--accent);
+  color: white;
+  font: inherit;
+  cursor: pointer;
+}
+
+.private-gate-form button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Settings page */
+
+.settings-page {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 32px 24px;
+  font-family: var(--sans);
+}
+
+.settings-page h1 {
+  font-family: var(--serif);
+  font-size: 28px;
+  color: var(--text-h);
+  margin: 0 0 24px;
+}
+
+.settings-section {
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--border);
+}
+
+.settings-section h2 {
+  font-family: var(--serif);
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--text-h);
+  margin: 0 0 8px;
+}
+
+.settings-hint {
+  font-size: 14px;
+  color: var(--text);
+  opacity: 0.7;
+  line-height: 1.5;
+  margin: 0 0 12px;
+}
+
+.settings-status {
+  font-size: 13px;
+  color: var(--text);
+  opacity: 0.6;
+  margin: 0 0 12px;
+}
+
+.settings-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.settings-form input {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text-h);
+  font: inherit;
+}
+
+.settings-form button {
+  padding: 8px 16px;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: var(--accent);
+  color: white;
+  font: inherit;
+  cursor: pointer;
+}
+
+.settings-form button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.settings-saved {
+  font-size: 13px;
+  color: var(--accent);
 }

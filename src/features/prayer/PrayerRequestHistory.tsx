@@ -4,6 +4,7 @@ import type { Entry } from '../../types/db'
 import { usePrayerEntries, type PrayerEntryType } from './usePrayerEntries'
 import { EntryBody } from '../journal/EntryBody'
 import { notebookHref } from '../reading/notebookLink'
+import { PrivateGate } from '../../components/PrivateGate'
 
 const KIND_LABEL: Record<PrayerEntryType, string> = {
   prayer_update: 'Update',
@@ -23,15 +24,19 @@ interface PrayerHistoryEntryProps {
   entry: Entry
   onEdit: (entryId: string, entryType: PrayerEntryType, title: string, body: string) => Promise<unknown>
   onDelete: (entryId: string) => Promise<void>
+  onSetPrivacy: (entryId: string, isPrivate: boolean) => Promise<unknown>
+  pinConfigured: boolean | null
+  verifyPin: (pin: string) => Promise<boolean>
 }
 
-function PrayerHistoryEntry({ entry, onEdit, onDelete }: PrayerHistoryEntryProps) {
+function PrayerHistoryEntry({ entry, onEdit, onDelete, onSetPrivacy, pinConfigured, verifyPin }: PrayerHistoryEntryProps) {
   const [editing, setEditing] = useState(false)
   const [kind, setKind] = useState<PrayerEntryType>(entry.entry_type as PrayerEntryType)
   const [title, setTitle] = useState(entry.title ?? '')
   const [body, setBody] = useState(entry.body)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [togglingPrivacy, setTogglingPrivacy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const date = new Date(entry.created_at).toLocaleDateString(undefined, {
@@ -73,6 +78,18 @@ function PrayerHistoryEntry({ entry, onEdit, onDelete }: PrayerHistoryEntryProps
     }
   }
 
+  async function handleTogglePrivacy() {
+    setTogglingPrivacy(true)
+    setError(null)
+    try {
+      await onSetPrivacy(entry.id, !entry.is_private)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not update privacy.')
+    } finally {
+      setTogglingPrivacy(false)
+    }
+  }
+
   if (editing) {
     return (
       <div className="prayer-history-entry-edit">
@@ -105,39 +122,58 @@ function PrayerHistoryEntry({ entry, onEdit, onDelete }: PrayerHistoryEntryProps
 
   return (
     <div className="prayer-history-entry">
-      <div className="prayer-history-entry-header">
-        <span className={`prayer-history-entry-kind prayer-history-kind-${entry.entry_type}`}>
-          {KIND_LABEL[entry.entry_type as PrayerEntryType]}
-        </span>
-        <span className="prayer-history-entry-date">{date}</span>
-        <div className="prayer-history-entry-actions">
-          <Link to={notebookHref(entry)} className="journal-card-notebook-link">
-            Edit in Notebook
-          </Link>
-          <button type="button" className="verse-panel-note-edit-btn" onClick={startEdit}>
-            Edit
-          </button>
-          <button type="button" className="verse-panel-note-delete" onClick={handleDelete} disabled={deleting}>
-            {deleting ? 'Deleting…' : 'Delete'}
-          </button>
+      <PrivateGate
+        isPrivate={entry.is_private}
+        pinConfigured={pinConfigured}
+        verifyPin={verifyPin}
+        placeholderMeta={
+          <div className="prayer-history-entry-header">
+            <span className={`prayer-history-entry-kind prayer-history-kind-${entry.entry_type}`}>
+              {KIND_LABEL[entry.entry_type as PrayerEntryType]}
+            </span>
+            <span className="prayer-history-entry-date">{date}</span>
+          </div>
+        }
+      >
+        <div className="prayer-history-entry-header">
+          <span className={`prayer-history-entry-kind prayer-history-kind-${entry.entry_type}`}>
+            {KIND_LABEL[entry.entry_type as PrayerEntryType]}
+          </span>
+          <span className="prayer-history-entry-date">{date}</span>
+          <div className="prayer-history-entry-actions">
+            <button type="button" className="journal-card-privacy" onClick={handleTogglePrivacy} disabled={togglingPrivacy}>
+              {entry.is_private ? 'Make Public' : 'Make Private'}
+            </button>
+            <Link to={notebookHref(entry)} className="journal-card-notebook-link">
+              Edit in Notebook
+            </Link>
+            <button type="button" className="verse-panel-note-edit-btn" onClick={startEdit}>
+              Edit
+            </button>
+            <button type="button" className="verse-panel-note-delete" onClick={handleDelete} disabled={deleting}>
+              {deleting ? 'Deleting…' : 'Delete'}
+            </button>
+          </div>
         </div>
-      </div>
-      {entry.title && <p className="prayer-history-entry-title">{entry.title}</p>}
-      <EntryBody text={entry.body} />
-      {error && <p className="error">{error}</p>}
+        {entry.title && <p className="prayer-history-entry-title">{entry.title}</p>}
+        <EntryBody text={entry.body} />
+        {error && <p className="error">{error}</p>}
+      </PrivateGate>
     </div>
   )
 }
 
 interface PrayerRequestHistoryProps {
   requestId: string
+  pinConfigured: boolean | null
+  verifyPin: (pin: string) => Promise<boolean>
 }
 
 // Rendered only while the card's "Show journey" toggle is open — the
 // hook's fetch-on-mount doubles as lazy loading, same effect as
 // AnchorScripture's explicit lazy-fetch-on-first-expand.
-export function PrayerRequestHistory({ requestId }: PrayerRequestHistoryProps) {
-  const { entries, loading, addEntry, updateEntry, deleteEntry } = usePrayerEntries(requestId)
+export function PrayerRequestHistory({ requestId, pinConfigured, verifyPin }: PrayerRequestHistoryProps) {
+  const { entries, loading, addEntry, updateEntry, deleteEntry, setPrivacy } = usePrayerEntries(requestId)
 
   const [kind, setKind] = useState<PrayerEntryType>('prayer_update')
   const [title, setTitle] = useState('')
@@ -167,7 +203,15 @@ export function PrayerRequestHistory({ requestId }: PrayerRequestHistoryProps) {
 
       <div className="prayer-history-list">
         {entries.map((entry) => (
-          <PrayerHistoryEntry key={entry.id} entry={entry} onEdit={updateEntry} onDelete={deleteEntry} />
+          <PrayerHistoryEntry
+            key={entry.id}
+            entry={entry}
+            onEdit={updateEntry}
+            onDelete={deleteEntry}
+            onSetPrivacy={setPrivacy}
+            pinConfigured={pinConfigured}
+            verifyPin={verifyPin}
+          />
         ))}
       </div>
 

@@ -5,11 +5,15 @@ import { EntryBody } from './EntryBody'
 import { AnchorScripture } from '../reading/AnchorScripture'
 import { parseVerseId, formatReference } from '../reading/books'
 import { notebookHref } from '../reading/notebookLink'
+import { PrivateGate } from '../../components/PrivateGate'
 
 interface JournalEntryCardProps {
   entry: Entry
   onEdit: (entryId: string, title: string, body: string, tags: string[]) => Promise<unknown>
   onDelete: (entryId: string) => Promise<void>
+  onSetPrivacy: (entryId: string, isPrivate: boolean) => Promise<unknown>
+  pinConfigured: boolean | null
+  verifyPin: (pin: string) => Promise<boolean>
   // Only set for prayer-attached entries (entry.request_id present) — the
   // title of the request this entry belongs to, resolved by the caller
   // (usePrayerRequestTitles) rather than fetched per-card.
@@ -35,7 +39,15 @@ function formatAnchorRange(anchorStart: string, anchorEnd: string): string {
     : `${formatReference(anchorStart)} – ${formatReference(anchorEnd)}`
 }
 
-export function JournalEntryCard({ entry, onEdit, onDelete, requestTitle }: JournalEntryCardProps) {
+export function JournalEntryCard({
+  entry,
+  onEdit,
+  onDelete,
+  onSetPrivacy,
+  pinConfigured,
+  verifyPin,
+  requestTitle,
+}: JournalEntryCardProps) {
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [editing, setEditing] = useState(false)
@@ -43,6 +55,7 @@ export function JournalEntryCard({ entry, onEdit, onDelete, requestTitle }: Jour
   const [body, setBody] = useState(entry.body)
   const [tagsInput, setTagsInput] = useState(entry.tags.join(', '))
   const [saving, setSaving] = useState(false)
+  const [togglingPrivacy, setTogglingPrivacy] = useState(false)
 
   const date = new Date(entry.created_at).toLocaleDateString(undefined, {
     month: 'long',
@@ -58,6 +71,18 @@ export function JournalEntryCard({ entry, onEdit, onDelete, requestTitle }: Jour
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not delete the entry.')
       setDeleting(false)
+    }
+  }
+
+  async function handleTogglePrivacy() {
+    setTogglingPrivacy(true)
+    setError(null)
+    try {
+      await onSetPrivacy(entry.id, !entry.is_private)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not update privacy.')
+    } finally {
+      setTogglingPrivacy(false)
     }
   }
 
@@ -130,52 +155,62 @@ export function JournalEntryCard({ entry, onEdit, onDelete, requestTitle }: Jour
 
   return (
     <article className="journal-card">
-      <div className="journal-card-header">
-        <div>
-          {entry.entry_type === 'reflection' && <span className="journal-card-badge">Reflection</span>}
-          {PRAYER_ENTRY_LABEL[entry.entry_type] && (
-            <span className="journal-card-badge">{PRAYER_ENTRY_LABEL[entry.entry_type]}</span>
-          )}
-          {entry.title && <h2>{entry.title}</h2>}
-          <p className="journal-card-date">{date}</p>
-          {entry.entry_type === 'reflection' && entry.anchor_start && entry.anchor_end && (
-            <Link
-              to={`/?book=${parseVerseId(entry.anchor_start).book}&chapter=${parseVerseId(entry.anchor_start).chapter}`}
-              className="journal-card-reference"
-            >
-              {formatAnchorRange(entry.anchor_start, entry.anchor_end)}
+      <PrivateGate
+        isPrivate={entry.is_private}
+        pinConfigured={pinConfigured}
+        verifyPin={verifyPin}
+        placeholderMeta={<p className="journal-card-date">{date}</p>}
+      >
+        <div className="journal-card-header">
+          <div>
+            {entry.entry_type === 'reflection' && <span className="journal-card-badge">Reflection</span>}
+            {PRAYER_ENTRY_LABEL[entry.entry_type] && (
+              <span className="journal-card-badge">{PRAYER_ENTRY_LABEL[entry.entry_type]}</span>
+            )}
+            {entry.title && <h2>{entry.title}</h2>}
+            <p className="journal-card-date">{date}</p>
+            {entry.entry_type === 'reflection' && entry.anchor_start && entry.anchor_end && (
+              <Link
+                to={`/?book=${parseVerseId(entry.anchor_start).book}&chapter=${parseVerseId(entry.anchor_start).chapter}`}
+                className="journal-card-reference"
+              >
+                {formatAnchorRange(entry.anchor_start, entry.anchor_end)}
+              </Link>
+            )}
+            {requestTitle && (
+              <Link to="/prayer" className="journal-card-reference">
+                From: {requestTitle} →
+              </Link>
+            )}
+          </div>
+          <div className="journal-card-actions">
+            <button type="button" className="journal-card-privacy" onClick={handleTogglePrivacy} disabled={togglingPrivacy}>
+              {entry.is_private ? 'Make Public' : 'Make Private'}
+            </button>
+            <Link to={notebookHref(entry)} className="journal-card-notebook-link">
+              Edit in Notebook
             </Link>
-          )}
-          {requestTitle && (
-            <Link to="/prayer" className="journal-card-reference">
-              From: {requestTitle} →
-            </Link>
-          )}
+            <button type="button" className="journal-card-edit" onClick={startEdit}>
+              Edit
+            </button>
+            <button type="button" className="journal-card-delete" onClick={handleDelete} disabled={deleting}>
+              {deleting ? 'Deleting…' : 'Delete'}
+            </button>
+          </div>
         </div>
-        <div className="journal-card-actions">
-          <Link to={notebookHref(entry)} className="journal-card-notebook-link">
-            Edit in Notebook
-          </Link>
-          <button type="button" className="journal-card-edit" onClick={startEdit}>
-            Edit
-          </button>
-          <button type="button" className="journal-card-delete" onClick={handleDelete} disabled={deleting}>
-            {deleting ? 'Deleting…' : 'Delete'}
-          </button>
-        </div>
-      </div>
-      {entry.entry_type === 'reflection' && <AnchorScripture entryId={entry.id} />}
-      <EntryBody text={entry.body} />
-      {entry.tags.length > 0 && (
-        <div className="journal-card-tags">
-          {entry.tags.map((tag) => (
-            <span key={tag} className="journal-tag">
-              {tag}
-            </span>
-          ))}
-        </div>
-      )}
-      {error && <p className="error">{error}</p>}
+        {entry.entry_type === 'reflection' && <AnchorScripture entryId={entry.id} />}
+        <EntryBody text={entry.body} />
+        {entry.tags.length > 0 && (
+          <div className="journal-card-tags">
+            {entry.tags.map((tag) => (
+              <span key={tag} className="journal-tag">
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
+        {error && <p className="error">{error}</p>}
+      </PrivateGate>
     </article>
   )
 }

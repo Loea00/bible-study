@@ -4,6 +4,7 @@ import { usePrayerRequests } from './usePrayerRequests'
 import { usePrayedMarks } from './usePrayedMarks'
 import { PrayerRequestCard } from './PrayerRequestCard'
 import { PrayThroughFlow } from './PrayThroughFlow'
+import { usePrivacyPin } from '../settings/usePrivacyPin'
 import type { PrayedMark, PrayerRequest, PrayerRequestStatus } from '../../types/db'
 
 type StatusFilter = 'open' | 'answered' | 'archived' | 'all'
@@ -26,9 +27,18 @@ function sortForPrayThrough(items: PrayerRequest[], marksByRequest: Record<strin
 
 export function PrayerPage() {
   const { lists, loading: listsLoading, createList, renameList, deleteList } = usePrayerLists()
-  const { requests, loading: requestsLoading, createRequest, updateRequest, markAnswered, setStatus, deleteRequest } =
-    usePrayerRequests()
+  const {
+    requests,
+    loading: requestsLoading,
+    createRequest,
+    updateRequest,
+    markAnswered,
+    setStatus,
+    deleteRequest,
+    setPrivacy,
+  } = usePrayerRequests()
   const { marksByRequest, addMark } = usePrayedMarks()
+  const { pinConfigured, verifyPin } = usePrivacyPin()
 
   const [prayThrough, setPrayThrough] = useState<{ name: string; requests: PrayerRequest[] } | null>(null)
 
@@ -278,6 +288,9 @@ export function PrayerPage() {
                     onMarkAnswered={markAnswered}
                     onMarkPrayed={addMark}
                     onDelete={deleteRequest}
+                    onSetPrivacy={setPrivacy}
+                    pinConfigured={pinConfigured}
+                    verifyPin={verifyPin}
                   />
                 ))}
               </div>
@@ -302,6 +315,9 @@ export function PrayerPage() {
                     onMarkAnswered={markAnswered}
                     onMarkPrayed={addMark}
                     onDelete={deleteRequest}
+                    onSetPrivacy={setPrivacy}
+                    pinConfigured={pinConfigured}
+                    verifyPin={verifyPin}
                   />
                 ))}
               </div>

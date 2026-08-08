@@ -80,5 +80,11 @@ export function usePrayerRequests() {
     setRequests((prev) => prev.filter((r) => r.id !== requestId))
   }
 
-  return { requests, loading, createRequest, updateRequest, markAnswered, setStatus, deleteRequest }
+  async function setPrivacy(requestId: string, isPrivate: boolean) {
+    const { error } = await supabase.from('prayer_requests').update({ is_private: isPrivate }).eq('id', requestId)
+    if (error) throw new Error(error.message)
+    setRequests((prev) => prev.map((r) => (r.id === requestId ? { ...r, is_private: isPrivate } : r)))
+  }
+
+  return { requests, loading, createRequest, updateRequest, markAnswered, setStatus, deleteRequest, setPrivacy }
 }

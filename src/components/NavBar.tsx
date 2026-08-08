@@ -19,6 +19,7 @@ export function NavBar() {
       </div>
       <div className="navbar-right">
         <NavLink to="/log">Log</NavLink>
+        <NavLink to="/settings">Settings</NavLink>
         <button type="button" onClick={() => void signOut()}>
           Sign out
         </button>

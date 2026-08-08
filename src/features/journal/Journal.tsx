@@ -3,9 +3,11 @@ import { useSearchParams } from 'react-router-dom'
 import { useJournalEntries } from './useJournalEntries'
 import { JournalEditor } from './JournalEditor'
 import { JournalEntryCard } from './JournalEntryCard'
+import { usePrivacyPin } from '../settings/usePrivacyPin'
 
 export function Journal() {
-  const { entries, loading, createEntry, updateEntry, deleteEntry } = useJournalEntries()
+  const { entries, loading, createEntry, updateEntry, deleteEntry, setPrivacy } = useJournalEntries()
+  const { pinConfigured, verifyPin } = usePrivacyPin()
   const [searchParams] = useSearchParams()
   const targetEntryId = searchParams.get('entry')
   const targetRef = useRef<HTMLDivElement>(null)
@@ -96,7 +98,14 @@ export function Journal() {
             ref={entry.id === targetEntryId ? targetRef : undefined}
             className={entry.id === targetEntryId ? 'journal-card-target' : undefined}
           >
-            <JournalEntryCard entry={entry} onEdit={updateEntry} onDelete={deleteEntry} />
+            <JournalEntryCard
+              entry={entry}
+              onEdit={updateEntry}
+              onDelete={deleteEntry}
+              onSetPrivacy={setPrivacy}
+              pinConfigured={pinConfigured}
+              verifyPin={verifyPin}
+            />
           </div>
         ))}
       </div>

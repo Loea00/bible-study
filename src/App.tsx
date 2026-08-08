@@ -10,6 +10,7 @@ import { PrayerPage } from './features/prayer/PrayerPage'
 import { ScriptureSearch } from './features/search/ScriptureSearch'
 import { TopicsPage } from './features/topics/TopicsPage'
 import { CalendarPage } from './features/calendar/CalendarPage'
+import { SettingsPage } from './features/settings/SettingsPage'
 
 function AppShell() {
   const { session, loading } = useAuth()
@@ -30,6 +31,7 @@ function AppShell() {
           <Route path="/highlights" element={<HighlightsPage />} />
           <Route path="/prayer" element={<PrayerPage />} />
           <Route path="/calendar" element={<CalendarPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
         </Routes>
       </main>
     </div>

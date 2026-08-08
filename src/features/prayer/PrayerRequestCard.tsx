@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { PrayedMark, PrayerList, PrayerRequest, PrayerRequestStatus } from '../../types/db'
 import { PrayerRequestHistory } from './PrayerRequestHistory'
+import { PrivateGate } from '../../components/PrivateGate'
 
 interface PrayerRequestCardProps {
   request: PrayerRequest
@@ -11,6 +12,9 @@ interface PrayerRequestCardProps {
   onMarkAnswered: (requestId: string, note: string) => Promise<unknown>
   onMarkPrayed: (requestId: string) => Promise<unknown>
   onDelete: (requestId: string) => Promise<void>
+  onSetPrivacy: (requestId: string, isPrivate: boolean) => Promise<unknown>
+  pinConfigured: boolean | null
+  verifyPin: (pin: string) => Promise<boolean>
 }
 
 const STATUS_LABEL: Record<PrayerRequestStatus, string> = {
@@ -42,6 +46,9 @@ export function PrayerRequestCard({
   onMarkAnswered,
   onMarkPrayed,
   onDelete,
+  onSetPrivacy,
+  pinConfigured,
+  verifyPin,
 }: PrayerRequestCardProps) {
   const [editing, setEditing] = useState(false)
   const [title, setTitle] = useState(request.title)
@@ -55,6 +62,7 @@ export function PrayerRequestCard({
   const [busy, setBusy] = useState(false)
   const [marking, setMarking] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [togglingPrivacy, setTogglingPrivacy] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -135,6 +143,18 @@ export function PrayerRequestCard({
     }
   }
 
+  async function handleTogglePrivacy() {
+    setTogglingPrivacy(true)
+    setError(null)
+    try {
+      await onSetPrivacy(request.id, !request.is_private)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not update privacy.')
+    } finally {
+      setTogglingPrivacy(false)
+    }
+  }
+
   if (editing) {
     return (
       <article className="prayer-card">
@@ -176,108 +196,125 @@ export function PrayerRequestCard({
 
   return (
     <article className="prayer-card">
-      <div className="journal-card-header">
-        <div>
-          <span className={`prayer-status-badge prayer-status-${request.status}`}>{STATUS_LABEL[request.status]}</span>
-          <h2>{request.title}</h2>
-          <p className="journal-card-date">{date}</p>
-        </div>
-        <div className="journal-card-actions">
-          <button type="button" className="journal-card-edit" onClick={startEdit}>
-            Edit
-          </button>
-          <button type="button" className="journal-card-delete" onClick={handleDelete} disabled={deleting}>
-            {deleting ? 'Deleting…' : 'Delete'}
-          </button>
-        </div>
-      </div>
-
-      {request.description && <p className="entry-body">{request.description}</p>}
-
-      <div className="prayer-mark-row">
-        <button type="button" className="prayer-mark-button" onClick={handleMarkPrayed} disabled={marking}>
-          {marking ? 'Marking…' : 'I prayed for this'}
-        </button>
-        <span className="prayer-mark-whisper">
-          {marks.length === 0 ? 'Not marked yet' : `Last prayed ${formatRelative(marks[0].created_at)}`}
-        </span>
-        {marks.length > 0 && (
-          <span className="prayer-mark-strip" aria-hidden="true">
-            {[...marks]
-              .slice(0, 20)
-              .reverse()
-              .map((m) => (
-                <span key={m.id} className="prayer-mark-dot" title={new Date(m.created_at).toLocaleString()} />
-              ))}
-          </span>
-        )}
-      </div>
-
-      {request.status === 'answered' && request.answered_note && (
-        <div className="prayer-answered-note">
-          <h3>Answered</h3>
-          <p>{request.answered_note}</p>
-        </div>
-      )}
-
-      {answering ? (
-        <div className="prayer-answer-form">
-          <textarea
-            value={answerNote}
-            onChange={(e) => setAnswerNote(e.target.value)}
-            rows={3}
-            placeholder="How was this answered? (optional)"
-          />
-          <div className="journal-card-edit-actions">
-            <button type="button" onClick={handleConfirmAnswered} disabled={busy}>
-              {busy ? 'Saving…' : 'Confirm'}
+      <PrivateGate
+        isPrivate={request.is_private}
+        pinConfigured={pinConfigured}
+        verifyPin={verifyPin}
+        placeholderMeta={
+          <div className="journal-card-header">
+            <div>
+              <span className={`prayer-status-badge prayer-status-${request.status}`}>{STATUS_LABEL[request.status]}</span>
+              <p className="journal-card-date">{date}</p>
+            </div>
+          </div>
+        }
+      >
+        <div className="journal-card-header">
+          <div>
+            <span className={`prayer-status-badge prayer-status-${request.status}`}>{STATUS_LABEL[request.status]}</span>
+            <h2>{request.title}</h2>
+            <p className="journal-card-date">{date}</p>
+          </div>
+          <div className="journal-card-actions">
+            <button type="button" className="journal-card-privacy" onClick={handleTogglePrivacy} disabled={togglingPrivacy}>
+              {request.is_private ? 'Make Public' : 'Make Private'}
             </button>
-            <button type="button" className="journal-card-edit-cancel" onClick={() => setAnswering(false)} disabled={busy}>
-              Cancel
+            <button type="button" className="journal-card-edit" onClick={startEdit}>
+              Edit
+            </button>
+            <button type="button" className="journal-card-delete" onClick={handleDelete} disabled={deleting}>
+              {deleting ? 'Deleting…' : 'Delete'}
             </button>
           </div>
         </div>
-      ) : (
-        <div className="prayer-status-actions">
-          {request.status !== 'active' && request.status !== 'answered' && (
-            <button type="button" onClick={() => handleSetStatus('active')} disabled={busy}>
-              Mark active
-            </button>
-          )}
-          {request.status !== 'ongoing' && request.status !== 'answered' && (
-            <button type="button" onClick={() => handleSetStatus('ongoing')} disabled={busy}>
-              Mark ongoing
-            </button>
-          )}
-          {request.status === 'answered' && (
-            <button type="button" onClick={() => handleSetStatus('active')} disabled={busy}>
-              Reopen
-            </button>
-          )}
-          {request.status !== 'answered' && (
-            <button type="button" onClick={() => setAnswering(true)} disabled={busy}>
-              Mark answered
-            </button>
-          )}
-          {request.status !== 'archived' && (
-            <button type="button" onClick={() => handleSetStatus('archived')} disabled={busy}>
-              Archive
-            </button>
-          )}
-          {request.status === 'archived' && (
-            <button type="button" onClick={() => handleSetStatus('active')} disabled={busy}>
-              Restore
-            </button>
+
+        {request.description && <p className="entry-body">{request.description}</p>}
+
+        <div className="prayer-mark-row">
+          <button type="button" className="prayer-mark-button" onClick={handleMarkPrayed} disabled={marking}>
+            {marking ? 'Marking…' : 'I prayed for this'}
+          </button>
+          <span className="prayer-mark-whisper">
+            {marks.length === 0 ? 'Not marked yet' : `Last prayed ${formatRelative(marks[0].created_at)}`}
+          </span>
+          {marks.length > 0 && (
+            <span className="prayer-mark-strip" aria-hidden="true">
+              {[...marks]
+                .slice(0, 20)
+                .reverse()
+                .map((m) => (
+                  <span key={m.id} className="prayer-mark-dot" title={new Date(m.created_at).toLocaleString()} />
+                ))}
+            </span>
           )}
         </div>
-      )}
 
-      <button type="button" className="anchor-scripture-toggle" onClick={() => setHistoryOpen((o) => !o)}>
-        {historyOpen ? '▲ Hide journey' : '▾ Show journey'}
-      </button>
-      {historyOpen && <PrayerRequestHistory requestId={request.id} />}
+        {request.status === 'answered' && request.answered_note && (
+          <div className="prayer-answered-note">
+            <h3>Answered</h3>
+            <p>{request.answered_note}</p>
+          </div>
+        )}
 
-      {error && <p className="error">{error}</p>}
+        {answering ? (
+          <div className="prayer-answer-form">
+            <textarea
+              value={answerNote}
+              onChange={(e) => setAnswerNote(e.target.value)}
+              rows={3}
+              placeholder="How was this answered? (optional)"
+            />
+            <div className="journal-card-edit-actions">
+              <button type="button" onClick={handleConfirmAnswered} disabled={busy}>
+                {busy ? 'Saving…' : 'Confirm'}
+              </button>
+              <button type="button" className="journal-card-edit-cancel" onClick={() => setAnswering(false)} disabled={busy}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="prayer-status-actions">
+            {request.status !== 'active' && request.status !== 'answered' && (
+              <button type="button" onClick={() => handleSetStatus('active')} disabled={busy}>
+                Mark active
+              </button>
+            )}
+            {request.status !== 'ongoing' && request.status !== 'answered' && (
+              <button type="button" onClick={() => handleSetStatus('ongoing')} disabled={busy}>
+                Mark ongoing
+              </button>
+            )}
+            {request.status === 'answered' && (
+              <button type="button" onClick={() => handleSetStatus('active')} disabled={busy}>
+                Reopen
+              </button>
+            )}
+            {request.status !== 'answered' && (
+              <button type="button" onClick={() => setAnswering(true)} disabled={busy}>
+                Mark answered
+              </button>
+            )}
+            {request.status !== 'archived' && (
+              <button type="button" onClick={() => handleSetStatus('archived')} disabled={busy}>
+                Archive
+              </button>
+            )}
+            {request.status === 'archived' && (
+              <button type="button" onClick={() => handleSetStatus('active')} disabled={busy}>
+                Restore
+              </button>
+            )}
+          </div>
+        )}
+
+        <button type="button" className="anchor-scripture-toggle" onClick={() => setHistoryOpen((o) => !o)}>
+          {historyOpen ? '▲ Hide journey' : '▾ Show journey'}
+        </button>
+        {historyOpen && <PrayerRequestHistory requestId={request.id} pinConfigured={pinConfigured} verifyPin={verifyPin} />}
+
+        {error && <p className="error">{error}</p>}
+      </PrivateGate>
     </article>
   )
 }

@@ -1367,6 +1367,56 @@ mocked journal entry with `@Exo 3:14` in its body produced `/?book=EXO&chapter=3
 and clicking through actually landed on Exodus 3 — confirming the reported bug (reading pane staying
 put) is fixed.
 
+**Privacy PIN: mark Journal/Reflection/prayer entries "Private," gated by a UI-level PIN.** Aaron
+asked for any user artifact to be markable Private, replacing it with a placeholder, ideally
+unlocked with a password. Scoped down via `AskUserQuestion` to: (1) a UI-level "glance protection"
+gate, not real encryption — since real encryption would mean a forgotten password permanently
+destroys the content, and this app has no password-reset infrastructure at all to make that
+recoverable; (2) a separate user-defined PIN rather than the account sign-in password; (3) Journal +
+Prayer only for this pass (margin notes and highlight artifacts untouched); (4) per-item unlock
+every time, not "stays unlocked for the session."
+
+No content is encrypted — everything marked Private is still stored and fetched completely
+normally, protected the same way as everything else in this app (Supabase Auth + row-level
+security). The PIN only controls whether the *reading UI* renders a placeholder instead of the real
+content. New migration `0018_privacy_pin.sql`: a `user_settings` table (`user_id` primary key,
+`privacy_pin_hash`) plus two Postgres RPC functions — `set_privacy_pin(pin)` (hashes with
+pgcrypto's `crypt()`/`gen_salt('bf')`, already-enabled extension from migration 0001) and
+`verify_privacy_pin(pin)` (compares server-side, returns a bare boolean) — so the raw PIN is
+compared inside Postgres, never client-side. `entries.is_private` and `prayer_requests.is_private`
+booleans (default `false`) added; deliberately a separate column from `prayer_requests.visibility`
+(`private`/`shared`/`group`/`public`), which is reserved for a completely different, future
+social-sharing feature and has nothing to do with this PIN gate.
+
+New `usePrivacyPin.ts` hook (`src/features/settings/`) wraps the two RPCs plus a `pinConfigured`
+check. New `/settings` page (`SettingsPage.tsx`, linked from `.navbar-right` next to Log/Sign out)
+is the only place to set or change the PIN — a bare PIN + confirm-PIN form, no old-PIN
+verification required to change it (single-user app; if forgotten, resetting is just setting a new
+one here, by design — see the recoverability tradeoff above).
+
+New shared `PrivateGate.tsx` (`src/components/`) is the actual gate: renders `children` normally if
+`!isPrivate`, otherwise a locked placeholder (a `placeholderMeta` prop for safe-to-show context like
+a date or status badge, plus a PIN input) until `verifyPin` returns true — `unlocked` is local
+component state that resets on every mount, which is what makes it "per-item, every time" rather
+than session-wide. Deliberately does **not** expose any way to edit/delete/un-private while locked
+— those actions all live inside `children`, so marking something back to Public is only reachable
+after actually entering the correct PIN, never as a way to bypass it.
+
+Wired into: `JournalEntryCard.tsx` (Journal + Reflection entries), `PrayerRequestCard.tsx` (the
+request itself — title/description/status-actions/journey-toggle all gated, only the status badge
+and date show while locked), and `PrayerRequestHistory.tsx`'s `PrayerHistoryEntry` (each journey
+entry independently gated from its parent request — marking the request private doesn't
+automatically privatize its journey entries or vice versa, and each needs its own unlock). Each
+surface got a "Make Private"/"Make Public" toggle alongside its existing Edit/Delete actions,
+visible only once already unlocked (or if not private at all).
+
+Verified live end-to-end with a mocked PIN (`1234`): confirmed a locked Journal card shows only the
+date; wrong PIN shows "Incorrect PIN."; correct PIN reveals full content plus the privacy toggle;
+toggling to Public updates immediately; independently repeated the same for a prayer request and one
+of its journey entries, confirming each has its own separate lock state. Settings page renders and
+reflects "A privacy PIN is currently set." Zero console errors. Build clean, no leftover
+TEMP-VERIFY markers. **Migration 0018 needs to be run by Aaron** before this is live.
+
 ## TODO — amendment v1.4 (theming), intentionally deferred
 
 Reviewed 2026-07-15, holding until after Strong's data sourcing (the currently agreed next
