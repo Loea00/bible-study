@@ -5,14 +5,18 @@ import { useHighlightArtifacts } from './useHighlightArtifacts'
 import { EntryBody } from '../journal/EntryBody'
 import { AnchorScripture } from '../reading/AnchorScripture'
 import { notebookHref } from '../reading/notebookLink'
+import { PrivateGate } from '../../components/PrivateGate'
+import { usePrivacyPin } from '../settings/usePrivacyPin'
 
 interface HighlightArtifactEntryProps {
   entry: Entry
   onEdit: (entryId: string, title: string, body: string) => Promise<unknown>
   onDelete: (entryId: string) => Promise<void>
+  pinConfigured: boolean | null
+  verifyPin: (pin: string) => Promise<boolean>
 }
 
-function HighlightArtifactEntry({ entry, onEdit, onDelete }: HighlightArtifactEntryProps) {
+function HighlightArtifactEntry({ entry, onEdit, onDelete, pinConfigured, verifyPin }: HighlightArtifactEntryProps) {
   const [editing, setEditing] = useState(false)
   const [title, setTitle] = useState(entry.title ?? '')
   const [body, setBody] = useState(entry.body)
@@ -83,25 +87,32 @@ function HighlightArtifactEntry({ entry, onEdit, onDelete }: HighlightArtifactEn
 
   return (
     <div className="highlight-artifact-entry">
-      <div className="highlight-artifact-entry-header">
-        {entry.entry_type === 'reflection' && <span className="journal-card-badge">Reflection</span>}
-        <span className="highlight-artifact-entry-date">{date}</span>
-        <div className="highlight-artifact-entry-actions">
-          <Link to={notebookHref(entry)} className="journal-card-notebook-link">
-            Edit in Notebook
-          </Link>
-          <button type="button" className="verse-panel-note-edit-btn" onClick={startEdit}>
-            Edit
-          </button>
-          <button type="button" className="verse-panel-note-delete" onClick={handleDelete} disabled={deleting}>
-            {deleting ? 'Deleting…' : 'Delete'}
-          </button>
+      <PrivateGate
+        isPrivate={entry.is_private}
+        pinConfigured={pinConfigured}
+        verifyPin={verifyPin}
+        placeholderMeta={<span className="highlight-artifact-entry-date">{date}</span>}
+      >
+        <div className="highlight-artifact-entry-header">
+          {entry.entry_type === 'reflection' && <span className="journal-card-badge">Reflection</span>}
+          <span className="highlight-artifact-entry-date">{date}</span>
+          <div className="highlight-artifact-entry-actions">
+            <Link to={notebookHref(entry)} className="journal-card-notebook-link">
+              Edit in Notebook
+            </Link>
+            <button type="button" className="verse-panel-note-edit-btn" onClick={startEdit}>
+              Edit
+            </button>
+            <button type="button" className="verse-panel-note-delete" onClick={handleDelete} disabled={deleting}>
+              {deleting ? 'Deleting…' : 'Delete'}
+            </button>
+          </div>
         </div>
-      </div>
-      {entry.title && <p className="highlight-artifact-entry-title">{entry.title}</p>}
-      {entry.entry_type === 'reflection' && <AnchorScripture entryId={entry.id} />}
-      <EntryBody text={entry.body} />
-      {error && <p className="error">{error}</p>}
+        {entry.title && <p className="highlight-artifact-entry-title">{entry.title}</p>}
+        {entry.entry_type === 'reflection' && <AnchorScripture entryId={entry.id} />}
+        <EntryBody text={entry.body} />
+        {error && <p className="error">{error}</p>}
+      </PrivateGate>
     </div>
   )
 }
@@ -115,6 +126,7 @@ interface HighlightArtifactsProps {
 // PrayerRequestHistory's toggle-gated fetch.
 export function HighlightArtifacts({ highlight }: HighlightArtifactsProps) {
   const { entries, loading, addEntry, updateEntry, deleteEntry } = useHighlightArtifacts(highlight)
+  const { pinConfigured, verifyPin } = usePrivacyPin()
 
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
@@ -143,7 +155,14 @@ export function HighlightArtifacts({ highlight }: HighlightArtifactsProps) {
 
       <div className="highlight-artifacts-list">
         {entries.map((entry) => (
-          <HighlightArtifactEntry key={entry.id} entry={entry} onEdit={updateEntry} onDelete={deleteEntry} />
+          <HighlightArtifactEntry
+            key={entry.id}
+            entry={entry}
+            onEdit={updateEntry}
+            onDelete={deleteEntry}
+            pinConfigured={pinConfigured}
+            verifyPin={verifyPin}
+          />
         ))}
       </div>
 

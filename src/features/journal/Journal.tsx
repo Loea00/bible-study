@@ -21,9 +21,16 @@ export function Journal() {
     }
   }, [targetEntryId, loading])
 
+  // Private entries are excluded from the tag chip list, and from ever
+  // *matching* a tag filter or text search — either would reveal something
+  // about hidden content (that it has this tag, or contains this word)
+  // without requiring the PIN. They still appear normally under the plain
+  // type tabs / "All" with no query or tag active, as a locked card — you
+  // need to be able to find your way to one to unlock it.
   const allTags = useMemo(() => {
     const seen = new Set<string>()
     for (const entry of entries) {
+      if (entry.is_private) continue
       for (const tag of entry.tags) seen.add(tag)
     }
     return [...seen].sort()
@@ -33,8 +40,12 @@ export function Journal() {
     const q = query.trim().toLowerCase()
     return entries.filter((entry) => {
       if (activeType !== 'all' && entry.entry_type !== activeType) return false
-      if (activeTag && !entry.tags.includes(activeTag)) return false
+      if (activeTag) {
+        if (entry.is_private) return false
+        if (!entry.tags.includes(activeTag)) return false
+      }
       if (!q) return true
+      if (entry.is_private) return false
       return entry.title?.toLowerCase().includes(q) || entry.body.toLowerCase().includes(q)
     })
   }, [entries, query, activeTag, activeType])

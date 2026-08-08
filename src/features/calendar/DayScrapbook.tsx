@@ -6,6 +6,8 @@ import { EntryBody } from '../journal/EntryBody'
 import { AnchorScripture } from '../reading/AnchorScripture'
 import { formatReferenceRange, parseVerseId } from '../reading/books'
 import { notebookHref } from '../reading/notebookLink'
+import { PrivateGate } from '../../components/PrivateGate'
+import { usePrivacyPin } from '../settings/usePrivacyPin'
 
 const PRAYER_ENTRY_LABEL: Partial<Record<Entry['entry_type'], string>> = {
   prayer_update: 'Update',
@@ -19,7 +21,14 @@ const PRAYER_ENTRY_LABEL: Partial<Record<Entry['entry_type'], string>> = {
 // already established. Editing still stays on Journal/Prayer, but a
 // straight delete is exposed here so a day's page can be cleaned up
 // without leaving the calendar.
-function DayEntryCard({ entry, onDelete }: { entry: Entry; onDelete: (entryId: string) => Promise<void> }) {
+interface DayEntryCardProps {
+  entry: Entry
+  onDelete: (entryId: string) => Promise<void>
+  pinConfigured: boolean | null
+  verifyPin: (pin: string) => Promise<boolean>
+}
+
+function DayEntryCard({ entry, onDelete, pinConfigured, verifyPin }: DayEntryCardProps) {
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -34,39 +43,52 @@ function DayEntryCard({ entry, onDelete }: { entry: Entry; onDelete: (entryId: s
     }
   }
 
+  const date = new Date(entry.created_at).toLocaleDateString(undefined, {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  })
+
   return (
     <article className="journal-card">
-      <div className="journal-card-header">
-        <div>
-          {entry.entry_type === 'reflection' && <span className="journal-card-badge">Reflection</span>}
-          {entry.entry_type === 'margin_note' && <span className="journal-card-badge">Margin note</span>}
-          {PRAYER_ENTRY_LABEL[entry.entry_type] && (
-            <span className="journal-card-badge">{PRAYER_ENTRY_LABEL[entry.entry_type]}</span>
-          )}
-          {entry.title && <h2>{entry.title}</h2>}
-          {(entry.entry_type === 'reflection' || entry.entry_type === 'margin_note') &&
-            entry.anchor_start &&
-            entry.anchor_end && (
-              <Link
-                to={`/?book=${parseVerseId(entry.anchor_start).book}&chapter=${parseVerseId(entry.anchor_start).chapter}`}
-                className="journal-card-reference"
-              >
-                {formatReferenceRange(entry.anchor_start, entry.anchor_end)}
-              </Link>
+      <PrivateGate
+        isPrivate={entry.is_private}
+        pinConfigured={pinConfigured}
+        verifyPin={verifyPin}
+        placeholderMeta={<p className="journal-card-date">{date}</p>}
+      >
+        <div className="journal-card-header">
+          <div>
+            {entry.entry_type === 'reflection' && <span className="journal-card-badge">Reflection</span>}
+            {entry.entry_type === 'margin_note' && <span className="journal-card-badge">Margin note</span>}
+            {PRAYER_ENTRY_LABEL[entry.entry_type] && (
+              <span className="journal-card-badge">{PRAYER_ENTRY_LABEL[entry.entry_type]}</span>
             )}
+            {entry.title && <h2>{entry.title}</h2>}
+            {(entry.entry_type === 'reflection' || entry.entry_type === 'margin_note') &&
+              entry.anchor_start &&
+              entry.anchor_end && (
+                <Link
+                  to={`/?book=${parseVerseId(entry.anchor_start).book}&chapter=${parseVerseId(entry.anchor_start).chapter}`}
+                  className="journal-card-reference"
+                >
+                  {formatReferenceRange(entry.anchor_start, entry.anchor_end)}
+                </Link>
+              )}
+          </div>
+          <div className="journal-card-actions">
+            <Link to={notebookHref(entry)} className="journal-card-notebook-link">
+              Edit in Notebook
+            </Link>
+            <button type="button" className="journal-card-delete" onClick={handleDelete} disabled={deleting}>
+              {deleting ? 'Deleting…' : 'Delete'}
+            </button>
+          </div>
         </div>
-        <div className="journal-card-actions">
-          <Link to={notebookHref(entry)} className="journal-card-notebook-link">
-            Edit in Notebook
-          </Link>
-          <button type="button" className="journal-card-delete" onClick={handleDelete} disabled={deleting}>
-            {deleting ? 'Deleting…' : 'Delete'}
-          </button>
-        </div>
-      </div>
-      {entry.entry_type === 'reflection' && <AnchorScripture entryId={entry.id} />}
-      <EntryBody text={entry.body} />
-      {error && <p className="error">{error}</p>}
+        {entry.entry_type === 'reflection' && <AnchorScripture entryId={entry.id} />}
+        <EntryBody text={entry.body} />
+        {error && <p className="error">{error}</p>}
+      </PrivateGate>
     </article>
   )
 }
@@ -78,6 +100,7 @@ interface DayScrapbookProps {
 export function DayScrapbook({ date }: DayScrapbookProps) {
   const { sessions, entries, answeredPrayers, loading, deleteSession, deleteEntry, unmarkAnswered } =
     useCalendarDay(date)
+  const { pinConfigured, verifyPin } = usePrivacyPin()
   const [busyId, setBusyId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -148,7 +171,13 @@ export function DayScrapbook({ date }: DayScrapbookProps) {
           <h3>Notes &amp; Reflections</h3>
           <div className="journal-timeline">
             {entries.map((entry) => (
-              <DayEntryCard key={entry.id} entry={entry} onDelete={deleteEntry} />
+              <DayEntryCard
+                key={entry.id}
+                entry={entry}
+                onDelete={deleteEntry}
+                pinConfigured={pinConfigured}
+                verifyPin={verifyPin}
+              />
             ))}
           </div>
         </div>
@@ -158,19 +187,21 @@ export function DayScrapbook({ date }: DayScrapbookProps) {
         <div className="calendar-scrapbook-section">
           <h3>Prayer</h3>
           {answeredPrayers.map((request) => (
-            <div key={request.id} className="calendar-line-item">
-              <Link to="/prayer" className="calendar-answered-badge">
-                Answered: {request.title}
-              </Link>
-              <button
-                type="button"
-                className="calendar-line-delete"
-                onClick={() => handleUnmarkAnswered(request.id)}
-                disabled={busyId === request.id}
-              >
-                {busyId === request.id ? 'Removing…' : 'Remove'}
-              </button>
-            </div>
+            <PrivateGate key={request.id} isPrivate={request.is_private} pinConfigured={pinConfigured} verifyPin={verifyPin}>
+              <div className="calendar-line-item">
+                <Link to="/prayer" className="calendar-answered-badge">
+                  Answered: {request.title}
+                </Link>
+                <button
+                  type="button"
+                  className="calendar-line-delete"
+                  onClick={() => handleUnmarkAnswered(request.id)}
+                  disabled={busyId === request.id}
+                >
+                  {busyId === request.id ? 'Removing…' : 'Remove'}
+                </button>
+              </div>
+            </PrivateGate>
           ))}
         </div>
       )}

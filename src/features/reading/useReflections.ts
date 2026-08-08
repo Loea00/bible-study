@@ -38,11 +38,16 @@ export function useReflections(book: string, chapter: number) {
     }
 
     const entryIds = [...new Set(refs.map((r) => r.entry_id))]
+    // Private reflections are excluded outright (see the matching note in
+    // useJournalExcerpts.ts) -- this is the verse panel's "also written
+    // here" pointer, not the reflection's home page, so there's no unlock
+    // UI to gate it behind.
     const { data: entries } = await supabase
       .from('entries')
       .select('*')
       .in('id', entryIds)
       .eq('entry_type', 'reflection')
+      .eq('is_private', false)
 
     const entryById = new Map((entries ?? []).map((e) => [e.id, e]))
     const grouped: Record<string, ReflectionExcerpt[]> = {}

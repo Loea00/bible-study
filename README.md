@@ -1415,7 +1415,49 @@ date; wrong PIN shows "Incorrect PIN."; correct PIN reveals full content plus th
 toggling to Public updates immediately; independently repeated the same for a prayer request and one
 of its journey entries, confirming each has its own separate lock state. Settings page renders and
 reflects "A privacy PIN is currently set." Zero console errors. Build clean, no leftover
-TEMP-VERIFY markers. **Migration 0018 needs to be run by Aaron** before this is live.
+TEMP-VERIFY markers. Migration 0018 run by Aaron. **Fully live.**
+
+**Fix: Private entries leaked outside Journal/Prayer in several places.** Aaron asked whether
+Private entries should also be hidden from search results — investigating turned up a bigger gap:
+`PrivateGate` had only ever been wired into the two pages Aaron scoped the feature to (Journal,
+Prayer), but the same underlying `entries`/`prayer_requests` rows are also displayed, completely
+unprotected, by three other surfaces that don't belong to that scope decision but still show the
+same data:
+
+- **Calendar's Day view** (`DayScrapbook.tsx`) showed full private entry content, and the "Answered:
+  {title}" line showed a private prayer request's title in plain text.
+- **The reading pane's verse panel** (`useJournalExcerpts.ts`/`useReflections.ts`) showed
+  journal/reflection excerpts and prayer-writing excerpts for a verse with no privacy check at all.
+- **Highlights' artifact list** (`HighlightArtifacts.tsx`) showed full content of any
+  highlight-tagged note or reflection, private or not.
+- **Journal's own search box and tag-chip list** (`Journal.tsx`) — the literal thing Aaron
+  asked about — matched against a private entry's actual title/body text and could surface it in
+  filtered results (proving a match exists, and by extension roughly what it's about) even though
+  the card itself stayed locked; a tag used only on a private entry also leaked into the tag-chip
+  list.
+
+Fixed with two different approaches depending on what kind of surface it is. **Excerpt/mention
+surfaces** (VersePanel's journal/reflection/prayer excerpts) got a query-level `.eq('is_private',
+false)` filter — these are secondary "also written elsewhere" pointers with no unlock UI of their
+own, so the safest default is excluding private entries outright rather than inventing a locked
+placeholder for a compact excerpt card. **Full-card display surfaces** (Calendar's `DayEntryCard`
+and its answered-prayer line, Highlights' `HighlightArtifactEntry`) got the same `PrivateGate`
+treatment already used in Journal/Prayer, each instantiating its own `usePrivacyPin()` and passing
+`pinConfigured`/`verifyPin` down — consistent with the existing pattern, no new component needed.
+**Journal's search/tags** got a narrower fix: `allTags` skips private entries when collecting tags,
+and `filteredEntries` excludes a private entry from ever *matching* an active tag filter or a
+non-empty search query (matching would itself leak that the hidden content contains that word/tag) —
+but a private entry still appears normally as a locked card under the plain type tabs / "All" with
+no query or tag active, since you still need some way to browse to it and unlock it.
+
+Verified live: confirmed a private entry with the word "secretword" in its body doesn't surface when
+searching "secretword" (falls through to "Nothing matches that search"), confirmed a tag used only
+on a private entry ("secret-tag") doesn't appear in the tag-chip list while a public entry's tag
+does, and confirmed both entries still show under "All" with no query active (one locked). Separately
+confirmed a mocked private Calendar Day entry, a mocked private answered-prayer title, and a mocked
+private Highlights artifact all render as locked placeholders. Zero console errors. Build clean, no
+leftover TEMP-VERIFY markers. No migration needed — every fix here is query/UI logic against the
+`is_private` column that migration 0018 already added.
 
 ## TODO — amendment v1.4 (theming), intentionally deferred
 

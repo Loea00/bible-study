@@ -38,11 +38,17 @@ export function useJournalExcerpts(book: string, chapter: number) {
     }
 
     const entryIds = [...new Set(refs.map((r) => r.entry_id))]
+    // Private entries are excluded outright here rather than shown as a
+    // locked placeholder -- this is a secondary "also mentioned elsewhere"
+    // pointer, not the entry's home page, so there's no unlock UI to put
+    // it behind; the safest default is to not surface it at all until
+    // it's made public again.
     const { data: entries } = await supabase
       .from('entries')
       .select('*')
       .in('id', entryIds)
       .in('entry_type', ['journal', ...PRAYER_TYPES])
+      .eq('is_private', false)
 
     const entryById = new Map((entries ?? []).map((e) => [e.id, e]))
     const grouped: Record<string, JournalExcerpt[]> = {}
