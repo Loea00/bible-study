@@ -1,6 +1,11 @@
-# Bible Study App
+# THEO
 
-Phase 1 scaffold: React + TypeScript (Vite) frontend, Supabase (Postgres/auth) backend. See
+A personal Bible study app — reading, highlights, notes, prayer with journey tracking, calendar,
+live note-taking, and privacy controls, all built on one connected data model rather than a set of
+separate tools. Named THEO; the AI assistant persona planned for the "scriptural grounding" work
+(see spec-amendment-v1-2-prayer-social.md §B5) will also be THEO once that phase is built.
+
+React + TypeScript (Vite) frontend, Supabase (Postgres/auth) backend. See
 `bible-study-app-spec.md` for the full product spec, plus `spec-amendment-v1-1-highlights.md`
 (span anchoring, unified across notes/highlights/journal tags), `spec-amendment-v1-2-prayer-social.md`
 (Phase 2+ prayer system, AI grounding, social — core prayer tracker now in progress, see Status;
@@ -1458,6 +1463,37 @@ confirmed a mocked private Calendar Day entry, a mocked private answered-prayer 
 private Highlights artifact all render as locked placeholders. Zero console errors. Build clean, no
 leftover TEMP-VERIFY markers. No migration needed — every fix here is query/UI logic against the
 `is_private` column that migration 0018 already added.
+
+**Rename to THEO.** Aaron named the app THEO as part of a pivot toward growing it into a
+standalone, eventually multi-user product (see the community roadmap below). Updated the
+user-facing spots: `index.html` page title, `SignIn.tsx`'s header, `package.json`'s `"name"`, and
+this README's title/intro. Internal code identifiers were left as-is — this is a branding change,
+not a technical rename. The AI assistant persona planned for the "scriptural grounding" work
+(spec-amendment-v1-2-prayer-social.md §B5) will also be presented to users as THEO once that phase
+is built — not yet, since no AI/API code exists in the app at all today.
+
+**Data export: "Download my data" in Settings.** First piece of the data-durability work Aaron
+asked to start before any community/sharing features get built — a self-serve backup so nothing
+Aaron has written only lives in one Supabase project. `useDataExport.ts` queries every table that
+holds a user's own artifacts — `entries`, `verse_references`, `reading_sessions`, `highlights`,
+`prayer_lists`, `prayer_requests`, `prayed_marks` — with a plain `select('*')` per table (RLS
+already scopes every one of these to `auth.uid()`, so no explicit filter is needed) and bundles the
+results into one JSON file, downloaded client-side via a `Blob` + temporary `<a download>` — no new
+backend infrastructure. `user_settings` is deliberately excluded from the export: it holds only
+`privacy_pin_hash`, a credential, not an artifact. Wired into `SettingsPage.tsx` as a new "Export
+your data" section, explicitly framed as a personal backup rather than a sync (nothing changes in
+the account, and there's no schedule — re-download whenever a fresh copy is wanted).
+
+Verified: build clean. Live-clicked "Download my data" in the browser preview and confirmed the
+click handler fires and the export completes with no thrown error and no console error — the
+preview tooling doesn't surface the actual cross-origin Supabase network calls, so the response
+payload itself wasn't inspected directly, but the code path (7 sequential `select('*')` calls, then
+blob/download) is straightforward and RLS-safe by construction. Worth a real check with a live
+login when convenient. No migration needed — this is a client-only read against existing tables.
+
+Next up in the agreed data-durability sequence: account recovery (Supabase Auth's built-in
+`resetPasswordForEmail`/`updateUser({password})`, unused today), then a full RLS audit — both
+before any friends/sharing/groups work begins.
 
 ## TODO — amendment v1.4 (theming), intentionally deferred
 

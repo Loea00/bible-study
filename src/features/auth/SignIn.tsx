@@ -22,7 +22,7 @@ export function SignIn() {
 
   return (
     <div className="signin">
-      <h1>Bible Study</h1>
+      <h1>THEO</h1>
       <p>Sign in to continue.</p>
       <form onSubmit={handleSubmit}>
         <input

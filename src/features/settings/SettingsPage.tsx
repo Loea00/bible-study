@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { usePrivacyPin } from './usePrivacyPin'
+import { useDataExport } from './useDataExport'
 
 export function SettingsPage() {
   const { pinConfigured, setPin } = usePrivacyPin()
+  const { exportData, exporting, error: exportError } = useDataExport()
   const [pin, setPinInput] = useState('')
   const [confirmPin, setConfirmPin] = useState('')
   const [saving, setSaving] = useState(false)
@@ -70,6 +72,22 @@ export function SettingsPage() {
           </button>
           {saved && <p className="settings-saved">Saved.</p>}
           {error && <p className="error">{error}</p>}
+        </div>
+      </section>
+
+      <section className="settings-section">
+        <h2>Export your data</h2>
+        <p className="settings-hint">
+          Download everything you've entered — journal entries, reflections, margin notes, prayer requests and their
+          full journeys, highlights, and reading sessions — as a single JSON file you keep. This is a personal backup,
+          not a sync: nothing changes in your account, and there's no automatic schedule yet, so re-download whenever
+          you want an up-to-date copy.
+        </p>
+        <div className="settings-form">
+          <button type="button" onClick={exportData} disabled={exporting}>
+            {exporting ? 'Preparing download…' : 'Download my data'}
+          </button>
+          {exportError && <p className="error">{exportError}</p>}
         </div>
       </section>
     </div>
