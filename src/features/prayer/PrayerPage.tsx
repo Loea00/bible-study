@@ -5,9 +5,11 @@ import { usePrayedMarks } from './usePrayedMarks'
 import { PrayerRequestCard } from './PrayerRequestCard'
 import { PrayThroughFlow } from './PrayThroughFlow'
 import { usePrivacyPin } from '../settings/usePrivacyPin'
+import { useInputPosition } from '../../lib/useInputPosition'
 import type { PrayedMark, PrayerRequest, PrayerRequestStatus } from '../../types/db'
 
 type StatusFilter = 'open' | 'answered' | 'archived' | 'all'
+type ViewMode = 'cards' | 'list'
 
 function matchesFilter(status: PrayerRequestStatus, filter: StatusFilter): boolean {
   if (filter === 'all') return true
@@ -39,6 +41,15 @@ export function PrayerPage() {
   } = usePrayerRequests()
   const { marksByRequest, addMark } = usePrayedMarks()
   const { pinConfigured, verifyPin } = usePrivacyPin()
+  const [inputPosition, setInputPosition] = useInputPosition('theo:prayer-input-position')
+  const [viewMode, setViewMode] = useState<ViewMode>(
+    () => (localStorage.getItem('theo:prayer-view-mode') === 'list' ? 'list' : 'cards'),
+  )
+
+  function handleSetViewMode(mode: ViewMode) {
+    setViewMode(mode)
+    localStorage.setItem('theo:prayer-view-mode', mode)
+  }
 
   const [prayThrough, setPrayThrough] = useState<{ name: string; requests: PrayerRequest[] } | null>(null)
 
@@ -133,34 +144,75 @@ export function PrayerPage() {
     )
   }
 
+  const inputCard = (
+    <div className="journal-editor">
+      <input
+        className="journal-title-input"
+        value={newTitle}
+        onChange={(e) => setNewTitle(e.target.value)}
+        placeholder="What are you praying for?"
+      />
+      <textarea
+        className="journal-body-input"
+        value={newDescription}
+        onChange={(e) => setNewDescription(e.target.value)}
+        rows={3}
+        placeholder="Details (optional)"
+      />
+      <select className="prayer-list-select" value={newListId} onChange={(e) => setNewListId(e.target.value)}>
+        <option value="">Unlisted</option>
+        {lists.map((l) => (
+          <option key={l.id} value={l.id}>
+            {l.name}
+          </option>
+        ))}
+      </select>
+      <button type="button" onClick={handleCreateRequest} disabled={creating || !newTitle.trim()}>
+        {creating ? 'Saving…' : 'Add to prayer list'}
+      </button>
+      {createError && <p className="error">{createError}</p>}
+    </div>
+  )
+
   return (
     <div className="prayer-page">
-      <div className="journal-editor">
-        <input
-          className="journal-title-input"
-          value={newTitle}
-          onChange={(e) => setNewTitle(e.target.value)}
-          placeholder="What are you praying for?"
-        />
-        <textarea
-          className="journal-body-input"
-          value={newDescription}
-          onChange={(e) => setNewDescription(e.target.value)}
-          rows={3}
-          placeholder="Details (optional)"
-        />
-        <select className="prayer-list-select" value={newListId} onChange={(e) => setNewListId(e.target.value)}>
-          <option value="">Unlisted</option>
-          {lists.map((l) => (
-            <option key={l.id} value={l.id}>
-              {l.name}
-            </option>
-          ))}
-        </select>
-        <button type="button" onClick={handleCreateRequest} disabled={creating || !newTitle.trim()}>
-          {creating ? 'Saving…' : 'Add to prayer list'}
-        </button>
-        {createError && <p className="error">{createError}</p>}
+      {inputPosition === 'top' && inputCard}
+
+      <div className="doorway-view-controls">
+        <div className="doorway-toggle-group">
+          <span className="doorway-toggle-label">View</span>
+          <button
+            type="button"
+            className={`doorway-toggle-button${viewMode === 'cards' ? ' active' : ''}`}
+            onClick={() => handleSetViewMode('cards')}
+          >
+            Cards
+          </button>
+          <button
+            type="button"
+            className={`doorway-toggle-button${viewMode === 'list' ? ' active' : ''}`}
+            onClick={() => handleSetViewMode('list')}
+          >
+            List
+          </button>
+        </div>
+        <div className="doorway-toggle-group">
+          <span className="doorway-toggle-label">New entry</span>
+          <button
+            type="button"
+            className={`doorway-toggle-button${inputPosition === 'top' ? ' active' : ''}`}
+            onClick={() => setInputPosition('top')}
+          >
+            Top
+          </button>
+          <button
+            type="button"
+            className={`doorway-toggle-button${inputPosition === 'bottom' ? ' active' : ''}`}
+            onClick={() => setInputPosition('bottom')}
+          >
+            Bottom
+          </button>
+        </div>
       </div>
 
       <div className="prayer-lists-bar">
@@ -265,7 +317,9 @@ export function PrayerPage() {
 
       {loading && <p className="placeholder">Loading…</p>}
       {!loading && requests.length === 0 && (
-        <p className="placeholder">Nothing here yet — add your first prayer request above.</p>
+        <p className="placeholder">
+          Nothing here yet — add your first prayer request {inputPosition === 'top' ? 'above' : 'below'}.
+        </p>
       )}
       {!loading && requests.length > 0 && !hasAnyVisible && <p className="placeholder">Nothing matches this filter.</p>}
 
@@ -291,6 +345,7 @@ export function PrayerPage() {
                     onSetPrivacy={setPrivacy}
                     pinConfigured={pinConfigured}
                     verifyPin={verifyPin}
+                    viewMode={viewMode === 'list' ? 'list' : 'card'}
                   />
                 ))}
               </div>
@@ -318,6 +373,7 @@ export function PrayerPage() {
                     onSetPrivacy={setPrivacy}
                     pinConfigured={pinConfigured}
                     verifyPin={verifyPin}
+                    viewMode={viewMode === 'list' ? 'list' : 'card'}
                   />
                 ))}
               </div>
@@ -325,6 +381,8 @@ export function PrayerPage() {
           )
         })()}
       </div>
+
+      {inputPosition === 'bottom' && inputCard}
     </div>
   )
 }

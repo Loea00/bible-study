@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { PrayedMark, PrayerList, PrayerRequest, PrayerRequestStatus } from '../../types/db'
 import { PrayerRequestHistory } from './PrayerRequestHistory'
 import { PrivateGate } from '../../components/PrivateGate'
@@ -15,6 +15,11 @@ interface PrayerRequestCardProps {
   onSetPrivacy: (requestId: string, isPrivate: boolean) => Promise<unknown>
   pinConfigured: boolean | null
   verifyPin: (pin: string) => Promise<boolean>
+  // 'card' (default) renders the full card open, as it always has. 'list'
+  // renders a compact checkable row that expands to the same full content
+  // on click — the summary/detail split lives entirely in this component
+  // so the two view modes share one source of truth for the card body.
+  viewMode?: 'card' | 'list'
 }
 
 const STATUS_LABEL: Record<PrayerRequestStatus, string> = {
@@ -49,6 +54,7 @@ export function PrayerRequestCard({
   onSetPrivacy,
   pinConfigured,
   verifyPin,
+  viewMode = 'card',
 }: PrayerRequestCardProps) {
   const [editing, setEditing] = useState(false)
   const [title, setTitle] = useState(request.title)
@@ -65,6 +71,21 @@ export function PrayerRequestCard({
   const [togglingPrivacy, setTogglingPrivacy] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [expanded, setExpanded] = useState(viewMode !== 'list')
+
+  // Switching the page's view-mode toggle should collapse/expand every
+  // already-mounted card, not just new ones — a plain useState initializer
+  // only runs once at mount, so this keeps it in sync with the prop.
+  useEffect(() => {
+    setExpanded(viewMode !== 'list')
+  }, [viewMode])
+
+  function isToday(iso: string): boolean {
+    const d = new Date(iso)
+    const now = new Date()
+    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate()
+  }
+  const markedToday = marks.some((m) => isToday(m.created_at))
 
   const date = new Date(request.created_at).toLocaleDateString(undefined, {
     month: 'long',
@@ -194,6 +215,58 @@ export function PrayerRequestCard({
     )
   }
 
+  if (viewMode === 'list' && !expanded) {
+    return (
+      <article className="prayer-card prayer-list-row-card">
+        <PrivateGate
+          isPrivate={request.is_private}
+          pinConfigured={pinConfigured}
+          verifyPin={verifyPin}
+          placeholderMeta={
+            <div className="journal-card-header">
+              <div>
+                <span className={`prayer-status-badge prayer-status-${request.status}`}>{STATUS_LABEL[request.status]}</span>
+                <p className="journal-card-date">{date}</p>
+              </div>
+            </div>
+          }
+        >
+          <div
+            className="prayer-list-row"
+            role="button"
+            tabIndex={0}
+            onClick={() => setExpanded(true)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                setExpanded(true)
+              }
+            }}
+          >
+            <input
+              type="checkbox"
+              className="prayer-list-checkbox"
+              checked={markedToday}
+              disabled={marking || markedToday}
+              title={markedToday ? 'Prayed for this today' : 'I prayed for this today'}
+              onClick={(e) => e.stopPropagation()}
+              onChange={handleMarkPrayed}
+            />
+            <span className={`prayer-status-badge prayer-status-${request.status}`}>{STATUS_LABEL[request.status]}</span>
+            <span className="prayer-list-row-title">{request.title}</span>
+            <span className="prayer-list-row-whisper">
+              {marks.length === 0 ? 'Not marked yet' : `Last prayed ${formatRelative(marks[0].created_at)}`}
+            </span>
+            <span className="prayer-list-row-chevron" aria-hidden="true">
+              ▾
+            </span>
+          </div>
+          {error && <p className="error">{error}</p>}
+        </PrivateGate>
+      </article>
+    )
+  }
+
   return (
     <article className="prayer-card">
       <PrivateGate
@@ -312,6 +385,12 @@ export function PrayerRequestCard({
           {historyOpen ? '▲ Hide journey' : '▾ Show journey'}
         </button>
         {historyOpen && <PrayerRequestHistory requestId={request.id} pinConfigured={pinConfigured} verifyPin={verifyPin} />}
+
+        {viewMode === 'list' && (
+          <button type="button" className="anchor-scripture-toggle" onClick={() => setExpanded(false)}>
+            ▲ Collapse
+          </button>
+        )}
 
         {error && <p className="error">{error}</p>}
       </PrivateGate>

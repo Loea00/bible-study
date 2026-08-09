@@ -4,10 +4,12 @@ import { useJournalEntries } from './useJournalEntries'
 import { JournalEditor } from './JournalEditor'
 import { JournalEntryCard } from './JournalEntryCard'
 import { usePrivacyPin } from '../settings/usePrivacyPin'
+import { useInputPosition } from '../../lib/useInputPosition'
 
 export function Journal() {
   const { entries, loading, createEntry, updateEntry, deleteEntry, setPrivacy } = useJournalEntries()
   const { pinConfigured, verifyPin } = usePrivacyPin()
+  const [inputPosition, setInputPosition] = useInputPosition('theo:journal-input-position')
   const [searchParams] = useSearchParams()
   const targetEntryId = searchParams.get('entry')
   const targetRef = useRef<HTMLDivElement>(null)
@@ -54,7 +56,27 @@ export function Journal() {
 
   return (
     <div className="journal">
-      <JournalEditor onSave={createEntry} />
+      {inputPosition === 'top' && <JournalEditor onSave={createEntry} />}
+
+      <div className="doorway-view-controls">
+        <div className="doorway-toggle-group">
+          <span className="doorway-toggle-label">New entry</span>
+          <button
+            type="button"
+            className={`doorway-toggle-button${inputPosition === 'top' ? ' active' : ''}`}
+            onClick={() => setInputPosition('top')}
+          >
+            Top
+          </button>
+          <button
+            type="button"
+            className={`doorway-toggle-button${inputPosition === 'bottom' ? ' active' : ''}`}
+            onClick={() => setInputPosition('bottom')}
+          >
+            Bottom
+          </button>
+        </div>
+      </div>
 
       {entries.length > 0 && (
         <div className="journal-search">
@@ -120,6 +142,8 @@ export function Journal() {
           </div>
         ))}
       </div>
+
+      {inputPosition === 'bottom' && <JournalEditor onSave={createEntry} />}
     </div>
   )
 }

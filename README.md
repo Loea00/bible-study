@@ -1495,6 +1495,44 @@ Next up in the agreed data-durability sequence: account recovery (Supabase Auth'
 `resetPasswordForEmail`/`updateUser({password})`, unused today), then a full RLS audit — both
 before any friends/sharing/groups work begins.
 
+**Prayer: list view (scan-and-check) alongside the existing card view, plus input-position
+toggle.** Aaron asked for a compact checklist-style way to pray through his list — a scan-and-tick
+mode instead of the full-card feed — with the "add a request" input card movable out of the way
+(top or bottom), and asked whether that placement toggle made sense for other doorways too, not
+just Prayer.
+
+Brainstormed the design in chat before building (checkbox semantics, list-vs-cards relationship,
+and toggle scope were all genuine open questions, not just scoping). Landed on: checking a box
+means **"I prayed for this today"** — reuses the existing `prayed_marks` history (no new schema),
+but the box's checked state is derived from whether *any* mark exists with today's date, so it
+reads as a daily checklist without inventing a second tracking concept alongside the card view's
+"I prayed for this" button and the separate Pray Through flow. `PrayerRequestCard.tsx` grew a
+`viewMode?: 'card' | 'list'` prop — 'list' renders a compact row (checkbox, status badge, title,
+last-prayed whisper) that expands in place to the exact same full card content it already had
+(edit, status actions, answer note, journey toggle, now with a matching "Collapse" control) — one
+source of truth for the card body, no duplicated JSX between the two views. `PrayerPage.tsx` adds a
+Cards/List toggle (persisted to `localStorage['theo:prayer-view-mode']`) above the lists bar.
+
+For input placement, added a small reusable `useInputPosition(storageKey)` hook
+(`src/lib/useInputPosition.ts`) backed by `localStorage`, and a `Top`/`Bottom` toggle next to the
+view-mode one. Aaron chose **per-page**, not one global setting — each doorway remembers its own
+choice under its own key. Wired into both **Prayer** (`theo:prayer-input-position`) and **Journal**
+(`theo:journal-input-position`), since both already share the identical `journal-editor` input-card
+pattern and extending it to both cost almost nothing once the hook existed. Left other doorways
+(reading pane's inline composer, etc.) alone — different structure, out of scope for this pass.
+
+Verified live with mocked prayer requests/marks (real login isn't something I can do myself):
+switching Cards → List correctly collapsed already-mounted cards (caught and fixed a real bug here
+— a card's expand/collapse state was a plain `useState` initializer that only ran once at mount, so
+toggling the page's view mode after cards were already rendered had no visible effect; fixed with a
+`useEffect` syncing `expanded` to the `viewMode` prop). Confirmed the checkbox shows checked+disabled
+for a request already marked today and unchecked for one that isn't, confirmed clicking the row
+(not the checkbox) expands to the full card and "Collapse" returns it to a row, confirmed clicking
+the checkbox itself doesn't also expand the row (`stopPropagation`), and confirmed the Top/Bottom
+toggle actually moves the input card on both Prayer and Journal. Build clean, no leftover
+TEMP-VERIFY markers. No migration needed — this is entirely client-side view/state logic against
+data that already exists.
+
 ## TODO — amendment v1.4 (theming), intentionally deferred
 
 Reviewed 2026-07-15, holding until after Strong's data sourcing (the currently agreed next
