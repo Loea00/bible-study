@@ -1599,6 +1599,47 @@ Re-verified live with Aaron's exact example: now surfaces STEWARD, BODY, LIFE, C
 all directly on-topic — with zero noise topics. Build clean, no leftover TEMP-VERIFY markers. No
 migration needed — still pure query/matching logic against data migration 0012 already seeded.
 
+**Account recovery: forgot-password flow.** Second piece of the data-durability work (after data
+export) — until now there was no way to recover a forgotten account password at all; Supabase Auth's
+built-in `resetPasswordForEmail`/`updateUser({password})` existed but nothing in the app called them.
+
+- `ForgotPassword.tsx` (new, `/forgot-password`) — email form, calls
+  `resetPasswordForEmail(email, { redirectTo: '<origin>/reset-password' })`. Always shows the same
+  neutral "if an account exists..." message regardless of outcome, so the flow can't be used to probe
+  which emails have accounts.
+- `ResetPassword.tsx` (new, `/reset-password`) — new-password + confirm form, calls
+  `updateUser({ password })`. Serves two entry points with the same form: (1) the link in a reset
+  email, which Supabase redirects back with a recovery token that supabase-js parses into a temporary
+  session automatically; (2) an already-signed-in user choosing "Change password" from Settings —
+  `updateUser` just needs *a* valid session, it doesn't care which kind.
+- `SignIn.tsx` — added a "Forgot password?" link.
+- `SettingsPage.tsx` — added an "Account" section with a "Change password" link to `/reset-password`.
+- `App.tsx` — `AppShell`'s signed-out branch previously rendered bare `<SignIn />` with no router
+  underneath it at all, so `/forgot-password` and `/reset-password` weren't reachable pre-login. Now
+  renders a small `<Routes>` of its own (`/forgot-password`, `/reset-password`, `*` → `SignIn`) in that
+  branch, and `/reset-password` is also registered in the signed-in branch's routes for the
+  already-authenticated "Change password" path.
+
+**Needs one manual step before this works end-to-end**: Supabase's Auth settings only redirect to
+allow-listed URLs. Aaron needs to add this app's `/reset-password` URL (both the production domain and
+`http://localhost:5173` for local dev) to **Supabase Dashboard → Authentication → URL Configuration →
+Redirect URLs** — otherwise `resetPasswordForEmail`'s `redirectTo` gets silently ignored in favor of
+the project's default Site URL. Nothing in the app code can configure this; it's dashboard-only.
+
+**A real bug found and fixed during verification, worth noting**: `ResetPassword.tsx`'s client-side
+validation (password too short, passwords don't match) called `setError(...)` but never flipped
+`status` to `'error'`, while the error `<p>` was gated on `status === 'error' && error` — so those two
+validation messages would never actually render, only a real `updateUser` failure would. Caught this
+by temporarily forcing the signed-out route branch to render in dev (`if (true)` in place of the real
+session check, `TEMP-VERIFY`-tagged and reverted after) so the flow could be driven without a real
+login, then testing all three error paths directly. Fixed by rendering `{error && ...}` unconditionally
+instead of gating on `status`. Re-verified all three paths (too short, mismatch, and a genuine
+`updateUser` failure — "Auth session missing!", the expected error for this mocked, session-less test)
+now display correctly.
+
+Build clean, no leftover TEMP-VERIFY markers. No migration needed — this is entirely routing/UI wired
+to Supabase Auth methods that already existed, unused, in the SDK.
+
 ## TODO — amendment v1.4 (theming), intentionally deferred
 
 Reviewed 2026-07-15, holding until after Strong's data sourcing (the currently agreed next

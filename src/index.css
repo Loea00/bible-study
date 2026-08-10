@@ -89,6 +89,15 @@ body {
   margin-top: 12px;
 }
 
+.signin-links {
+  margin-top: 16px;
+  font-size: 13px;
+}
+
+.signin-links a {
+  color: var(--accent);
+}
+
 .navbar {
   display: flex;
   justify-content: space-between;
@@ -3046,4 +3055,16 @@ button.highlight-swatch {
 .settings-saved {
   font-size: 13px;
   color: var(--accent);
+}
+
+.settings-link-button {
+  display: inline-block;
+  padding: 8px 16px;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: var(--accent);
+  color: white;
+  font: inherit;
+  text-decoration: none;
+  cursor: pointer;
 }

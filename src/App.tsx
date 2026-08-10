@@ -1,6 +1,8 @@
 import { Route, Routes } from 'react-router-dom'
 import { AuthProvider, useAuth } from './features/auth/AuthContext'
 import { SignIn } from './features/auth/SignIn'
+import { ForgotPassword } from './features/auth/ForgotPassword'
+import { ResetPassword } from './features/auth/ResetPassword'
 import { NavBar } from './components/NavBar'
 import { ReadingView } from './features/reading/ReadingView'
 import { Journal } from './features/journal/Journal'
@@ -16,7 +18,16 @@ function AppShell() {
   const { session, loading } = useAuth()
 
   if (loading) return null
-  if (!session && !import.meta.env.DEV) return <SignIn />
+
+  if (!session && !import.meta.env.DEV) {
+    return (
+      <Routes>
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="*" element={<SignIn />} />
+      </Routes>
+    )
+  }
 
   return (
     <div className="app-shell">
@@ -32,6 +43,7 @@ function AppShell() {
           <Route path="/prayer" element={<PrayerPage />} />
           <Route path="/calendar" element={<CalendarPage />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
         </Routes>
       </main>
     </div>

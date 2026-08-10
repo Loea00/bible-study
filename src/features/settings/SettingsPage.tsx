@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { usePrivacyPin } from './usePrivacyPin'
 import { useDataExport } from './useDataExport'
 
@@ -38,6 +39,16 @@ export function SettingsPage() {
   return (
     <div className="settings-page">
       <h1>Settings</h1>
+
+      <section className="settings-section">
+        <h2>Account</h2>
+        <p className="settings-hint">Change the password you use to sign in.</p>
+        <div className="settings-form">
+          <Link to="/reset-password" className="settings-link-button">
+            Change password
+          </Link>
+        </div>
+      </section>
 
       <section className="settings-section">
         <h2>Privacy PIN</h2>

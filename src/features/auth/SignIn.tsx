@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 
 export function SignIn() {
@@ -44,6 +45,9 @@ export function SignIn() {
         </button>
       </form>
       {status === 'error' && error && <p className="error">{error}</p>}
+      <p className="signin-links">
+        <Link to="/forgot-password">Forgot password?</Link>
+      </p>
     </div>
   )
 }
