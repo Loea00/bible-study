@@ -16,6 +16,10 @@ import type { NaveTopic } from '../../types/db'
 // ~5,000 topics alphabetically, which would make anything from "T" onward
 // (including common ones like "Wisdom") unreachable.
 
+// Generic stopwords, plus common prayer-address/filler words ("Lord",
+// "help", "please", "want", "gave") that are frequent enough in *any*
+// prayer to swamp the actual subject if left in — "Lord, help me..."
+// shouldn't surface the LORD topic every single time.
 const STOPWORDS = new Set([
   'that',
   'this',
@@ -49,11 +53,31 @@ const STOPWORDS = new Set([
   'these',
   'those',
   'which',
+  'lord',
+  'god',
+  'jesus',
+  'christ',
+  'help',
+  'want',
+  'wish',
+  'gave',
+  'given',
+  'give',
+  'pray',
+  'praying',
+  'prayer',
+  'thank',
+  'thanks',
+  'amen',
+  'dear',
 ])
 
-// Capped so a long description doesn't fire an unbounded number of
-// parallel requests.
-const MAX_KEYWORDS = 8
+// No cap on real-world prayer text — the earlier cap of 8 sliced by
+// document order, which silently dropped the most specific words in any
+// request longer than a sentence (they tend to come later, after the
+// address to God and the generic "help me" opener). A high ceiling just
+// guards against something pathological, not normal prayer text.
+const MAX_KEYWORDS = 40
 
 function extractKeywords(text: string): string[] {
   const words = text
@@ -64,20 +88,36 @@ function extractKeywords(text: string): string[] {
   return [...new Set(words)].slice(0, MAX_KEYWORDS)
 }
 
-// Each keyword's own search_nave_topics call already does the substring
-// matching server-side; here we just tally which topics came up across
-// multiple keywords so the most relevant ones surface first.
+// Naive singular/plural fold ("pain" ~ "pains") — good enough for this
+// offline heuristic, not real stemming.
+function stem(word: string): string {
+  return word.length > 4 && word.endsWith('s') ? word.slice(0, -1) : word
+}
+
+function isWholeWordMatch(keyword: string, topic: string): boolean {
+  const topicWords = topic.toLowerCase().split(/[\s,]+/)
+  return topicWords.some((w) => stem(w) === stem(keyword))
+}
+
+// search_nave_topics does a plain substring ilike server-side (same as the
+// Topics page's own search), which is enough to fetch a small candidate
+// set per keyword but too loose to trust directly — "body" would substring
+// -match "BUSYBODY". Each keyword's candidates get filtered down here to
+// only topics that actually contain that keyword as a whole word, then
+// tallied across keywords so multi-keyword matches rank first.
 async function findMatchingTopics(keywords: string[], limit: number): Promise<string[]> {
   const scores = new Map<string, number>()
-  const results = await Promise.all(
-    keywords.map((kw) => supabase.rpc('search_nave_topics', { query: kw, max_results: 20 })),
+  await Promise.all(
+    keywords.map(async (kw) => {
+      const { data, error } = await supabase.rpc('search_nave_topics', { query: kw, max_results: 20 })
+      if (error || !data) return
+      for (const row of data) {
+        if (isWholeWordMatch(kw, row.topic)) {
+          scores.set(row.topic, (scores.get(row.topic) ?? 0) + 1)
+        }
+      }
+    }),
   )
-  for (const { data, error } of results) {
-    if (error) continue
-    for (const row of data ?? []) {
-      scores.set(row.topic, (scores.get(row.topic) ?? 0) + 1)
-    }
-  }
   return [...scores.entries()]
     .sort((a, b) => b[1] - a[1])
     .slice(0, limit)

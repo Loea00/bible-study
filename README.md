@@ -1572,6 +1572,33 @@ time the section is opened, nothing written back to the request. Build clean, no
 TEMP-VERIFY markers. No migration needed — everything here reads data that migration 0012 already
 seeded.
 
+**Fix: "Related Scripture" matches were unrelated to the prayer request.** Aaron reported a real
+request — "A better body!" / "Lord, help me to better steward the body you gave me... I want to
+honor you with my care of your creation! I am tired of being the 'fat' kid and I want to shed all
+of these pains... and I want to live a long and healthy life!" — surfaced BODY (correct) but also
+BUSYBODY, EUCHARIST, LORD, and LORD'S PRAYER (all noise). Three real bugs in `usePrayerGrounding.ts`,
+not a ceiling on what offline matching can do:
+
+1. **Keyword truncation by position, not relevance.** The 8-keyword cap sliced off the *first* 8
+   words encountered in the text — for a prayer that opens "Lord, help me..." before ever getting to
+   the actual subject, that meant "lord," "help," "want," "gave" made the cut while "healthy,"
+   "pains," "tired," "creation," "steward," "care," "life" — the words that actually carry the
+   request — never got searched at all. Raised the cap to 40 (effectively unbounded for real prayer
+   text) so specific words later in a sentence aren't silently dropped.
+2. **Substring false positives.** `search_nave_topics` does a plain `ilike '%body%'` server-side (by
+   design — it's the same RPC the Topics page uses for search-as-you-type), which matched "body"
+   against "BUSYBODY" as a substring. Added a client-side `isWholeWordMatch` filter — each keyword's
+   ilike candidates now only count if the keyword equals one of the topic's own words (naive
+   singular/plural fold, "pain" ~ "pains") — before this ships to Layer 1's own tallying step.
+3. **Missing prayer-address stopwords.** "Lord," "help," "want," "gave," "given," "pray," "thank,"
+   "amen" etc. are common enough in *any* prayer's opening/closing that they were swamping the
+   actual subject with generic matches (LORD, LORD'S PRAYER). Added them to the stopword list
+   alongside the existing generic English ones.
+
+Re-verified live with Aaron's exact example: now surfaces STEWARD, BODY, LIFE, CARE, and CREATION —
+all directly on-topic — with zero noise topics. Build clean, no leftover TEMP-VERIFY markers. No
+migration needed — still pure query/matching logic against data migration 0012 already seeded.
+
 ## TODO — amendment v1.4 (theming), intentionally deferred
 
 Reviewed 2026-07-15, holding until after Strong's data sourcing (the currently agreed next
