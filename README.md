@@ -1640,6 +1640,39 @@ now display correctly.
 Build clean, no leftover TEMP-VERIFY markers. No migration needed — this is entirely routing/UI wired
 to Supabase Auth methods that already existed, unused, in the SDK.
 
+**RLS audit — clean, no fixes needed.** Third and final piece of the data-durability sequence
+(after data export and account recovery), done before any friends/sharing/groups work begins.
+Read every migration's `create table`/`enable row level security`/`create policy` statement and
+cross-checked against the live table list.
+
+Findings: all 16 live tables have RLS enabled, split into two consistent, correct patterns —
+
+- **8 owner-scoped tables** (`entries`, `verse_references`, `reading_sessions`, `highlights`,
+  `prayer_lists`, `prayer_requests`, `prayed_marks`, `user_settings`) all use the identical
+  `for all using (auth.uid() = user_id) with check (auth.uid() = user_id)`, covering every
+  operation uniformly — no table has a narrower or missing `with check` that could let a write
+  slip through unscoped.
+- **8 reference-data tables** (`translations`, `verses`, `strongs_lexicon`, `word_tags`,
+  `tsk_cross_references`, `commentary_entries`, `nave_topics`, `book_introductions`) are correctly
+  public-read-only (`using (true)`, no write policy at all) — writes only ever happen via
+  migrations/seed scripts running as the Postgres admin role, never reachable from the client.
+
+Also checked and clean: none of the 4 custom SQL functions (`verses_for_strongs`,
+`search_nave_topics`, `set_privacy_pin`, `verify_privacy_pin`) are `security definer`, so RLS still
+applies inside every one of them — no privilege-escalation path; none are vulnerable to SQL
+injection (all parameters are bound values, never interpolated into dynamic SQL); the app's
+Supabase client uses only the anon key (confirmed in `.env` and nowhere else in the codebase) —
+never a service-role key, which is what actually makes RLS the real enforcement boundary rather
+than a formality; and the dev-mode auth bypass in `App.tsx` (`!session && !import.meta.env.DEV`)
+is gated on a Vite compile-time flag that's `false` in production builds, so it can't leak into
+what's deployed.
+
+No code changes from this pass — a pure audit. Revisit this note (not a full re-audit) whenever a
+new table is added, especially once friends/sharing/groups introduces tables that need
+`auth.uid()`-scoped-but-not-owner-only policies (e.g. a friendship or group-membership check
+instead of a plain `= user_id`), which is a meaningfully different and easier-to-get-wrong shape
+than everything audited here.
+
 ## TODO — amendment v1.4 (theming), intentionally deferred
 
 Reviewed 2026-07-15, holding until after Strong's data sourcing (the currently agreed next
