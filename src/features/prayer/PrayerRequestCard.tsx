@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import type { PrayedMark, PrayerList, PrayerRequest, PrayerRequestStatus } from '../../types/db'
 import { PrayerRequestHistory } from './PrayerRequestHistory'
 import { PrivateGate } from '../../components/PrivateGate'
+import { usePrayerGrounding } from './usePrayerGrounding'
+import { PrayerGrounding } from './PrayerGrounding'
 
 interface PrayerRequestCardProps {
   request: PrayerRequest
@@ -70,6 +72,9 @@ export function PrayerRequestCard({
   const [deleting, setDeleting] = useState(false)
   const [togglingPrivacy, setTogglingPrivacy] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
+  const [groundingOpen, setGroundingOpen] = useState(false)
+  const { groups: groundingGroups, loading: groundingLoading, error: groundingError, load: loadGrounding } =
+    usePrayerGrounding()
   const [error, setError] = useState<string | null>(null)
   const [expanded, setExpanded] = useState(viewMode !== 'list')
 
@@ -86,6 +91,14 @@ export function PrayerRequestCard({
     return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate()
   }
   const markedToday = marks.some((m) => isToday(m.created_at))
+
+  function handleToggleGrounding() {
+    const opening = !groundingOpen
+    setGroundingOpen(opening)
+    if (opening && groundingGroups === null) {
+      loadGrounding(request.title, request.description)
+    }
+  }
 
   const date = new Date(request.created_at).toLocaleDateString(undefined, {
     month: 'long',
@@ -385,6 +398,17 @@ export function PrayerRequestCard({
           {historyOpen ? '▲ Hide journey' : '▾ Show journey'}
         </button>
         {historyOpen && <PrayerRequestHistory requestId={request.id} pinConfigured={pinConfigured} verifyPin={verifyPin} />}
+
+        <button type="button" className="anchor-scripture-toggle" onClick={handleToggleGrounding}>
+          {groundingOpen ? '▲ Hide related Scripture' : '▾ Related Scripture'}
+        </button>
+        {groundingOpen && (
+          <>
+            {groundingLoading && <p className="placeholder">Searching Nave's Topical Bible…</p>}
+            {groundingError && <p className="error">Couldn't load related Scripture: {groundingError}</p>}
+            {!groundingLoading && !groundingError && groundingGroups && <PrayerGrounding groups={groundingGroups} />}
+          </>
+        )}
 
         {viewMode === 'list' && (
           <button type="button" className="anchor-scripture-toggle" onClick={() => setExpanded(false)}>

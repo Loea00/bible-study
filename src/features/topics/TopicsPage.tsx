@@ -2,23 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useNaveTopics } from './useNaveTopics'
 import { formatReferenceRange, parseVerseId } from '../reading/books'
-
-// Groups consecutive entries sharing the same label together, so "Marriage
-// of: Ex 6:23" and "Children of: Ex 6:23, 25" render as labeled groups
-// instead of a flat list — matching how Nave's own printed edition
-// organizes a topic.
-function groupByLabel(entries: { id: string; label: string | null; verse_start: string; verse_end: string }[]) {
-  const groups: { label: string | null; refs: typeof entries }[] = []
-  for (const entry of entries) {
-    const last = groups[groups.length - 1]
-    if (last && last.label === entry.label) {
-      last.refs.push(entry)
-    } else {
-      groups.push({ label: entry.label, refs: [entry] })
-    }
-  }
-  return groups
-}
+import { groupByLabel } from './naveGrouping'
 
 export function TopicsPage() {
   const [query, setQuery] = useState('')

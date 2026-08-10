@@ -1533,6 +1533,45 @@ toggle actually moves the input card on both Prayer and Journal. Build clean, no
 TEMP-VERIFY markers. No migration needed — this is entirely client-side view/state logic against
 data that already exists.
 
+**Prayer: "Related Scripture" — Layer 1 of scriptural grounding (offline, no AI call).**
+spec-amendment-v1-2 §B5 describes two layers of scriptural grounding for prayer requests: Layer 1,
+free/offline topic-to-verse matching via Nave's Topical Bible, and Layer 2, a paid AI call that
+writes a short reflection (deferred — this app has never called an LLM and has no server-side code
+to hold an API key safely yet). Aaron asked to start with Layer 1 since the data and RPC already
+existed (migration 0012, already powering the Topics page).
+
+`usePrayerGrounding.ts` extracts keywords from a request's title + description (lowercase, strip
+punctuation, drop words under 4 letters and a short stopword list, cap at 8 keywords so a long
+description can't fire an unbounded number of requests), then calls the existing
+`search_nave_topics` RPC once per keyword in parallel and tallies which topics come up across
+multiple keywords — the same RPC the Topics page already uses for its search-as-you-type, just
+driven by extracted words instead of a typed query. The top 5 topics by tally get their full
+`nave_topics` rows fetched and rendered via a new `PrayerGrounding.tsx` component (grouped by
+Nave's own sub-labels, linking each reference into the reading view) behind a "▾ Related Scripture"
+toggle next to "Show journey" on the expanded card. Extracted the label-grouping helper
+(`groupByLabel`) out of `TopicsPage.tsx` into `src/features/topics/naveGrouping.ts` so both features
+share one implementation.
+
+**First approach didn't work — worth noting why.** The initial version fetched the *entire* topic
+list once (`search_nave_topics('', 6000)`) and matched keywords against it client-side, to avoid
+firing a request per keyword. Live-tested with a mocked request titled "Wisdom and patience for the
+budget meeting" and got zero matches despite "Wisdom" being a real, confirmed-working topic
+(verified separately via the Topics page's own search). Root cause: PostgREST's default 1000-row
+response cap silently truncated the "fetch everything" call to roughly the first fifth of the
+~5,000 topics in alphabetical order — anything from "T" onward, including "Wisdom," was
+structurally unreachable no matter what `max_results` the SQL function itself requested, since the
+truncation happens in PostgREST's response layer, after the function already returned its full set.
+Switched to the current per-keyword-RPC-call approach, which sidesteps the cap entirely (each call
+returns a handful of rows, well under 1000) and re-verified: the mocked request now correctly
+surfaces WISDOM, PATIENCE, and PROTRACTED MEETINGS (a looser but harmless match on "meeting"), each
+with real, clickable verse references pulled from actual seeded data.
+
+Deliberately doesn't touch `prayer_requests.grounding`/`grounding_generated_at` — those columns
+stay reserved for Layer 2's cached AI output; Layer 1 is a pure client-side lookup, recomputed each
+time the section is opened, nothing written back to the request. Build clean, no leftover
+TEMP-VERIFY markers. No migration needed — everything here reads data that migration 0012 already
+seeded.
+
 ## TODO — amendment v1.4 (theming), intentionally deferred
 
 Reviewed 2026-07-15, holding until after Strong's data sourcing (the currently agreed next

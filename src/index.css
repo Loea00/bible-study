@@ -805,6 +805,38 @@ button.highlight-swatch {
   margin-right: 14px;
 }
 
+.prayer-grounding {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 10px 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--code-bg, rgba(128, 128, 128, 0.06));
+}
+
+.prayer-grounding-topic-title {
+  font-family: var(--serif);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-h);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0 0 4px;
+}
+
+.prayer-grounding-refs {
+  font-family: var(--sans);
+  font-size: 13px;
+  line-height: 1.7;
+  margin: 0;
+}
+
+.prayer-grounding-label {
+  color: var(--text);
+  opacity: 0.6;
+}
+
 .anchor-scripture .highlight-group-pieces {
   margin-top: 6px;
 }
