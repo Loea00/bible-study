@@ -7,7 +7,7 @@ import { useProfile } from '../friends/useProfile'
 export function SettingsPage() {
   const { pinConfigured, setPin } = usePrivacyPin()
   const { exportData, exporting, error: exportError } = useDataExport()
-  const { profile, updateProfile } = useProfile()
+  const { profile, error: profileFetchError, updateProfile } = useProfile()
   const [pin, setPinInput] = useState('')
   const [confirmPin, setConfirmPin] = useState('')
   const [saving, setSaving] = useState(false)
@@ -86,6 +86,7 @@ export function SettingsPage() {
           and on anything you share. Your email ({profile?.email ?? '…'}) is only ever matched on an exact search, never
           shown to other users.
         </p>
+        {profileFetchError && <p className="error">Couldn't load your profile: {profileFetchError}</p>}
         <div className="settings-form">
           <input
             type="text"

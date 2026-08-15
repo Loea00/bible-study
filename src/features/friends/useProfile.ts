@@ -8,9 +8,11 @@ import type { Profile } from '../../types/db'
 export function useProfile() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   const refetch = useCallback(async () => {
     setLoading(true)
+    setError(null)
     const { data: userData } = await supabase.auth.getUser()
     const userId = userData.user?.id
     if (!userId) {
@@ -18,7 +20,12 @@ export function useProfile() {
       setLoading(false)
       return
     }
-    const { data } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle()
+    const { data, error: queryError } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle()
+    if (queryError) {
+      setError(queryError.message)
+      setLoading(false)
+      return
+    }
     setProfile(data)
     setLoading(false)
   }, [])
@@ -43,5 +50,5 @@ export function useProfile() {
     return data
   }
 
-  return { profile, loading, updateProfile }
+  return { profile, loading, error, updateProfile }
 }

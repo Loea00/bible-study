@@ -1754,6 +1754,53 @@ later steps.
 **Needs Aaron to run migration `0019_friends_and_sharing.sql`** before any of this works — nothing
 here is live yet. Build clean, no leftover TEMP-VERIFY markers.
 
+**Post-launch incident: migration 0019 broke every account's own data, then broke the invite link
+too — three real bugs, all fixed live.** Right after Aaron ran migration 0019, his main account
+showed zero journals, zero prayer requests, nothing — looked exactly like data loss. It wasn't:
+`select count(*) from entries/prayer_requests where user_id = ...` confirmed everything was still
+there. Three separate, unrelated bugs stacked on top of each other:
+
+1. **Infinite RLS recursion** (the actual data-visibility bug, fixed by `0020_fix_prayer_shares_rls_
+   recursion.sql`). `prayer_shares_owner_manage`'s policy checked ownership via a plain subquery on
+   `prayer_requests`. That subquery triggers `prayer_requests`' own RLS policies — including
+   `prayer_requests_shared_read`, which queries `prayer_shares` again. Querying `prayer_shares`
+   re-triggers `prayer_shares_owner_manage`, which queries `prayer_requests` again — an unbounded
+   cycle. Postgres hit its stack-depth limit and errored out, which PostgREST surfaced as a 500 —
+   for *every* query touching `entries`, `prayer_requests`, or `profiles` (all three reach the cycle
+   transitively), for every account, immediately on migration. Fixed by moving the ownership check
+   into `is_prayer_request_owner()`, a `security definer` function — since it's owned by a
+   BYPASSRLS role, its internal read of `prayer_requests` never re-triggers that table's policies,
+   breaking the cycle at that one link. Diagnosed by walking the chain backward from a live 500:
+   confirmed data existed (`select count(*)`) → confirmed RLS policies matched the migration exactly
+   (`pg_policies`) → the only thing left that could produce a 500 with correct policies and existing
+   data is Postgres itself erroring during evaluation, which is exactly what circular RLS does.
+2. **A silently swallowed error** made this harder to see than it should have been:
+   `useProfile.ts`'s fetch never checked for a query error, so when the *same* recursion bug also
+   broke `profiles` reads, the Settings page just showed a blank email instead of surfacing anything
+   — cost real time before the actual 500 was found via the browser's Network tab. Fixed by
+   surfacing the error properly (now shown as "Couldn't load your profile: ...").
+3. **A second, unrelated bug** surfaced only after the recursion was fixed: the invite-link box stuck
+   on "Loading…" forever, console showing a 404 for `get_or_create_invite_code`. Ruled out — in this
+   order, each confirmed with a direct SQL check rather than assumed — a stale PostgREST schema
+   cache (`notify pgrst, 'reload schema'`, then a full project restart, neither fixed it), the
+   function not existing (`pg_proc` showed it did, correct schema, correct arg count), and missing
+   `EXECUTE` grants (granted explicitly, no change). Tested the live endpoint directly with `curl`
+   using the public anon key (bypassing the browser and Aaron's session entirely) and got a clean
+   `400 "Not signed in"` — proving the function was reachable and correctly routed all along, so the
+   404 Aaron saw was from *before* one of the earlier fixes took effect, not a still-live problem.
+   The actual, distinct root cause only appeared after a hard refresh: `function gen_random_bytes
+   (integer) does not exist`. `get_or_create_invite_code` sets `search_path = public` (deliberate —
+   never trust an unqualified search path in a `security definer` function), but Supabase installs
+   `pgcrypto` into the `extensions` schema, not `public` — so `gen_random_bytes` was never reachable
+   from inside that function. It's the *only* one of the four new functions that calls a pgcrypto
+   function, which is exactly why `search_profiles` and the others were never affected. Fixed in
+   `0021_fix_invite_code_search_path.sql` by adding `extensions` to the function's search path.
+
+All three fixes were handed to Aaron as direct SQL to run immediately (unblocking him without
+waiting on a deploy), then written up as proper forward migrations (`0020`, `0021`) and committed —
+this project's existing convention of never editing an already-applied migration, extended here to
+a same-day hotfix under real pressure rather than a calm follow-up.
+
 ## TODO — amendment v1.4 (theming), intentionally deferred
 
 Reviewed 2026-07-15, holding until after Strong's data sourcing (the currently agreed next
