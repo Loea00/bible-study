@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
-import type { PrayedMark, PrayerList, PrayerRequest, PrayerRequestStatus } from '../../types/db'
+import type { PrayedMark, PrayerList, PrayerRequest, PrayerRequestStatus, PrayerVisibility } from '../../types/db'
 import { PrayerRequestHistory } from './PrayerRequestHistory'
 import { PrivateGate } from '../../components/PrivateGate'
 import { usePrayerGrounding } from './usePrayerGrounding'
 import { PrayerGrounding } from './PrayerGrounding'
+import { PrayerShareControls } from './PrayerShareControls'
+import { useEncouragement } from './useEncouragement'
 
 interface PrayerRequestCardProps {
   request: PrayerRequest
@@ -15,8 +17,11 @@ interface PrayerRequestCardProps {
   onMarkPrayed: (requestId: string) => Promise<unknown>
   onDelete: (requestId: string) => Promise<void>
   onSetPrivacy: (requestId: string, isPrivate: boolean) => Promise<unknown>
+  onSetVisibility: (requestId: string, visibility: PrayerVisibility) => Promise<unknown>
   pinConfigured: boolean | null
   verifyPin: (pin: string) => Promise<boolean>
+  // Accepted friends, for the share panel's friend picker.
+  friends: { id: string; name: string }[]
   // 'card' (default) renders the full card open, as it always has. 'list'
   // renders a compact checkable row that expands to the same full content
   // on click — the summary/detail split lives entirely in this component
@@ -54,8 +59,10 @@ export function PrayerRequestCard({
   onMarkPrayed,
   onDelete,
   onSetPrivacy,
+  onSetVisibility,
   pinConfigured,
   verifyPin,
+  friends,
   viewMode = 'card',
 }: PrayerRequestCardProps) {
   const [editing, setEditing] = useState(false)
@@ -73,6 +80,8 @@ export function PrayerRequestCard({
   const [togglingPrivacy, setTogglingPrivacy] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
   const [groundingOpen, setGroundingOpen] = useState(false)
+  const [sharingOpen, setSharingOpen] = useState(false)
+  const [encouragementOpen, setEncouragementOpen] = useState(false)
   const { groups: groundingGroups, loading: groundingLoading, error: groundingError, load: loadGrounding } =
     usePrayerGrounding()
   const [error, setError] = useState<string | null>(null)
@@ -410,6 +419,22 @@ export function PrayerRequestCard({
           </>
         )}
 
+        <button type="button" className="anchor-scripture-toggle" onClick={() => setSharingOpen((o) => !o)}>
+          {sharingOpen ? '▲ Hide sharing' : request.visibility === 'shared' ? '▾ Shared' : '▾ Share'}
+        </button>
+        {sharingOpen && (
+          <PrayerShareControls
+            requestId={request.id}
+            friends={friends}
+            onVisibilityChange={(v) => onSetVisibility(request.id, v)}
+          />
+        )}
+
+        <button type="button" className="anchor-scripture-toggle" onClick={() => setEncouragementOpen((o) => !o)}>
+          {encouragementOpen ? '▲ Hide encouragement' : '▾ Encouragement'}
+        </button>
+        {encouragementOpen && <PrayerEncouragementSection requestId={request.id} />}
+
         {viewMode === 'list' && (
           <button type="button" className="anchor-scripture-toggle" onClick={() => setExpanded(false)}>
             ▲ Collapse
@@ -419,5 +444,57 @@ export function PrayerRequestCard({
         {error && <p className="error">{error}</p>}
       </PrivateGate>
     </article>
+  )
+}
+
+// A shared comment thread on this request — visible to the owner and
+// everyone it's shared with (see 0019_friends_and_sharing.sql). Kept as
+// its own component, mounted only while open, so useEncouragement's fetch
+// doesn't fire for every collapsed card.
+function PrayerEncouragementSection({ requestId }: { requestId: string }) {
+  const { entries, authorsById, loading, addEncouragement } = useEncouragement(requestId)
+  const [body, setBody] = useState('')
+  const [sending, setSending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function handleSend() {
+    if (!body.trim()) return
+    setSending(true)
+    setError(null)
+    try {
+      await addEncouragement(body)
+      setBody('')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not send that.')
+    } finally {
+      setSending(false)
+    }
+  }
+
+  return (
+    <div className="prayer-encouragement">
+      {loading && <p className="placeholder">Loading…</p>}
+      {!loading && entries.length === 0 && <p className="placeholder">No encouragement yet.</p>}
+      {entries.map((e) => (
+        <div key={e.id} className="prayer-encouragement-entry">
+          <p className="prayer-encouragement-author">
+            {authorsById[e.user_id]?.display_name || authorsById[e.user_id]?.full_name || 'A friend'}
+          </p>
+          <p className="entry-body">{e.body}</p>
+        </div>
+      ))}
+      <div className="prayer-encouragement-form">
+        <textarea
+          value={body}
+          onChange={(ev) => setBody(ev.target.value)}
+          rows={2}
+          placeholder="Write a word of encouragement…"
+        />
+        <button type="button" onClick={handleSend} disabled={sending || !body.trim()}>
+          {sending ? 'Sending…' : 'Send'}
+        </button>
+      </div>
+      {error && <p className="error">{error}</p>}
+    </div>
   )
 }

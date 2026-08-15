@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
-import type { PrayerRequest, PrayerRequestStatus } from '../../types/db'
+import type { PrayerRequest, PrayerRequestStatus, PrayerVisibility } from '../../types/db'
 
 export function usePrayerRequests() {
   const [requests, setRequests] = useState<PrayerRequest[]>([])
@@ -8,7 +8,22 @@ export function usePrayerRequests() {
 
   const refetch = useCallback(async () => {
     setLoading(true)
-    const { data } = await supabase.from('prayer_requests').select('*').order('created_at', { ascending: false })
+    // Since migration 0019, RLS also returns requests shared *with* the
+    // current user (not just their own) — an explicit user_id filter here
+    // keeps this hook scoped to "my requests" as every existing caller
+    // expects. Requests shared with me live in useSharedWithMe instead.
+    const { data: userData } = await supabase.auth.getUser()
+    const userId = userData.user?.id
+    if (!userId) {
+      setRequests([])
+      setLoading(false)
+      return
+    }
+    const { data } = await supabase
+      .from('prayer_requests')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
     setRequests(data ?? [])
     setLoading(false)
   }, [])
@@ -86,5 +101,21 @@ export function usePrayerRequests() {
     setRequests((prev) => prev.map((r) => (r.id === requestId ? { ...r, is_private: isPrivate } : r)))
   }
 
-  return { requests, loading, createRequest, updateRequest, markAnswered, setStatus, deleteRequest, setPrivacy }
+  async function setVisibility(requestId: string, visibility: PrayerVisibility) {
+    const { error } = await supabase.from('prayer_requests').update({ visibility }).eq('id', requestId)
+    if (error) throw new Error(error.message)
+    setRequests((prev) => prev.map((r) => (r.id === requestId ? { ...r, visibility } : r)))
+  }
+
+  return {
+    requests,
+    loading,
+    createRequest,
+    updateRequest,
+    markAnswered,
+    setStatus,
+    deleteRequest,
+    setPrivacy,
+    setVisibility,
+  }
 }

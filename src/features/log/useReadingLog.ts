@@ -38,6 +38,14 @@ export function useReadingLog() {
 
   const refetch = useCallback(async () => {
     setLoading(true)
+    const { data: userData } = await supabase.auth.getUser()
+    const userId = userData.user?.id
+    if (!userId) {
+      setSessions([])
+      setLoading(false)
+      return
+    }
+
     const { data } = await supabase
       .from('reading_sessions')
       .select('*')
@@ -46,8 +54,16 @@ export function useReadingLog() {
 
     // Fetched eagerly (not per-session on expand) so every row can show an
     // artifact-count indicator up front, not just after tapping into it.
+    // entries gets an explicit user_id filter since migration 0019 also
+    // makes a friend's encouragement entries readable via RLS — this log
+    // is "my sessions," not "everything I can read."
     const [entriesRes, prayedRes] = await Promise.all([
-      supabase.from('entries').select('*').not('session_id', 'is', null).order('created_at', { ascending: true }),
+      supabase
+        .from('entries')
+        .select('*')
+        .eq('user_id', userId)
+        .not('session_id', 'is', null)
+        .order('created_at', { ascending: true }),
       supabase.from('prayed_marks').select('request_id, session_id').not('session_id', 'is', null),
     ])
 
@@ -76,6 +92,7 @@ export function useReadingLog() {
     const { count } = await supabase
       .from('entries')
       .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
       .gte('created_at', startOfMonth)
     setNotesThisMonth(count ?? 0)
 

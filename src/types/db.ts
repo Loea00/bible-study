@@ -16,6 +16,11 @@ export type EntryType =
   | 'word'
   | 'concern'
   | 'vision'
+  // A friend's words of support on a request shared with them (spec-
+  // amendment-v1-2 §B7.1) — content authored by someone other than the
+  // request's owner, the one exception to entries normally being entirely
+  // self-authored.
+  | 'encouragement'
 export type RefKind = 'anchor' | 'inline'
 export type HighlightColor = 'yellow' | 'green' | 'blue' | 'pink' | 'purple'
 
@@ -231,6 +236,64 @@ export type BookIntroduction = {
   body: string
 }
 
+// Public-safe profile row (spec-amendment-v1-2 §B7.2) — auth.users itself
+// isn't queryable from the client, so this is the only place a friend, a
+// search result, or a share notice can ever see someone's name. `email` is
+// stored here but is never returned by search_profiles() directly (only
+// whether a query matched it) — see 0019_friends_and_sharing.sql.
+export type Profile = {
+  id: string
+  email: string
+  display_name: string | null
+  full_name: string | null
+  invite_code: string | null
+  created_at: string
+}
+
+export type FriendshipStatus = 'pending' | 'accepted'
+
+export type Friendship = {
+  id: string
+  requester_id: string
+  addressee_id: string
+  status: FriendshipStatus
+  created_at: string
+  responded_at: string | null
+}
+
+// Blocker-only visibility — the blocked party has no way to see this row
+// exists at all (see 0019_friends_and_sharing.sql's RLS policy).
+export type Block = {
+  id: string
+  blocker_id: string
+  blocked_id: string
+  created_at: string
+}
+
+export type ReportTargetType = 'prayer_request' | 'entry' | 'user'
+export type ReportStatus = 'open' | 'reviewed'
+
+// Reviewed manually via the Supabase dashboard, not an in-app admin panel
+// (deliberately out of scope for Phase 4 step 1).
+export type Report = {
+  id: string
+  reporter_id: string
+  target_type: ReportTargetType
+  target_id: string
+  reason: string
+  status: ReportStatus
+  created_at: string
+}
+
+// Who, specifically, a "shared" prayer request is visible to — sharing is
+// named friends, not "everyone I'm friends with."
+export type PrayerShare = {
+  id: string
+  request_id: string
+  shared_with_id: string
+  created_at: string
+}
+
 export type Database = {
   public: {
     Tables: {
@@ -363,6 +426,51 @@ export type Database = {
         Update: Partial<UserSettings>
         Relationships: []
       }
+      profiles: {
+        Row: Profile
+        Insert: Omit<Profile, 'display_name' | 'full_name' | 'invite_code' | 'created_at'> & {
+          display_name?: string | null
+          full_name?: string | null
+          invite_code?: string | null
+          created_at?: string
+        }
+        Update: Partial<Profile>
+        Relationships: []
+      }
+      friendships: {
+        Row: Friendship
+        Insert: Omit<Friendship, 'id' | 'status' | 'created_at' | 'responded_at'> & {
+          id?: string
+          status?: FriendshipStatus
+          created_at?: string
+          responded_at?: string | null
+        }
+        Update: Partial<Friendship>
+        Relationships: []
+      }
+      blocks: {
+        Row: Block
+        Insert: Omit<Block, 'id' | 'created_at'> & { id?: string; created_at?: string }
+        Update: Partial<Block>
+        Relationships: []
+      }
+      reports: {
+        Row: Report
+        Insert: Omit<Report, 'id' | 'reason' | 'status' | 'created_at'> & {
+          id?: string
+          reason?: string
+          status?: ReportStatus
+          created_at?: string
+        }
+        Update: Partial<Report>
+        Relationships: []
+      }
+      prayer_shares: {
+        Row: PrayerShare
+        Insert: Omit<PrayerShare, 'id' | 'created_at'> & { id?: string; created_at?: string }
+        Update: Partial<PrayerShare>
+        Relationships: []
+      }
     }
     Views: Record<string, never>
     Functions: {
@@ -381,6 +489,18 @@ export type Database = {
       verify_privacy_pin: {
         Args: { pin: string }
         Returns: boolean
+      }
+      search_profiles: {
+        Args: { query: string; max_results?: number }
+        Returns: { id: string; display_name: string | null; full_name: string | null; email_match: boolean }[]
+      }
+      get_or_create_invite_code: {
+        Args: Record<string, never>
+        Returns: string
+      }
+      accept_invite: {
+        Args: { code: string }
+        Returns: string
       }
     }
   }

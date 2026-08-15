@@ -13,6 +13,8 @@ import { ScriptureSearch } from './features/search/ScriptureSearch'
 import { TopicsPage } from './features/topics/TopicsPage'
 import { CalendarPage } from './features/calendar/CalendarPage'
 import { SettingsPage } from './features/settings/SettingsPage'
+import { FriendsPage } from './features/friends/FriendsPage'
+import { AcceptInvitePage } from './features/friends/AcceptInvitePage'
 
 function AppShell() {
   const { session, loading } = useAuth()
@@ -24,6 +26,7 @@ function AppShell() {
       <Routes>
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/invite/:code" element={<AcceptInvitePage />} />
         <Route path="*" element={<SignIn />} />
       </Routes>
     )
@@ -42,8 +45,10 @@ function AppShell() {
           <Route path="/highlights" element={<HighlightsPage />} />
           <Route path="/prayer" element={<PrayerPage />} />
           <Route path="/calendar" element={<CalendarPage />} />
+          <Route path="/friends" element={<FriendsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/invite/:code" element={<AcceptInvitePage />} />
         </Routes>
       </main>
     </div>

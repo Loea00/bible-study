@@ -1,16 +1,45 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { usePrivacyPin } from './usePrivacyPin'
 import { useDataExport } from './useDataExport'
+import { useProfile } from '../friends/useProfile'
 
 export function SettingsPage() {
   const { pinConfigured, setPin } = usePrivacyPin()
   const { exportData, exporting, error: exportError } = useDataExport()
+  const { profile, updateProfile } = useProfile()
   const [pin, setPinInput] = useState('')
   const [confirmPin, setConfirmPin] = useState('')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const [displayName, setDisplayName] = useState('')
+  const [fullName, setFullName] = useState('')
+  const [profileSaving, setProfileSaving] = useState(false)
+  const [profileSaved, setProfileSaved] = useState(false)
+  const [profileError, setProfileError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (profile) {
+      setDisplayName(profile.display_name ?? '')
+      setFullName(profile.full_name ?? '')
+    }
+  }, [profile])
+
+  async function handleSaveProfile() {
+    setProfileError(null)
+    setProfileSaved(false)
+    setProfileSaving(true)
+    try {
+      await updateProfile(displayName, fullName)
+      setProfileSaved(true)
+    } catch (err) {
+      setProfileError(err instanceof Error ? err.message : 'Could not save your profile.')
+    } finally {
+      setProfileSaving(false)
+    }
+  }
 
   async function handleSave() {
     setError(null)
@@ -47,6 +76,29 @@ export function SettingsPage() {
           <Link to="/reset-password" className="settings-link-button">
             Change password
           </Link>
+        </div>
+      </section>
+
+      <section className="settings-section">
+        <h2>Profile</h2>
+        <p className="settings-hint">
+          Your display name and real name are how friends find and recognize you — shown in search, friend requests,
+          and on anything you share. Your email ({profile?.email ?? '…'}) is only ever matched on an exact search, never
+          shown to other users.
+        </p>
+        <div className="settings-form">
+          <input
+            type="text"
+            value={displayName}
+            onChange={(e) => setDisplayName(e.target.value)}
+            placeholder="Display name"
+          />
+          <input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Real name" />
+          <button type="button" onClick={handleSaveProfile} disabled={profileSaving}>
+            {profileSaving ? 'Saving…' : 'Save'}
+          </button>
+          {profileSaved && <p className="settings-saved">Saved.</p>}
+          {profileError && <p className="error">{profileError}</p>}
         </div>
       </section>
 

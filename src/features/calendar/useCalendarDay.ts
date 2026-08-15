@@ -14,10 +14,23 @@ export async function fetchCalendarDay(date: Date): Promise<CalendarDayData> {
   const rangeStart = startOfDay(date).toISOString()
   const rangeEnd = addDays(date, 1).toISOString()
 
+  // Since migration 0019, RLS also returns a friend's encouragement
+  // entries and a friend's shared-and-answered requests — this view is "my
+  // day," not "everything I can read," so both queries stay explicitly
+  // scoped to the current user rather than relying on RLS alone.
+  const { data: userData } = await supabase.auth.getUser()
+  const userId = userData.user?.id
+  if (!userId) return { sessions: [], entries: [], answeredPrayers: [] }
+
   const [sessionsRes, entriesRes, answeredRes] = await Promise.all([
     supabase.from('reading_sessions').select('*').gte('started_at', rangeStart).lt('started_at', rangeEnd),
-    supabase.from('entries').select('*').gte('created_at', rangeStart).lt('created_at', rangeEnd),
-    supabase.from('prayer_requests').select('*').gte('answered_at', rangeStart).lt('answered_at', rangeEnd),
+    supabase.from('entries').select('*').eq('user_id', userId).gte('created_at', rangeStart).lt('created_at', rangeEnd),
+    supabase
+      .from('prayer_requests')
+      .select('*')
+      .eq('user_id', userId)
+      .gte('answered_at', rangeStart)
+      .lt('answered_at', rangeEnd),
   ])
 
   return {

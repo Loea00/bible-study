@@ -1673,6 +1673,87 @@ new table is added, especially once friends/sharing/groups introduces tables tha
 instead of a plain `= user_id`), which is a meaningfully different and easier-to-get-wrong shape
 than everything audited here.
 
+**Phase 4, step 1: Friends, sharing, and moderation** (spec-amendment-v1-2 §B7). The first piece of
+the Community phase — everything downstream (groups, group boards, group reading plans) depends on
+friendships existing first, so this is where the phase starts. Brainstormed scope with Aaron before
+building: friend discovery by email/display-name/real-name search *and* a shareable invite link
+(both, not either/or), and friends + sharing + moderation built together as one cohesive pass rather
+than friends-list-only first — matching the spec's own framing that moderation isn't deferrable once
+anything's shareable.
+
+**Migration `0019_friends_and_sharing.sql`** — five new tables, layered in build order (each needs
+the ones before it): `profiles` (a public-safe name/email row per user, since `auth.users` isn't
+queryable from the client at all — auto-created via a trigger on signup, backfilled for existing
+accounts), `friendships` (mutual consent: pending → accepted, either party can cancel/unfriend, one
+row per pair via a `least`/`greatest` unique index), `blocks` and `reports` (moderation primitives,
+built before the sharing policies that follow), `prayer_shares` (who, specifically, a request is
+shared with — the spec says "named friends," not "all my friends," so this is a join table, not a
+boolean). `entries` gains an `'encouragement'` type — a friend's words of support on a shared
+request, the one entry type authored by someone other than whoever it's "about."
+
+Three new RPC functions: `search_profiles` (email exact-match, or display/real name substring —
+`security definer` so it can look past the narrow read policy, but the function body itself never
+returns the raw email, only whether the query matched it, and excludes anyone blocked in either
+direction), `get_or_create_invite_code` and `accept_invite` (the shareable-link flow — visiting
+`/invite/<code>` and confirming creates an accepted friendship directly, no separate approval step,
+since sharing the link *is* the owner's consent and clicking it *is* the visitor's).
+
+**The RLS shape here is genuinely new for this app** — flagged in the RLS audit note as the kind of
+thing to watch for: every table before this migration was owner-only (`auth.uid() = user_id`); this
+migration adds *relationship*-gated read policies on top (a friend can read a request shared with
+them; the request owner can read a friend's `prayed_mark`; a shared request's encouragement thread is
+visible to the owner and everyone it's shared with; a profile is visible to anyone with a friendship,
+share, or block relationship to it). Each is additive alongside the existing owner-only policy — none
+of them touch insert/update/delete, which stay exactly as owner-only as before.
+
+**A real, code-wide consequence of that RLS change, caught by re-auditing every existing query, not
+just the new ones**: several hooks did a broad `entries`/`prayer_requests` select relying on RLS
+alone for scoping (`useCalendarDay/Week/Month/Year`, `useReadingLog`, `usePrayerRequestTitles`,
+`usePrayerRequests` itself). Once RLS could also legitimately return a friend's encouragement entries
+or shared-and-answered requests, those views would have silently mixed a friend's activity into "my
+day" / "my reading log" / "my requests." Fixed all of them with an explicit `.eq('user_id', ...)` —
+each of those surfaces is "mine," not "everything I can read," and RLS scoping correctly only when a
+query *wants* the wider set. Also added a `prayed_marks` cross-user policy that the original design
+missed on first pass (the owner needs to see a friend's prayed-mark to know someone prayed for them
+at all) and a `blocks`-based profile-read policy (without it, blocking someone — which deletes the
+friendship — would make their name permanently unreadable to the very person managing their own
+blocked list).
+
+**App layer**: `useFriends` (search, requests, friends list, invite code), `useModeration`
+(block/unblock, file a report), `useProfile` (display name / real name, edited from a new "Profile"
+section in Settings), `usePrayerShares` (who a request is shared with), `useEncouragement` (the
+comment-thread hook, reused both on the owner's own card and on `SharedWithMe`'s read-only view),
+`useSharedWithMe` (requests shared with me — explicitly excludes my own via `user_id !=`, since RLS
+now returns both from a plain select). New pages: `/friends` (search, requests, friends list, invite
+link, blocked list) and `/invite/:code` (the landing page for someone's personal link). Prayer cards
+grew a "Share" toggle (a friend picker wired to `prayer_shares`, auto-flips `visibility` to `shared`/
+`private` as the share list goes from empty to non-empty and back) and an "Encouragement" toggle;
+`PrayerPage` now also renders a "Shared with me" section above the usual list.
+
+**Two real bugs found and fixed during verification** (live-tested with `TEMP-VERIFY` mocked
+friendship/search data, since I can't create a second real account myself): (1) `FriendsPage` derived
+"who's the other person in this friendship" using a *different* hook's user id (`useProfile`) than
+the one that actually had it (`useFriends`'s own `userId`) — against real data this meant `useProfile`
+would resolve to `null` before its own fetch completed, misattributing every accepted friend's name
+as "Someone" or worse, the wrong person entirely, only visible in mocked testing because the mock
+made the mismatch deterministic. Fixed by using `useFriends`'s own `userId` throughout. (2)
+`useFriends.searchUsers` (email/name search) was a plain function, not `useCallback`-wrapped, so
+every state change it caused (the `searching` flag, `searchResults`) gave it a new reference on the
+next render — and since `FriendsPage`'s debounce effect lists it as a dependency, that new reference
+re-triggered the effect, which called search again, causing more state changes, in a self-sustaining
+loop. Surfaced as search results appearing but "Searching…" never clearing. Fixed by wrapping it in
+`useCallback` with an empty dependency array, matching the already-proven pattern in
+`useNaveTopics.searchTopics` (Topics page's own search-as-you-type, which never had this bug).
+
+**Deliberately out of scope for this pass** (noted when the plan was proposed, not discovered
+along the way): report review is manual via the Supabase dashboard, not an in-app admin panel;
+"praying for you" is pull (shown on the request card/Shared-with-me view when you look), not a
+push notification system; groups, group study boards, and group reading plans are separate,
+later steps.
+
+**Needs Aaron to run migration `0019_friends_and_sharing.sql`** before any of this works — nothing
+here is live yet. Build clean, no leftover TEMP-VERIFY markers.
+
 ## TODO — amendment v1.4 (theming), intentionally deferred
 
 Reviewed 2026-07-15, holding until after Strong's data sourcing (the currently agreed next

@@ -3068,3 +3068,142 @@ button.highlight-swatch {
   text-decoration: none;
   cursor: pointer;
 }
+
+.friends-page {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 32px 24px;
+  font-family: var(--sans);
+}
+
+.friends-page h1 {
+  font-family: var(--serif);
+  font-size: 28px;
+  color: var(--text-h);
+  margin: 0 0 24px;
+}
+
+.friends-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.friends-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.friends-row-name {
+  font-size: 15px;
+  color: var(--text-h);
+}
+
+.friends-row-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.friends-row button {
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+.friends-row button:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.friends-row button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.prayer-share-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 8px 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--code-bg, rgba(128, 128, 128, 0.06));
+}
+
+.prayer-share-friend {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--sans);
+  font-size: 14px;
+  color: var(--text-h);
+  cursor: pointer;
+}
+
+.prayer-encouragement {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 8px 0;
+}
+
+.prayer-encouragement-entry {
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--code-bg, rgba(128, 128, 128, 0.06));
+}
+
+.prayer-encouragement-author {
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  margin: 0 0 4px;
+}
+
+.prayer-encouragement-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.prayer-encouragement-form textarea {
+  font: inherit;
+  font-family: var(--serif);
+  font-size: 15px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-h);
+  resize: vertical;
+}
+
+.prayer-encouragement-form button {
+  align-self: flex-start;
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--accent);
+  background: var(--accent-bg, rgba(107, 79, 160, 0.1));
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  padding: 4px 12px;
+  cursor: pointer;
+}
+
+.prayer-encouragement-form button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

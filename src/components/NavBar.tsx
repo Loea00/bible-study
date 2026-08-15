@@ -16,6 +16,7 @@ export function NavBar() {
         <NavLink to="/journal">Journal</NavLink>
         <NavLink to="/prayer">Prayer</NavLink>
         <NavLink to="/calendar">Calendar</NavLink>
+        <NavLink to="/friends">Friends</NavLink>
       </div>
       <div className="navbar-right">
         <NavLink to="/log">Log</NavLink>

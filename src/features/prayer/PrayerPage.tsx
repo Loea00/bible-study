@@ -6,6 +6,8 @@ import { PrayerRequestCard } from './PrayerRequestCard'
 import { PrayThroughFlow } from './PrayThroughFlow'
 import { usePrivacyPin } from '../settings/usePrivacyPin'
 import { useInputPosition } from '../../lib/useInputPosition'
+import { useFriends } from '../friends/useFriends'
+import { SharedWithMe } from './SharedWithMe'
 import type { PrayedMark, PrayerRequest, PrayerRequestStatus } from '../../types/db'
 
 type StatusFilter = 'open' | 'answered' | 'archived' | 'all'
@@ -38,9 +40,20 @@ export function PrayerPage() {
     setStatus,
     deleteRequest,
     setPrivacy,
+    setVisibility,
   } = usePrayerRequests()
   const { marksByRequest, addMark } = usePrayedMarks()
   const { pinConfigured, verifyPin } = usePrivacyPin()
+  const { userId: myUserId, accepted: acceptedFriendships, profilesById: friendProfilesById } = useFriends()
+  const friends = useMemo(
+    () =>
+      acceptedFriendships.map((f) => {
+        const otherId = f.requester_id === myUserId ? f.addressee_id : f.requester_id
+        const p = friendProfilesById[otherId]
+        return { id: otherId, name: p?.display_name || p?.full_name || p?.email || 'Friend' }
+      }),
+    [acceptedFriendships, myUserId, friendProfilesById],
+  )
   const [inputPosition, setInputPosition] = useInputPosition('theo:prayer-input-position')
   const [viewMode, setViewMode] = useState<ViewMode>(
     () => (localStorage.getItem('theo:prayer-view-mode') === 'list' ? 'list' : 'cards'),
@@ -177,6 +190,8 @@ export function PrayerPage() {
   return (
     <div className="prayer-page">
       {inputPosition === 'top' && inputCard}
+
+      <SharedWithMe />
 
       <div className="doorway-view-controls">
         <div className="doorway-toggle-group">
@@ -343,6 +358,8 @@ export function PrayerPage() {
                     onMarkPrayed={addMark}
                     onDelete={deleteRequest}
                     onSetPrivacy={setPrivacy}
+                    onSetVisibility={setVisibility}
+                    friends={friends}
                     pinConfigured={pinConfigured}
                     verifyPin={verifyPin}
                     viewMode={viewMode === 'list' ? 'list' : 'card'}
@@ -371,6 +388,8 @@ export function PrayerPage() {
                     onMarkPrayed={addMark}
                     onDelete={deleteRequest}
                     onSetPrivacy={setPrivacy}
+                    onSetVisibility={setVisibility}
+                    friends={friends}
                     pinConfigured={pinConfigured}
                     verifyPin={verifyPin}
                     viewMode={viewMode === 'list' ? 'list' : 'card'}

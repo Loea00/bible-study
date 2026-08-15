@@ -19,12 +19,28 @@ export function useCalendarMonth(year: number, month: number) {
     const rangeStart = startOfMonth(year, month).toISOString()
     const rangeEnd = new Date(endOfMonth(year, month).getTime() + 24 * 60 * 60 * 1000).toISOString()
 
+    // See useCalendarDay.ts's fetchCalendarDay for why entries/prayer_requests
+    // need an explicit user_id filter since migration 0019.
+    const { data: userData } = await supabase.auth.getUser()
+    const userId = userData.user?.id
+    if (!userId) {
+      setDayMap(new Map())
+      setLoading(false)
+      return
+    }
+
     const [sessionsRes, entriesRes, answeredRes] = await Promise.all([
       supabase.from('reading_sessions').select('started_at').gte('started_at', rangeStart).lt('started_at', rangeEnd),
-      supabase.from('entries').select('created_at').gte('created_at', rangeStart).lt('created_at', rangeEnd),
+      supabase
+        .from('entries')
+        .select('created_at')
+        .eq('user_id', userId)
+        .gte('created_at', rangeStart)
+        .lt('created_at', rangeEnd),
       supabase
         .from('prayer_requests')
         .select('answered_at')
+        .eq('user_id', userId)
         .gte('answered_at', rangeStart)
         .lt('answered_at', rangeEnd),
     ])
